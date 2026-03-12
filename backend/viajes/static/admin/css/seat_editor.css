@@ -1,0 +1,174 @@
+/* VA-Bus — Seat Editor Styles for Django Admin */
+
+.seat-editor-wrap {
+  margin: 12px 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+/* Toolbar */
+.seat-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+  flex-wrap: wrap;
+}
+
+.seat-editor-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #333;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.seat-editor-tools {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.seat-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.seat-tool:hover {
+  border-color: var(--tool-color, #999);
+  background: var(--tool-bg, #f0f0f0);
+}
+
+.seat-tool.active {
+  border-color: var(--tool-color, #0052cc);
+  background: var(--tool-bg, #e6f0ff);
+  color: var(--tool-color, #0052cc);
+  box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.15);
+}
+
+.tool-icon {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tool-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.seat-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.seat-action-btn {
+  padding: 7px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.seat-action-btn:hover {
+  background: #0052cc;
+  color: #fff;
+  border-color: #0052cc;
+}
+
+.seat-action-btn-danger:hover {
+  background: #d32f2f;
+  border-color: #d32f2f;
+}
+
+/* Grid Container */
+.seat-editor-grid-container {
+  padding: 24px;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+  background: #fafbfc;
+}
+
+.seat-editor-grid {
+  display: grid;
+  gap: 4px;
+  user-select: none;
+}
+
+/* Individual Cell */
+.seat-cell {
+  width: 52px;
+  height: 52px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Segoe UI', 'Inter', -apple-system, sans-serif;
+  transition: transform 0.1s, box-shadow 0.1s;
+  position: relative;
+}
+
+.seat-cell:hover {
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+}
+
+/* Numbered seats — big bold number */
+.seat-cell-numbered {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* Empty cells — subtle dashed border */
+.seat-cell-empty {
+  border-style: dashed;
+  border-color: #e0e0e0;
+  background: #fafafa;
+}
+
+/* Typed cells (door, driver, stairs, aisle) */
+.seat-cell-typed {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* Status Bar */
+.seat-editor-status {
+  padding: 10px 16px;
+  background: #f8f9fa;
+  border-top: 1px solid #ddd;
+  font-size: 14px;
+  font-weight: 700;
+  color: #666;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
