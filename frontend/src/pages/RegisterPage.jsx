@@ -11,6 +11,7 @@ export default function RegisterPage() {
     email: '',
     first_name: '',
     last_name: '',
+    cedula_tipo: 'V',
     cedula: '',
     telefono: '',
     password: '',
@@ -34,7 +35,13 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await registro(form);
+      const submitData = {
+        ...form,
+        cedula: form.cedula ? `${form.cedula_tipo}-${form.cedula}` : '',
+      };
+      delete submitData.cedula_tipo;
+      delete submitData.password2;
+      await registro(submitData);
       // Auto login after registration
       const loginRes = await login(form.username, form.password);
       localStorage.setItem('access_token', loginRes.data.access);
@@ -123,14 +130,31 @@ export default function RegisterPage() {
             <div className="passenger-form">
               <div className="form-group">
                 <label>Cédula</label>
-                <input
-                  type="text"
-                  name="cedula"
-                  className="form-control"
-                  placeholder="V-12345678"
-                  value={form.cedula}
-                  onChange={handleChange}
-                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <select
+                    name="cedula_tipo"
+                    className="form-control"
+                    value={form.cedula_tipo}
+                    onChange={handleChange}
+                    style={{ width: '70px', flexShrink: 0 }}
+                  >
+                    <option value="V">V</option>
+                    <option value="J">J</option>
+                    <option value="E">E</option>
+                  </select>
+                  <input
+                    type="text"
+                    name="cedula"
+                    className="form-control"
+                    placeholder="12345678"
+                    value={form.cedula}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setForm({ ...form, cedula: val });
+                    }}
+                    inputMode="numeric"
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <label>Teléfono</label>

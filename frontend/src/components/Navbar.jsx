@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Home, MapPin, Ticket, Settings, User,
-  LogOut, LogIn, UserPlus, Menu, X,
+  LogOut, LogIn, UserPlus, Menu, X, FileCheck,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -40,7 +40,10 @@ export default function Navbar() {
     { to: '/', label: 'Inicio', icon: Home },
     { to: '/viajes', label: 'Viajes', icon: MapPin },
     ...(user ? [{ to: '/mis-reservas', label: 'Mis Reservas', icon: Ticket }] : []),
-    ...(user?.is_staff ? [{ to: '/admin/panel', label: 'Admin', icon: Settings }] : []),
+    ...(user?.is_staff ? [
+      { to: '/admin/panel', label: 'Admin', icon: Settings },
+      { to: '/admin/comprobantes', label: 'Comprobantes', icon: FileCheck },
+    ] : []),
   ];
 
   return (

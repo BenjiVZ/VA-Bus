@@ -2,6 +2,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import IntegrityError
+from django.utils import timezone
+from datetime import timedelta
+import uuid as uuid_lib
 from .models import Reserva
 from .serializers import ReservaSerializer, CrearReservaSerializer, AdminReservaSerializer
 from viajes.models import Viaje, Autobus, ConfiguracionGeneral
@@ -17,6 +20,19 @@ class CrearReservaView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        # ── Anti-spam check ──
+        ordenes_pendientes = Reserva.objects.filter(
+            usuario=request.user,
+            estado__in=['pendiente', 'apartado']
+        ).values('grupo_pago').distinct().count()
+
+        if ordenes_pendientes >= 3:
+            return Response({
+                "error": "Tienes demasiadas órdenes activas. Completa o espera que se procesen antes de crear nuevas. "
+                         "El abuso del sistema puede resultar en el bloqueo de tu cuenta.",
+                "bloqueado": True,
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = CrearReservaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -33,6 +49,10 @@ class CrearReservaView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Generate grupo_pago and expiration
+        grupo_pago = uuid_lib.uuid4()
+        fecha_expiracion = timezone.now() + timedelta(minutes=15)
+
         reservas_creadas = []
         errores = []
 
@@ -48,7 +68,9 @@ class CrearReservaView(APIView):
                     piso_asiento=piso,
                     nombre_pasajero=nombre,
                     cedula_pasajero=cedula,
-                    estado='pendiente'
+                    estado='pendiente',
+                    grupo_pago=grupo_pago,
+                    fecha_expiracion=fecha_expiracion,
                 )
                 reservas_creadas.append(reserva)
             except IntegrityError:
@@ -60,27 +82,20 @@ class CrearReservaView(APIView):
                 status=status.HTTP_409_CONFLICT
             )
 
-        # Generar info para WhatsApp
-        config = ConfiguracionGeneral.load()
-        asientos_str = ', '.join([f"#{r.numero_asiento} (P{r.piso_asiento})" for r in reservas_creadas])
-        detalles = (
-            f"🚌 *Reserva Aerorutas*\n"
-            f"📍 {viaje.ruta.origen} → {viaje.ruta.destino}\n"
-            f"📅 {viaje.fecha_salida} a las {viaje.hora_salida}\n"
-            f"💺 Asientos: {asientos_str}\n"
-            f"💰 Total: ${viaje.precio_usd * len(reservas_creadas)} USD\n"
-            f"👤 {nombre} - CI: {cedula}\n"
-            f"🔖 Reserva(s): {', '.join([f'#{r.id}' for r in reservas_creadas])}"
-        )
-
-        mensaje_wsp = config.mensaje_whatsapp.replace('{detalles}', detalles)
-        whatsapp_url = f"https://wa.me/{config.whatsapp_vendedor}?text={mensaje_wsp}"
-
         return Response({
-            "mensaje": "Reserva(s) creada(s) exitosamente. Estado: Pendiente.",
+            "mensaje": "Reserva(s) creada(s). Tienes 15 minutos para completar el pago.",
             "reservas": ReservaSerializer(reservas_creadas, many=True).data,
-            "whatsapp_url": whatsapp_url,
-            "whatsapp_numero": config.whatsapp_vendedor,
+            "grupo_pago": str(grupo_pago),
+            "fecha_expiracion": fecha_expiracion.isoformat(),
+            "viaje_info": {
+                "id": viaje.id,
+                "origen": viaje.ruta.origen,
+                "destino": viaje.ruta.destino,
+                "fecha_salida": str(viaje.fecha_salida),
+                "hora_salida": str(viaje.hora_salida),
+                "precio_usd": float(viaje.precio_usd),
+                "autobus": viaje.autobus.nombre,
+            },
             "errores": errores if errores else None
         }, status=status.HTTP_201_CREATED)
 

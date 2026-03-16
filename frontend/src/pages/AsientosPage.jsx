@@ -17,6 +17,7 @@ export default function AsientosPage() {
   const [tasa, setTasa] = useState(null);
   const [nombre, setNombre] = useState('');
   const [cedula, setCedula] = useState('');
+  const [cedulaTipo, setCedulaTipo] = useState('V');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,7 +32,14 @@ export default function AsientosPage() {
         // Pre-fill passenger info from user profile
         if (user) {
           setNombre(`${user.first_name || ''} ${user.last_name || ''}`.trim());
-          setCedula(user.cedula || '');
+          const rawCedula = user.cedula || '';
+          const match = rawCedula.match(/^([VJE])-?(.*)$/i);
+          if (match) {
+            setCedulaTipo(match[1].toUpperCase());
+            setCedula(match[2]);
+          } else {
+            setCedula(rawCedula);
+          }
         }
       })
       .catch(() => setError('Error al cargar los asientos.'))
@@ -67,16 +75,21 @@ export default function AsientosPage() {
         viaje_id: Number(id),
         asientos: selectedSeats.map((s) => ({ numero: s.numero, piso: s.piso })),
         nombre_pasajero: nombre,
-        cedula_pasajero: cedula,
+        cedula_pasajero: cedula ? `${cedulaTipo}-${cedula}` : '',
       });
 
-      navigate('/reserva/confirmacion', {
+      // Check anti-spam block
+      if (res.data.bloqueado) {
+        setError(res.data.error);
+        return;
+      }
+
+      navigate('/pago', {
         state: {
           reservas: res.data.reservas,
-          whatsapp_url: res.data.whatsapp_url,
-          viaje: data.viaje,
-          total_usd: totalUsd,
-          total_bs: totalBs,
+          grupo_pago: res.data.grupo_pago,
+          fecha_expiracion: res.data.fecha_expiracion,
+          viaje_info: res.data.viaje_info,
         },
       });
     } catch (err) {
@@ -191,13 +204,26 @@ export default function AsientosPage() {
                 </div>
                 <div className="form-group">
                   <label>Cédula</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={cedula}
-                    onChange={(e) => setCedula(e.target.value)}
-                    placeholder="V-12345678"
-                  />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <select
+                      className="form-control"
+                      value={cedulaTipo}
+                      onChange={(e) => setCedulaTipo(e.target.value)}
+                      style={{ width: '70px', flexShrink: 0 }}
+                    >
+                      <option value="V">V</option>
+                      <option value="J">J</option>
+                      <option value="E">E</option>
+                    </select>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={cedula}
+                      onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
+                      placeholder="12345678"
+                      inputMode="numeric"
+                    />
+                  </div>
                 </div>
 
                 <button

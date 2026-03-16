@@ -113,7 +113,7 @@ export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat }) {
       )}
 
       {/* Bus Outline */}
-      <div className="bus-outline" style={{ minWidth: columnas * 56 + 48, maxWidth: columnas * 56 + 48 }}>
+      <div className="bus-outline">
         {/* Windshield */}
         <div className="bus-windshield">
           <svg width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">

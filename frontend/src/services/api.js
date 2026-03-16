@@ -99,4 +99,22 @@ export const adminCambiarAsiento = (reservaId, numero_asiento, piso_asiento) =>
 export const adminGetBuses = () =>
   api.get('/admin/buses/');
 
+// Pagos
+export const getMetodosPago = () =>
+  api.get('/metodos-pago/');
+
+export const crearComprobante = (formData) =>
+  api.post('/comprobantes/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const getEstadoComprobante = (grupoPago) =>
+  api.get(`/comprobantes/${grupoPago}/`);
+
+export const adminGetComprobantes = (estado) =>
+  api.get('/admin/comprobantes/', { params: estado ? { estado } : {} });
+
+export const adminValidarComprobante = (comprobanteId, estado, nota = '') =>
+  api.patch(`/admin/comprobantes/${comprobanteId}/validar/`, { estado, nota });
+
 export default api;

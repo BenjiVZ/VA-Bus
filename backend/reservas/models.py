@@ -1,10 +1,14 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
+import uuid
 
 
 class Reserva(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
+        ('apartado', 'Apartado'),
         ('confirmado', 'Confirmado'),
         ('cancelado', 'Cancelado'),
     ]
@@ -33,6 +37,29 @@ class Reserva(models.Model):
     fecha_actualizacion = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
     nombre_pasajero = models.CharField(max_length=200, blank=True, verbose_name="Nombre del Pasajero")
     cedula_pasajero = models.CharField(max_length=20, blank=True, verbose_name="Cédula del Pasajero")
+    grupo_pago = models.UUIDField(
+        null=True, blank=True, db_index=True,
+        verbose_name="Grupo de Pago",
+        help_text="UUID que agrupa las reservas de una misma compra"
+    )
+    fecha_expiracion = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Fecha de Expiración",
+        help_text="15 min después de creación. Solo aplica en estado pendiente."
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.fecha_expiracion:
+            self.fecha_expiracion = timezone.now() + timedelta(minutes=15)
+        super().save(*args, **kwargs)
+
+    @property
+    def esta_expirada(self):
+        if self.estado != 'pendiente':
+            return False
+        if self.fecha_expiracion and timezone.now() > self.fecha_expiracion:
+            return True
+        return False
 
     class Meta:
         verbose_name = "Reserva"

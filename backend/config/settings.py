@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'usuarios',
     'viajes',
     'reservas',
+    'pagos',
 ]
 
 MIDDLEWARE = [
@@ -91,6 +92,10 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # REST Framework
 REST_FRAMEWORK = {
