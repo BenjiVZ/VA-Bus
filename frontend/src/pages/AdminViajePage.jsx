@@ -6,7 +6,7 @@ import {
   getAsientos,
 } from '../services/api';
 import SeatMap from '../components/SeatMap';
-import { ArrowLeft, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Users, Clock, Hash } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, RefreshCw, ArrowRightLeft, Users, Clock, Hash, Crosshair, X } from 'lucide-react';
 
 export default function AdminViajePage() {
   const { id } = useParams();
@@ -19,8 +19,7 @@ export default function AdminViajePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [changingSeat, setChangingSeat] = useState(null);
-  const [newSeatNum, setNewSeatNum] = useState('');
-  const [newSeatPiso, setNewSeatPiso] = useState('1');
+  const [movingReserva, setMovingReserva] = useState(null);
 
   useEffect(() => {
     if (!user?.is_staff) { navigate('/'); return; }
@@ -51,16 +50,28 @@ export default function AdminViajePage() {
     }
   };
 
-  const handleMoverAsiento = async (reservaId) => {
-    if (!newSeatNum) return;
+  const handleMoverAsiento = async (reservaId, numero, piso) => {
+    if (!numero) return;
     try {
-      await adminCambiarAsiento(reservaId, parseInt(newSeatNum), parseInt(newSeatPiso));
-      setChangingSeat(null);
-      setNewSeatNum('');
+      await adminCambiarAsiento(reservaId, numero, piso);
+      setMovingReserva(null);
       loadData();
     } catch (err) {
       setError(err.response?.data?.error || 'Error al mover asiento');
     }
+  };
+
+  const handleSeatClickForMove = (seat) => {
+    if (!movingReserva) return;
+    handleMoverAsiento(movingReserva.id, seat.numero, seat.piso);
+  };
+
+  const startMoving = (reserva) => {
+    setMovingReserva(movingReserva?.id === reserva.id ? null : reserva);
+  };
+
+  const cancelMoving = () => {
+    setMovingReserva(null);
   };
 
   if (loading) {
@@ -115,13 +126,32 @@ export default function AdminViajePage() {
           {/* Seat map */}
           {seatData?.pisos_config && (
             <div className="admin-seatmap-panel">
+              {movingReserva && (
+                <div className="seat-move-banner">
+                  <div className="seat-move-banner-content">
+                    <Crosshair size={18} className="seat-move-banner-icon" />
+                    <div>
+                      <strong>Moviendo Asiento #{movingReserva.numero_asiento}</strong>
+                      <span className="seat-move-banner-sub">
+                        {movingReserva.nombre_pasajero || movingReserva.usuario_info?.nombre || 'Sin nombre'}
+                        {' · '}Haz clic en un asiento disponible
+                      </span>
+                    </div>
+                  </div>
+                  <button className="btn btn-sm seat-move-cancel" onClick={cancelMoving}>
+                    <X size={14} /> Cancelar
+                  </button>
+                </div>
+              )}
               <h4 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Hash size={16} /> Mapa de Asientos
               </h4>
               <SeatMap
                 pisosConfig={seatData.pisos_config}
                 selectedSeats={[]}
-                onToggleSeat={() => {}}
+                onToggleSeat={movingReserva ? handleSeatClickForMove : () => {}}
+                isMovingMode={!!movingReserva}
+                movingSeatNumber={movingReserva ? { numero: movingReserva.numero_asiento, piso: movingReserva.piso_asiento } : null}
               />
             </div>
           )}
@@ -180,31 +210,13 @@ export default function AdminViajePage() {
                           <RefreshCw size={14} /> Reactivar
                         </button>
                       )}
-                      <button className="btn btn-secondary btn-sm" onClick={() => setChangingSeat(changingSeat === r.id ? null : r.id)}
+                      <button className={`btn btn-sm ${movingReserva?.id === r.id ? 'btn-warning' : 'btn-secondary'}`}
+                        onClick={() => startMoving(r)}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <ArrowRightLeft size={14} /> Cambiar Asiento
+                        <ArrowRightLeft size={14} /> {movingReserva?.id === r.id ? 'Seleccionando...' : 'Cambiar Asiento'}
                       </button>
                     </div>
-                    {changingSeat === r.id && (
-                      <div className="reserva-change-seat">
-                        <input
-                          type="number" placeholder="Nuevo #" value={newSeatNum}
-                          onChange={(e) => setNewSeatNum(e.target.value)}
-                          className="form-control" style={{ width: '80px' }}
-                        />
-                        <input
-                          type="number" placeholder="Piso" value={newSeatPiso}
-                          onChange={(e) => setNewSeatPiso(e.target.value)}
-                          className="form-control" style={{ width: '60px' }}
-                        />
-                        <button className="btn btn-primary btn-sm" onClick={() => handleMoverAsiento(r.id)}>
-                          Mover
-                        </button>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setChangingSeat(null)}>
-                          Cancelar
-                        </button>
-                      </div>
-                    )}
+
                   </div>
                 ))}
               </div>

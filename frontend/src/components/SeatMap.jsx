@@ -7,15 +7,16 @@ function SeatIcon({ number, state, onClick, title }) {
     available: { fill: '#ffffff', stroke: '#c1c7d0', text: '#42526e', headrest: '#dfe1e6' },
     selected:  { fill: '#0052cc', stroke: '#003380', text: '#ffffff', headrest: '#0043a6' },
     occupied:  { fill: '#ebecf0', stroke: '#dfe1e6', text: '#a5adba', headrest: '#c1c7d0' },
+    moving:    { fill: '#ff8f00', stroke: '#e65100', text: '#ffffff', headrest: '#f57c00' },
   };
   const c = colors[state] || colors.available;
-  const cursor = state === 'occupied' ? 'not-allowed' : 'pointer';
+  const cursor = (state === 'occupied' || state === 'moving') ? 'not-allowed' : 'pointer';
 
   return (
     <svg
       width="48" height="52" viewBox="0 0 48 52"
       className={`seat-svg seat-svg-${state}`}
-      onClick={state !== 'occupied' ? onClick : undefined}
+      onClick={(state !== 'occupied' && state !== 'moving') ? onClick : undefined}
       style={{ cursor }}
       role="button"
       aria-label={title}
@@ -71,7 +72,7 @@ function DriverCell() {
   );
 }
 
-export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat }) {
+export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat, movingSeatNumber, isMovingMode }) {
   const pisos = pisosConfig.map((p) => p.numero_piso).sort();
   const [activePiso, setActivePiso] = useState(pisos[0] || 1);
 
@@ -85,6 +86,7 @@ export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat }) {
   }
 
   const getSeatState = (number) => {
+    if (isMovingMode && movingSeatNumber?.numero === number && movingSeatNumber?.piso === activePiso) return 'moving';
     if (selectedSeats.some((s) => s.numero === number && s.piso === activePiso)) return 'selected';
     return 'available';
   };
@@ -141,13 +143,16 @@ export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat }) {
 
               if (type === 'seat' && number) {
                 const state = !disponible ? 'occupied' : getSeatState(number);
+                const pulseClass = isMovingMode && state === 'available' ? ' seat-cell-pulse' : '';
+                const titleText = state === 'moving' ? `Asiento ${number} - Mover desde aquí`
+                  : `Asiento ${number} - ${disponible ? (state === 'selected' ? 'Seleccionado' : (isMovingMode ? 'Clic para mover aquí' : 'Disponible')) : 'Ocupado'}`;
                 return (
-                  <div key={key} className="layout-cell layout-cell-seat">
+                  <div key={key} className={`layout-cell layout-cell-seat${pulseClass}`}>
                     <SeatIcon
                       number={number}
                       state={state}
                       onClick={() => handleClick(number, disponible)}
-                      title={`Asiento ${number} - ${disponible ? (state === 'selected' ? 'Seleccionado' : 'Disponible') : 'Ocupado'}`}
+                      title={titleText}
                     />
                   </div>
                 );
