@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'http://localhost:8001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -55,6 +55,12 @@ export const registro = (data) =>
 
 export const getPerfil = () =>
   api.get('/auth/perfil/');
+
+export const actualizarPerfil = (data) =>
+  api.put('/auth/perfil/', data);
+
+export const cambiarPassword = (data) =>
+  api.post('/auth/cambiar-password/', data);
 
 // Viajes
 export const getRutas = () =>

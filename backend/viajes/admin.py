@@ -37,8 +37,8 @@ class RutaAdmin(admin.ModelAdmin):
 
 @admin.register(Autobus)
 class AutobusAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'placa', 'pisos', 'capacidad_total')
-    search_fields = ('nombre', 'placa')
+    list_display = ('nombre', 'placa', 'marca', 'color', 'anio', 'pisos', 'capacidad_total')
+    search_fields = ('nombre', 'placa', 'marca')
     inlines = [PisoAutobusInline]
 
 
@@ -52,7 +52,7 @@ class ViajeAdmin(admin.ModelAdmin):
 
 @admin.register(ConfiguracionGeneral)
 class ConfiguracionGeneralAdmin(admin.ModelAdmin):
-    list_display = ('nombre_empresa', 'whatsapp_vendedor', 'tasa_bcv', 'tasa_actualizada')
+    list_display = ('nombre_empresa', 'rif', 'whatsapp_vendedor', 'tasa_bcv', 'tasa_actualizada')
 
     def has_add_permission(self, request):
         return not ConfiguracionGeneral.objects.exists()

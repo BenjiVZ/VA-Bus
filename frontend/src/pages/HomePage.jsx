@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRutas } from '../services/api';
 import { Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar } from 'lucide-react';
+import FleetGallery from '../components/FleetGallery';
+import '../components/FleetGallery.css';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -97,6 +99,8 @@ export default function HomePage() {
             </button>
           </form>
         </section>
+
+        <FleetGallery />
 
         <section style={{ marginTop: '4rem', textAlign: 'center' }}>
           <h3 style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>

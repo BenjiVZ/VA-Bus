@@ -22,7 +22,7 @@ class AutobusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Autobus
-        fields = ('id', 'nombre', 'placa', 'pisos', 'pisos_config', 'capacidad_total')
+        fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'pisos_config', 'capacidad_total')
 
 
 class ViajeListSerializer(serializers.ModelSerializer):
@@ -59,5 +59,4 @@ class AsientoMapSerializer(serializers.Serializer):
 class ConfiguracionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfiguracionGeneral
-        fields = ('whatsapp_vendedor', 'mensaje_whatsapp', 'nombre_empresa',
-                  'tasa_bcv', 'tasa_actualizada')
+        fields = ('whatsapp_vendedor', 'mensaje_whatsapp', 'nombre_empresa', 'rif', 'domicilio_fiscal', 'banco', 'cuenta_bancaria', 'tipo_cuenta', 'telefono_contacto', 'lema', 'tasa_bcv', 'tasa_actualizada')

@@ -19,6 +19,10 @@ class Ruta(models.Model):
 class Autobus(models.Model):
     nombre = models.CharField(max_length=100, verbose_name="Nombre / Identificador")
     placa = models.CharField(max_length=20, unique=True, verbose_name="Placa")
+    marca = models.CharField(max_length=50, blank=True, default='', verbose_name="Marca")
+    color = models.CharField(max_length=50, blank=True, default='', verbose_name="Color")
+    anio = models.PositiveIntegerField(null=True, blank=True, verbose_name="Año")
+    propietario = models.CharField(max_length=200, blank=True, default='', verbose_name="Propietario")
     pisos = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)], verbose_name="Cantidad de Pisos")
 
     class Meta:
@@ -96,6 +100,13 @@ class ConfiguracionGeneral(models.Model):
         help_text="Usa {detalles} donde quieras insertar la info de la reserva"
     )
     nombre_empresa = models.CharField(max_length=200, default="Aerorutas de Venezuela", verbose_name="Nombre de la Empresa")
+    rif = models.CharField(max_length=20, blank=True, default='', verbose_name="RIF")
+    domicilio_fiscal = models.TextField(blank=True, default='', verbose_name="Domicilio Fiscal")
+    banco = models.CharField(max_length=100, blank=True, default='', verbose_name="Banco")
+    cuenta_bancaria = models.CharField(max_length=30, blank=True, default='', verbose_name="Cuenta Bancaria")
+    tipo_cuenta = models.CharField(max_length=30, blank=True, default='', verbose_name="Tipo de Cuenta")
+    telefono_contacto = models.CharField(max_length=20, blank=True, default='', verbose_name="Teléfono de Contacto")
+    lema = models.CharField(max_length=200, blank=True, default='', verbose_name="Lema de la Empresa")
     tasa_bcv = models.DecimalField(
         max_digits=12, decimal_places=4, default=0,
         verbose_name="Tasa BCV (Bs/$)"

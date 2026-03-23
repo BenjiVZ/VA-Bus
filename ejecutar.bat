@@ -8,8 +8,8 @@ echo ============================================
 echo.
 
 :: Iniciar Backend (Django)
-echo [1/3] Iniciando Backend (Django en puerto 8000)...
-start "VA-Bus Backend" cmd /k "cd /d %~dp0backend && python manage.py runserver 8000"
+echo [1/3] Iniciando Backend (Django en puerto 8001)...
+start "VA-Bus Backend" cmd /k "cd /d %~dp0backend && python manage.py runserver 8001"
 
 :: Esperar a que Django arranque
 timeout /t 3 /nobreak >nul
@@ -29,8 +29,8 @@ echo.
 echo ============================================
 echo   Sistema iniciado correctamente!
 echo   Frontend: http://localhost:3000
-echo   Backend:  http://localhost:8000
-echo   Admin:    http://localhost:8000/admin
+echo   Backend:  http://localhost:8001
+echo   Admin:    http://localhost:8001/admin
 echo ============================================
 echo.
 echo Cierra esta ventana cuando quieras detener todo.

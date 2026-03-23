@@ -76,12 +76,12 @@ export default function Navbar() {
         <div className="nav-user-area">
           {user ? (
             <>
-              <div className="nav-user-badge">
+              <Link to="/perfil" className="nav-user-badge" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="nav-avatar">
                   {(user.first_name?.[0] || user.username[0]).toUpperCase()}
                 </div>
                 <span className="nav-user-label">{user.first_name || user.username}</span>
-              </div>
+              </Link>
               <button className="nav-icon-btn" onClick={handleLogout} title="Cerrar sesión">
                 <LogOut size={18} />
               </button>
@@ -128,7 +128,7 @@ export default function Navbar() {
         <div className="nav-drawer-actions">
           {user ? (
             <>
-              <div className="nav-drawer-user">
+              <Link to="/perfil" className="nav-drawer-user" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="nav-avatar">
                   {(user.first_name?.[0] || user.username[0]).toUpperCase()}
                 </div>
@@ -136,7 +136,7 @@ export default function Navbar() {
                   <div style={{ fontWeight: 600 }}>{user.first_name || user.username}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.email}</div>
                 </div>
-              </div>
+              </Link>
               <button className="btn btn-sm btn-ghost" onClick={handleLogout} style={{ width: '100%', justifyContent: 'center' }}>
                 <LogOut size={15} /> Cerrar sesión
               </button>

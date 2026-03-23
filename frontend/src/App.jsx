@@ -14,6 +14,8 @@ import AdminPanelPage from './pages/AdminPanelPage';
 import AdminViajePage from './pages/AdminViajePage';
 import AdminBusesPage from './pages/AdminBusesPage';
 import AdminComprobantesPage from './pages/AdminComprobantesPage';
+import PerfilPage from './pages/PerfilPage';
+import './pages/PerfilPage.css';
 
 function App() {
   return (
@@ -29,6 +31,7 @@ function App() {
           <Route path="/pago" element={<PagoPage />} />
           <Route path="/reserva/confirmacion" element={<ConfirmacionPage />} />
           <Route path="/mis-reservas" element={<MisReservasPage />} />
+          <Route path="/perfil" element={<PerfilPage />} />
           {/* Admin */}
           <Route path="/admin/panel" element={<AdminPanelPage />} />
           <Route path="/admin/viajes/:id" element={<AdminViajePage />} />
