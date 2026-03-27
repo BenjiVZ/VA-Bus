@@ -5,6 +5,11 @@ from datetime import timedelta
 import uuid
 
 
+def generar_codigo_ticket():
+    """Genera un código de ticket único de 8 caracteres."""
+    return uuid.uuid4().hex[:8].upper()
+
+
 class Reserva(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
@@ -47,10 +52,36 @@ class Reserva(models.Model):
         verbose_name="Fecha de Expiración",
         help_text="15 min después de creación. Solo aplica en estado pendiente."
     )
+    codigo_ticket = models.CharField(
+        max_length=8, unique=True, null=True, blank=True,
+        verbose_name="Código de Ticket",
+        help_text="Se genera automáticamente al confirmar la reserva."
+    )
+    es_menor_edad = models.BooleanField(
+        default=False,
+        verbose_name="¿Es menor de edad?"
+    )
+    para_otra_persona = models.BooleanField(
+        default=False,
+        verbose_name="¿Asiento para otra persona?"
+    )
+    nombre_asignado = models.CharField(
+        max_length=200, blank=True, default='',
+        verbose_name="Nombre del asignado",
+        help_text="Nombre de la persona a quien se asigna el asiento"
+    )
+    cedula_asignado = models.CharField(
+        max_length=20, blank=True, default='',
+        verbose_name="Cédula del asignado",
+        help_text="Cédula de la persona a quien se asigna el asiento"
+    )
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.fecha_expiracion:
             self.fecha_expiracion = timezone.now() + timedelta(minutes=15)
+        # Auto-generate ticket code when confirmed
+        if self.estado == 'confirmado' and not self.codigo_ticket:
+            self.codigo_ticket = generar_codigo_ticket()
         super().save(*args, **kwargs)
 
     @property

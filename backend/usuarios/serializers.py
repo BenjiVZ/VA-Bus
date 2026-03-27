@@ -5,7 +5,7 @@ from .models import Usuario
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'cedula', 'telefono', 'is_staff')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'cedula', 'telefono', 'fecha_nacimiento', 'is_staff')
         read_only_fields = ('id',)
 
 
@@ -15,7 +15,7 @@ class RegistroSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name', 'cedula', 'telefono')
+        fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name', 'cedula', 'telefono', 'fecha_nacimiento')
 
     def validate(self, data):
         if data['password'] != data['password2']:

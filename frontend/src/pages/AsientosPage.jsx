@@ -4,7 +4,7 @@ import { getAsientos, crearReserva, getTasaCambio } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
-import { ClipboardList, User, Armchair } from 'lucide-react';
+import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle } from 'lucide-react';
 
 export default function AsientosPage() {
   const { id } = useParams();
@@ -20,6 +20,12 @@ export default function AsientosPage() {
   const [cedulaTipo, setCedulaTipo] = useState('V');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Per-seat options: { seatKey: { es_menor, para_otra, nombre_asignado, cedula_asignado, cedula_tipo_asignado } }
+  const [seatOptions, setSeatOptions] = useState({});
+
+  // Track seats where user toggled "menor" on then off (fraud detection)
+  const [menorToggled, setMenorToggled] = useState({});
 
   useEffect(() => {
     Promise.all([
@@ -46,15 +52,53 @@ export default function AsientosPage() {
       .finally(() => setLoading(false));
   }, [id, user]);
 
+  const getSeatKey = (seat) => `${seat.piso}-${seat.numero}`;
+
   const handleToggleSeat = (seat) => {
+    const key = getSeatKey(seat);
     setSelectedSeats((prev) => {
       const exists = prev.some((s) => s.numero === seat.numero && s.piso === seat.piso);
       if (exists) {
+        // Remove seat options too
+        setSeatOptions((opts) => {
+          const copy = { ...opts };
+          delete copy[key];
+          return copy;
+        });
         return prev.filter((s) => !(s.numero === seat.numero && s.piso === seat.piso));
       }
+      // Initialize seat options
+      setSeatOptions((opts) => ({
+        ...opts,
+        [key]: { es_menor: false, para_otra: false, nombre_asignado: '', cedula_asignado: '', cedula_tipo_asignado: 'V' },
+      }));
       return [...prev, seat];
     });
   };
+
+  const updateSeatOption = (key, field, value) => {
+    // Track if user toggled "es_menor" on then off
+    if (field === 'es_menor') {
+      const currentlyMinor = seatOptions[key]?.es_menor || false;
+      if (currentlyMinor && !value) {
+        // User is unchecking minor → flag this seat
+        setMenorToggled((prev) => ({ ...prev, [key]: true }));
+      }
+    }
+    setSeatOptions((opts) => ({
+      ...opts,
+      [key]: { ...opts[key], [field]: value },
+    }));
+  };
+
+  // Check if any seat currently has es_menor checked
+  const hasMinorSelected = selectedSeats.some((s) => {
+    const opts = seatOptions[getSeatKey(s)] || {};
+    return opts.es_menor;
+  });
+
+  // Check if any seat had minor toggled on then off
+  const hasMinorWarning = selectedSeats.some((s) => menorToggled[getSeatKey(s)]);
 
   const totalUsd = data ? selectedSeats.length * Number(data.viaje.precio_usd) : 0;
   const totalBs = tasa ? totalUsd * tasa : null;
@@ -67,13 +111,36 @@ export default function AsientosPage() {
 
     if (selectedSeats.length === 0) return;
 
+    // Validate: if para_otra, must have nombre_asignado
+    for (const seat of selectedSeats) {
+      const key = getSeatKey(seat);
+      const opts = seatOptions[key] || {};
+      if (opts.para_otra && !opts.nombre_asignado.trim()) {
+        setError(`Asiento #${seat.numero}: Debes ingresar el nombre de la persona asignada.`);
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError('');
 
     try {
       const res = await crearReserva({
         viaje_id: Number(id),
-        asientos: selectedSeats.map((s) => ({ numero: s.numero, piso: s.piso })),
+        asientos: selectedSeats.map((s) => {
+          const key = getSeatKey(s);
+          const opts = seatOptions[key] || {};
+          return {
+            numero: s.numero,
+            piso: s.piso,
+            es_menor: opts.es_menor || false,
+            para_otra: opts.para_otra || false,
+            nombre_asignado: opts.nombre_asignado || '',
+            cedula_asignado: opts.cedula_asignado
+              ? `${opts.cedula_tipo_asignado || 'V'}-${opts.cedula_asignado}`
+              : '',
+          };
+        }),
         nombre_pasajero: nombre,
         cedula_pasajero: cedula ? `${cedulaTipo}-${cedula}` : '',
       });
@@ -190,7 +257,7 @@ export default function AsientosPage() {
             {selectedSeats.length > 0 && (
               <div className="card" style={{ animation: 'fadeIn 0.3s ease' }}>
                 <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <User size={16} /> Datos del Pasajero
+                  <User size={16} /> Datos del Comprador
                 </h4>
                 <div className="form-group">
                   <label>Nombre Completo</label>
@@ -226,13 +293,128 @@ export default function AsientosPage() {
                   </div>
                 </div>
 
+                {/* Per-seat options */}
+                {selectedSeats.length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <h4 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem' }}>
+                      <Armchair size={16} /> Opciones por Asiento
+                    </h4>
+                    {selectedSeats.map((seat) => {
+                      const key = getSeatKey(seat);
+                      const opts = seatOptions[key] || {};
+                      return (
+                        <div key={key} className="seat-options-card">
+                          <div className="seat-options-header">
+                            Asiento #{seat.numero} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· Piso {seat.piso}</span>
+                          </div>
+
+                          <label className="seat-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={opts.es_menor || false}
+                              onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)}
+                            />
+                            <Baby size={14} />
+                            <span>Es menor de edad</span>
+                          </label>
+
+                          {opts.es_menor && (
+                            <div className="seat-minor-block">
+                              <Baby size={16} />
+                              <div>
+                                <strong>Pasaje de menor de edad</strong>
+                                <p>Los pasajes para menores de edad deben ser adquiridos únicamente en taquilla. No es posible comprar este asiento en línea para un menor.</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {!opts.es_menor && menorToggled[key] && (
+                            <div className="seat-minor-warning">
+                              <AlertTriangle size={16} />
+                              <div>
+                                <strong>⚠️ IMPORTANTE</strong>
+                                <p>En caso de que el pasaje de este asiento sea para un menor de edad y no haya sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong> al momento del abordaje.</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <label className="seat-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={opts.para_otra || false}
+                              onChange={(e) => updateSeatOption(key, 'para_otra', e.target.checked)}
+                            />
+                            <UserPlus size={14} />
+                            <span>Asignar a otra persona</span>
+                          </label>
+
+                          {opts.para_otra && (
+                            <div className="seat-assign-fields" style={{ animation: 'fadeIn 0.2s ease' }}>
+                              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                                <label style={{ fontSize: '0.75rem' }}>Nombre del asignado</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={opts.nombre_asignado}
+                                  onChange={(e) => updateSeatOption(key, 'nombre_asignado', e.target.value)}
+                                  placeholder="Nombre y apellido"
+                                  style={{ fontSize: '0.85rem' }}
+                                />
+                              </div>
+                              <div className="form-group" style={{ marginBottom: '0.25rem' }}>
+                                <label style={{ fontSize: '0.75rem' }}>Cédula del asignado</label>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                  <select
+                                    className="form-control"
+                                    value={opts.cedula_tipo_asignado || 'V'}
+                                    onChange={(e) => updateSeatOption(key, 'cedula_tipo_asignado', e.target.value)}
+                                    style={{ width: '60px', flexShrink: 0, fontSize: '0.85rem' }}
+                                  >
+                                    <option value="V">V</option>
+                                    <option value="J">J</option>
+                                    <option value="E">E</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    className="form-control"
+                                    value={opts.cedula_asignado}
+                                    onChange={(e) => updateSeatOption(key, 'cedula_asignado', e.target.value.replace(/\D/g, ''))}
+                                    placeholder="12345678"
+                                    inputMode="numeric"
+                                    style={{ fontSize: '0.85rem' }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {hasMinorWarning && !hasMinorSelected && (
+                  <div className="seat-minor-warning" style={{ marginTop: '0.75rem' }}>
+                    <AlertTriangle size={16} />
+                    <div>
+                      <strong>⚠️ ADVERTENCIA GENERAL</strong>
+                      <p>Si alguno de los pasajes adquiridos es utilizado por un menor de edad sin haber sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   className="btn btn-success btn-lg"
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', marginTop: '1rem' }}
                   onClick={handleReservar}
-                  disabled={submitting || selectedSeats.length === 0}
+                  disabled={submitting || selectedSeats.length === 0 || hasMinorSelected}
                 >
-                  {submitting ? 'Reservando...' : (
+                  {hasMinorSelected ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Baby size={16} />
+                      Compra en taquilla requerida
+                    </span>
+                  ) : submitting ? 'Reservando...' : (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                       <Armchair size={16} />
                       {`Reservar ${selectedSeats.length} asiento${selectedSeats.length > 1 ? 's' : ''}`}

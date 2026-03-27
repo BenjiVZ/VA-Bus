@@ -21,7 +21,22 @@ class ViajeListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = Viaje.objects.filter(activo=True).select_related('ruta', 'autobus')
+        from django.utils import timezone
+        from django.db.models import Q
+        hoy = timezone.now().date()
+
+        queryset = Viaje.objects.filter(
+            activo=True,
+            fecha_salida__gte=hoy,
+        ).select_related('ruta', 'autobus')
+
+        # Filter by sales window
+        queryset = queryset.filter(
+            Q(fecha_inicio_venta__isnull=True) | Q(fecha_inicio_venta__lte=hoy)
+        ).filter(
+            Q(fecha_fin_venta__isnull=True) | Q(fecha_fin_venta__gte=hoy)
+        )
+
         origen = self.request.query_params.get('origen')
         destino = self.request.query_params.get('destino')
         fecha = self.request.query_params.get('fecha')
@@ -109,9 +124,28 @@ class TasaCambioView(APIView):
     def get(self, request):
         config = ConfiguracionGeneral.load()
 
+        # Auto-update if rate is 0 or older than 6 hours
+        should_update = False
         if not config.tasa_bcv or config.tasa_bcv == 0:
-            actualizar_tasa_bcv()
-            config.refresh_from_db()
+            should_update = True
+        elif config.tasa_actualizada:
+            from django.utils import timezone
+            from datetime import timedelta
+            age = timezone.now() - config.tasa_actualizada
+            if age > timedelta(hours=6):
+                should_update = True
+        else:
+            should_update = True
+
+        if should_update:
+            import threading
+            def update():
+                actualizar_tasa_bcv()
+            threading.Thread(target=update, daemon=True).start()
+            # If rate is 0, do it synchronously so we have a value to return
+            if not config.tasa_bcv or config.tasa_bcv == 0:
+                actualizar_tasa_bcv()
+                config.refresh_from_db()
 
         return Response({
             'tasa_bcv': float(config.tasa_bcv),

@@ -123,4 +123,11 @@ export const adminGetComprobantes = (estado) =>
 export const adminValidarComprobante = (comprobanteId, estado, nota = '') =>
   api.patch(`/admin/comprobantes/${comprobanteId}/validar/`, { estado, nota });
 
+// Tickets
+export const getTicket = (grupoPago) =>
+  api.get(`/ticket/${grupoPago}/`);
+
+export const verificarTicket = (codigoTicket) =>
+  api.get(`/verificar/${codigoTicket}/`);
+
 export default api;

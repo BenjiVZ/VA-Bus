@@ -59,6 +59,10 @@ class CrearReservaView(APIView):
         for asiento_data in asientos:
             numero = asiento_data.get('numero')
             piso = asiento_data.get('piso', 1)
+            es_menor = asiento_data.get('es_menor', False)
+            para_otra = asiento_data.get('para_otra', False)
+            nombre_asig = asiento_data.get('nombre_asignado', '')
+            cedula_asig = asiento_data.get('cedula_asignado', '')
 
             try:
                 reserva = Reserva.objects.create(
@@ -71,6 +75,10 @@ class CrearReservaView(APIView):
                     estado='pendiente',
                     grupo_pago=grupo_pago,
                     fecha_expiracion=fecha_expiracion,
+                    es_menor_edad=es_menor,
+                    para_otra_persona=para_otra,
+                    nombre_asignado=nombre_asig,
+                    cedula_asignado=cedula_asig,
                 )
                 reservas_creadas.append(reserva)
             except IntegrityError:
@@ -137,7 +145,7 @@ class AdminCambiarEstadoView(APIView):
 
     def patch(self, request, reserva_id):
         try:
-            reserva = Reserva.objects.select_related('viaje', 'viaje__ruta', 'usuario').get(pk=reserva_id)
+            reserva = Reserva.objects.select_related('viaje', 'viaje__ruta', 'viaje__autobus', 'usuario').get(pk=reserva_id)
         except Reserva.DoesNotExist:
             return Response({"error": "Reserva no encontrada."}, status=404)
 
@@ -145,12 +153,44 @@ class AdminCambiarEstadoView(APIView):
         if nuevo_estado not in ['pendiente', 'confirmado', 'cancelado']:
             return Response({"error": "Estado inválido."}, status=400)
 
+        old_estado = reserva.estado
         reserva.estado = nuevo_estado
         reserva.save()
+
+        # If confirming, send email with PDF ticket
+        email_enviado = False
+        if nuevo_estado == 'confirmado' and old_estado != 'confirmado':
+            import threading
+            from .services import enviar_email_ticket
+
+            config = ConfiguracionGeneral.load()
+            viaje = reserva.viaje
+            usuario = reserva.usuario
+
+            # Get all reservas in same grupo_pago for this user
+            if reserva.grupo_pago:
+                reservas_grupo = list(Reserva.objects.filter(
+                    grupo_pago=reserva.grupo_pago,
+                    estado='confirmado',
+                ).select_related('viaje', 'viaje__ruta', 'viaje__autobus'))
+            else:
+                reservas_grupo = [reserva]
+
+            base_url = request.build_absolute_uri('/').rstrip('/')
+            # Use frontend URL for QR codes
+            frontend_url = base_url.replace(':8001', ':3000')
+
+            # Send email in a background thread to avoid blocking
+            def send_email():
+                enviar_email_ticket(reservas_grupo, viaje, config, usuario, frontend_url)
+
+            threading.Thread(target=send_email, daemon=True).start()
+            email_enviado = True
 
         return Response({
             'mensaje': f'Reserva #{reserva.id} actualizada a "{reserva.get_estado_display()}".',
             'reserva': AdminReservaSerializer(reserva).data,
+            'email_enviado': email_enviado,
         })
 
 
@@ -231,3 +271,99 @@ class AdminBusesListView(APIView):
         from viajes.serializers import AutobusSerializer
         buses = Autobus.objects.prefetch_related('pisos_config').all()
         return Response(AutobusSerializer(buses, many=True).data)
+
+
+class TicketView(APIView):
+    """Retorna datos del ticket para un grupo de pago confirmado."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, grupo_pago):
+        reservas = Reserva.objects.filter(
+            grupo_pago=grupo_pago,
+            usuario=request.user,
+            estado='confirmado',
+        ).select_related('viaje', 'viaje__ruta', 'viaje__autobus')
+
+        if not reservas.exists():
+            return Response(
+                {"error": "No se encontraron reservas confirmadas para este grupo."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        viaje = reservas.first().viaje
+        config = ConfiguracionGeneral.load()
+
+        tickets = []
+        for r in reservas:
+            tickets.append({
+                'id': r.id,
+                'codigo_ticket': r.codigo_ticket,
+                'numero_asiento': r.numero_asiento,
+                'piso_asiento': r.piso_asiento,
+                'nombre_pasajero': r.nombre_pasajero,
+                'cedula_pasajero': r.cedula_pasajero,
+                'es_menor_edad': r.es_menor_edad,
+                'para_otra_persona': r.para_otra_persona,
+                'nombre_asignado': r.nombre_asignado,
+                'cedula_asignado': r.cedula_asignado,
+                'fecha_confirmacion': r.fecha_actualizacion.isoformat(),
+            })
+
+        return Response({
+            'grupo_pago': str(grupo_pago),
+            'empresa': config.nombre_empresa if config else 'VA-Bus',
+            'rif': config.rif if config else '',
+            'viaje': {
+                'origen': viaje.ruta.origen,
+                'destino': viaje.ruta.destino,
+                'fecha_salida': str(viaje.fecha_salida),
+                'hora_salida': str(viaje.hora_salida),
+                'autobus': viaje.autobus.nombre,
+                'precio_usd': float(viaje.precio_usd),
+                'tipo_viaje': viaje.tipo_viaje,
+                'fecha_vuelta': str(viaje.fecha_vuelta) if viaje.fecha_vuelta else None,
+                'hora_vuelta': str(viaje.hora_vuelta) if viaje.hora_vuelta else None,
+            },
+            'tickets': tickets,
+        })
+
+
+class VerificarTicketView(APIView):
+    """Endpoint público para verificar un ticket por código QR."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, codigo_ticket):
+        try:
+            reserva = Reserva.objects.select_related(
+                'viaje', 'viaje__ruta', 'viaje__autobus'
+            ).get(codigo_ticket=codigo_ticket.upper())
+        except Reserva.DoesNotExist:
+            return Response({
+                'valido': False,
+                'mensaje': 'Ticket no encontrado. Código inválido.',
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        viaje = reserva.viaje
+        es_valido = reserva.estado == 'confirmado'
+
+        return Response({
+            'valido': es_valido,
+            'estado': reserva.get_estado_display(),
+            'mensaje': 'Ticket válido ✅' if es_valido else f'Ticket {reserva.get_estado_display()} ⚠️',
+            'datos': {
+                'nombre_pasajero': reserva.nombre_pasajero,
+                'cedula_pasajero': reserva.cedula_pasajero,
+                'es_menor_edad': reserva.es_menor_edad,
+                'para_otra_persona': reserva.para_otra_persona,
+                'nombre_asignado': reserva.nombre_asignado,
+                'cedula_asignado': reserva.cedula_asignado,
+                'numero_asiento': reserva.numero_asiento,
+                'piso_asiento': reserva.piso_asiento,
+                'origen': viaje.ruta.origen,
+                'destino': viaje.ruta.destino,
+                'fecha_salida': str(viaje.fecha_salida),
+                'hora_salida': str(viaje.hora_salida),
+                'autobus': viaje.autobus.nombre,
+                'tipo_viaje': viaje.tipo_viaje,
+            },
+        })

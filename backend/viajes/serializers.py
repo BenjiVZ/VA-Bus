@@ -32,8 +32,9 @@ class ViajeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Viaje
-        fields = ('id', 'ruta', 'autobus', 'fecha_salida', 'hora_salida',
-                  'precio_usd', 'activo', 'asientos_disponibles')
+        fields = ('id', 'ruta', 'autobus', 'tipo_viaje', 'fecha_salida', 'hora_salida',
+                  'fecha_vuelta', 'hora_vuelta', 'precio_usd', 'activo',
+                  'asientos_disponibles', 'fecha_inicio_venta', 'fecha_fin_venta')
 
     def get_asientos_disponibles(self, obj):
         total = obj.autobus.capacidad_total

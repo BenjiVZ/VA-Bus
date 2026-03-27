@@ -11,7 +11,8 @@ class ReservaSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'viaje', 'numero_asiento', 'piso_asiento',
             'estado', 'estado_display', 'nombre_pasajero', 'cedula_pasajero',
-            'fecha_creacion', 'fecha_actualizacion', 'viaje_info'
+            'es_menor_edad', 'para_otra_persona', 'nombre_asignado', 'cedula_asignado',
+            'fecha_creacion', 'fecha_actualizacion', 'viaje_info', 'grupo_pago'
         )
         read_only_fields = ('id', 'estado', 'fecha_creacion', 'fecha_actualizacion')
 
@@ -33,7 +34,7 @@ class CrearReservaSerializer(serializers.Serializer):
     asientos = serializers.ListField(
         child=serializers.DictField(),
         min_length=1,
-        help_text="Lista de asientos: [{'numero': 1, 'piso': 1}, ...]"
+        help_text="Lista de asientos: [{'numero': 1, 'piso': 1, 'es_menor': false, 'para_otra': false, 'nombre_asignado': '', 'cedula_asignado': ''}, ...]"
     )
     nombre_pasajero = serializers.CharField(max_length=200, required=False, default='')
     cedula_pasajero = serializers.CharField(max_length=20, required=False, default='')
@@ -50,6 +51,7 @@ class AdminReservaSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'viaje', 'numero_asiento', 'piso_asiento',
             'estado', 'estado_display', 'nombre_pasajero', 'cedula_pasajero',
+            'es_menor_edad', 'para_otra_persona', 'nombre_asignado', 'cedula_asignado',
             'fecha_creacion', 'fecha_actualizacion', 'viaje_info', 'usuario_info'
         )
 

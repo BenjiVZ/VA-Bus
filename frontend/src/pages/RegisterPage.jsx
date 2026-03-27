@@ -14,6 +14,7 @@ export default function RegisterPage() {
     cedula_tipo: 'V',
     cedula: '',
     telefono: '',
+    fecha_nacimiento: '',
     password: '',
     password2: '',
   });
@@ -167,6 +168,18 @@ export default function RegisterPage() {
                   onChange={handleChange}
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>Fecha de Nacimiento</label>
+              <input
+                type="date"
+                name="fecha_nacimiento"
+                className="form-control"
+                value={form.fecha_nacimiento}
+                onChange={handleChange}
+                required
+              />
             </div>
 
             <div className="passenger-form">

@@ -4,11 +4,16 @@ from .views import (
     AdminReservasViajeView, AdminCambiarEstadoView,
     AdminCambiarAsientoView, AdminViajesListView,
     AdminBusesListView,
+    TicketView, VerificarTicketView,
 )
 
 urlpatterns = [
     path('reservas/', CrearReservaView.as_view(), name='crear-reserva'),
     path('mis-reservas/', MisReservasView.as_view(), name='mis-reservas'),
+
+    # Tickets
+    path('ticket/<uuid:grupo_pago>/', TicketView.as_view(), name='ticket'),
+    path('verificar/<str:codigo_ticket>/', VerificarTicketView.as_view(), name='verificar-ticket'),
 
     # Admin endpoints
     path('admin/viajes/', AdminViajesListView.as_view(), name='admin-viajes'),

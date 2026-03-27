@@ -99,6 +99,15 @@ export default function MisReservasPage() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                     Reserva #{reserva.id}
                   </div>
+                  {reserva.estado === 'confirmado' && reserva.grupo_pago && (
+                    <button
+                      className="btn btn-primary"
+                      style={{ marginTop: '0.5rem', fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                      onClick={() => navigate(`/ticket/${reserva.grupo_pago}`)}
+                    >
+                      🎫 Ver Ticket
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

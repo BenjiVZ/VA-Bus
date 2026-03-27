@@ -44,10 +44,36 @@ class AutobusAdmin(admin.ModelAdmin):
 
 @admin.register(Viaje)
 class ViajeAdmin(admin.ModelAdmin):
-    list_display = ('ruta', 'autobus', 'fecha_salida', 'hora_salida', 'precio_usd', 'activo')
-    list_filter = ('activo', 'fecha_salida', 'ruta')
+    list_display = (
+        'ruta', 'autobus', 'tipo_viaje', 'fecha_salida', 'hora_salida',
+        'fecha_vuelta', 'precio_usd', 'fecha_fin_venta', 'activo'
+    )
+    list_filter = ('activo', 'tipo_viaje', 'fecha_salida', 'ruta')
     search_fields = ('ruta__origen', 'ruta__destino')
     date_hierarchy = 'fecha_salida'
+    fieldsets = (
+        ('Ruta y Autobús', {
+            'fields': ('ruta', 'autobus')
+        }),
+        ('Viaje de Ida', {
+            'fields': ('tipo_viaje', 'fecha_salida', 'hora_salida')
+        }),
+        ('Viaje de Vuelta', {
+            'fields': ('fecha_vuelta', 'hora_vuelta'),
+            'classes': ('collapse',),
+            'description': 'Solo aplica si el tipo de viaje es "Ida y Vuelta".'
+        }),
+        ('Precio y Disponibilidad', {
+            'fields': ('precio_usd', 'activo')
+        }),
+        ('Ventana de Compra', {
+            'fields': ('fecha_inicio_venta', 'fecha_fin_venta'),
+            'description': 'Cuándo se abren y cuándo expiran las reservas. Dejar vacío = siempre disponible.'
+        }),
+    )
+
+    class Media:
+        js = ('admin/js/viaje_tipo.js',)
 
 
 @admin.register(ConfiguracionGeneral)

@@ -71,12 +71,41 @@ class PisoAutobus(models.Model):
 
 
 class Viaje(models.Model):
+    TIPO_CHOICES = [
+        ('ida', 'Solo Ida'),
+        ('ida_vuelta', 'Ida y Vuelta'),
+    ]
+
     ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE, related_name='viajes', verbose_name="Ruta")
     autobus = models.ForeignKey(Autobus, on_delete=models.CASCADE, related_name='viajes', verbose_name="Autobús")
+    tipo_viaje = models.CharField(
+        max_length=15, choices=TIPO_CHOICES, default='ida',
+        verbose_name="Tipo de Viaje"
+    )
     fecha_salida = models.DateField(verbose_name="Fecha de Salida")
     hora_salida = models.TimeField(verbose_name="Hora de Salida")
+    fecha_vuelta = models.DateField(
+        null=True, blank=True,
+        verbose_name="Fecha de Vuelta",
+        help_text="Solo aplica para viajes de Ida y Vuelta."
+    )
+    hora_vuelta = models.TimeField(
+        null=True, blank=True,
+        verbose_name="Hora de Vuelta",
+        help_text="Solo aplica para viajes de Ida y Vuelta."
+    )
     precio_usd = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Precio (USD)")
     activo = models.BooleanField(default=True, verbose_name="Activo")
+    fecha_inicio_venta = models.DateField(
+        null=True, blank=True,
+        verbose_name="Inicio de Venta",
+        help_text="Desde cuándo se pueden reservar puestos. Vacío = ya disponible."
+    )
+    fecha_fin_venta = models.DateField(
+        null=True, blank=True,
+        verbose_name="Expiración de Compra",
+        help_text="Fecha límite para comprar puestos. Vacío = abierto hasta la salida."
+    )
 
     class Meta:
         verbose_name = "Viaje"
@@ -84,7 +113,8 @@ class Viaje(models.Model):
         ordering = ['fecha_salida', 'hora_salida']
 
     def __str__(self):
-        return f"{self.ruta} - {self.fecha_salida} {self.hora_salida}"
+        tipo = "↔" if self.tipo_viaje == 'ida_vuelta' else "→"
+        return f"{self.ruta.origen} {tipo} {self.ruta.destino} - {self.fecha_salida} {self.hora_salida}"
 
 
 class ConfiguracionGeneral(models.Model):
