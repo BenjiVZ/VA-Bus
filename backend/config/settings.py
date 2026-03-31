@@ -4,6 +4,10 @@ Django settings for VA-Bus project.
 
 from pathlib import Path
 from datetime import timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -118,18 +122,12 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True  # Development only
 CORS_ALLOW_CREDENTIALS = True
 
-# Email Configuration
-# In development, emails are printed to console.
-# In production, configure SMTP (e.g. Gmail, SendGrid, etc.)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Dev: prints to console
-
-# ── Production SMTP (uncomment and configure) ──
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'tu-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'tu-app-password'
-
-DEFAULT_FROM_EMAIL = 'Aerorutas de Venezuela <noreply@aeroruras.com>'
+# Email Configuration (Gmail SMTP)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Aerorutas de Venezuela <noreply@aerorutas.com>')
 

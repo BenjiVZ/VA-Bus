@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Flujo del Cliente — Aerorutas de Venezuela</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #f0f4f8; display: flex; justify-content: center; padding: 40px 20px; }
+  .diagram { background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); width: 900px; overflow: hidden; }
+  .header { background: linear-gradient(135deg, #0a1628 0%, #1a365d 100%); padding: 28px 40px; text-align: center; }
+  .header h1 { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+  .header p { color: #90cdf4; font-size: 13px; margin-top: 4px; }
+  .content { padding: 40px; }
+
+  .flow-row { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .arrow-down { display: flex; justify-content: center; margin-bottom: 8px; }
+  .arrow-down svg { display: block; }
+
+  .node { display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid transparent; min-width: 220px; justify-content: center; }
+  .node-start { background: #c6f6d5; color: #22543d; border-color: #48bb78; border-radius: 50px; min-width: 140px; }
+  .node-blue { background: #ebf8ff; color: #1a365d; border-color: #4299e1; }
+  .node-orange { background: #fefcbf; color: #744210; border-color: #ecc94b; }
+  .node-green { background: #c6f6d5; color: #22543d; border-color: #48bb78; }
+  .node-red { background: #fed7d7; color: #742a2a; border-color: #fc8181; }
+  .node-purple { background: #e9d8fd; color: #44337a; border-color: #9f7aea; }
+  .node-icon { font-size: 20px; }
+
+  .diamond { width: 180px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
+  .diamond-inner { background: #fefcbf; border: 2px solid #d69e2e; width: 180px; height: 80px; transform: rotate(45deg); border-radius: 8px; position: absolute; }
+  .diamond-text { position: relative; z-index: 1; font-weight: 700; font-size: 13px; color: #744210; text-align: center; }
+
+  .branch-row { display: flex; justify-content: center; gap: 80px; margin-top: 8px; margin-bottom: 8px; }
+  .branch-label { font-size: 12px; font-weight: 700; color: #718096; margin-bottom: 4px; text-align: center; }
+
+  .side-panel { display: flex; gap: 20px; justify-content: center; margin-top: 32px; padding-top: 24px; border-top: 2px dashed #e2e8f0; }
+
+  .step-num { background: #1a365d; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+
+  .legend { display: flex; gap: 20px; justify-content: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #4a5568; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; }
+</style>
+</head>
+<body>
+<div class="diagram">
+  <div class="header">
+    <h1>🚌 Flujo del Cliente — Aerorutas de Venezuela</h1>
+    <p>Diagrama de flujo del proceso de reserva de boletos</p>
+  </div>
+  <div class="content">
+
+    <!-- Step 1: Start -->
+    <div class="flow-row">
+      <div class="node node-start"><span class="node-icon">🟢</span> INICIO</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Step 2: Login/Register -->
+    <div class="flow-row">
+      <div class="node node-blue"><span class="step-num">1</span><span class="node-icon">🔐</span> Registro / Inicio de Sesión</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Step 3: Search -->
+    <div class="flow-row">
+      <div class="node node-blue"><span class="step-num">2</span><span class="node-icon">🔍</span> Buscar Viajes (ruta, fecha)</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Step 4: Select trip -->
+    <div class="flow-row">
+      <div class="node node-blue"><span class="step-num">3</span><span class="node-icon">🚌</span> Seleccionar Viaje Disponible</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Step 5: Select seats -->
+    <div class="flow-row">
+      <div class="node node-blue"><span class="step-num">4</span><span class="node-icon">💺</span> Seleccionar Asientos (mapa interactivo)</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Step 6: Passenger data + reserve -->
+    <div class="flow-row">
+      <div class="node node-blue"><span class="step-num">5</span><span class="node-icon">👤</span> Datos del Pasajero → Reservar</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Step 7: Payment -->
+    <div class="flow-row">
+      <div class="node node-orange"><span class="step-num">6</span><span class="node-icon">💳</span> Subir Comprobante de Pago</div>
+    </div>
+    <div class="arrow-down"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+
+    <!-- Diamond -->
+    <div class="flow-row">
+      <div class="diamond">
+        <div class="diamond-inner"></div>
+        <div class="diamond-text">¿Pago<br>Aprobado?</div>
+      </div>
+    </div>
+    <div class="arrow-down" style="height:10px;"></div>
+
+    <!-- Branches -->
+    <div class="branch-row">
+      <div style="text-align:center;">
+        <div class="branch-label">✅ SÍ</div>
+        <div class="node node-green"><span class="step-num">7</span><span class="node-icon">✅</span> Reserva Confirmada</div>
+        <div class="arrow-down" style="margin-top:8px;"><svg width="20" height="30"><line x1="10" y1="0" x2="10" y2="22" stroke="#4a5568" stroke-width="2"/><polygon points="4,22 10,30 16,22" fill="#4a5568"/></svg></div>
+        <div class="node node-green"><span class="step-num">8</span><span class="node-icon">🎫</span> Ticket + Código QR</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="branch-label">❌ NO</div>
+        <div class="node node-red"><span class="node-icon">🚫</span> Reserva Cancelada</div>
+      </div>
+    </div>
+
+    <!-- Side features -->
+    <div class="side-panel">
+      <div class="node node-purple"><span class="node-icon">👤</span> Mi Perfil (editar datos, contraseña)</div>
+      <div class="node node-purple"><span class="node-icon">📋</span> Mis Reservas (historial)</div>
+      <div class="node node-purple"><span class="node-icon">🔍</span> Verificar Ticket (escanear QR)</div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ebf8ff;border-color:#4299e1;"></div> Paso principal</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fefcbf;border-color:#ecc94b;"></div> Pago / Decisión</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c6f6d5;border-color:#48bb78;"></div> Éxito</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fed7d7;border-color:#fc8181;"></div> Error</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e9d8fd;border-color:#9f7aea;"></div> Funciones adicionales</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

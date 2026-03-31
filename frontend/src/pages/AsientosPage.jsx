@@ -201,6 +201,10 @@ export default function AsientosPage() {
 
         {error && <div className="alert alert-error">{error}</div>}
 
+        <div className="alert alert-info" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          👶 <strong>Nota:</strong> Los menores de edad deben viajar acompañados por un adulto responsable.
+        </div>
+
         <div className="asientos-layout">
           <div>
             <div className="seat-map-container">
