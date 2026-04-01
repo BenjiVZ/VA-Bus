@@ -146,14 +146,14 @@ today = date.today()
 rutas_viajes = [
     ('Mérida', 'Maracaibo',               time(20, 30), 25.00),
     ('Maracay', 'Mérida',                  time(17, 30), 30.00),
-    ('Mérida', 'Caracas (La Bandera)',     time(18, 0),  35.00),
-    ('Maracay', 'San Antonio',             time(17, 45), 28.00),
+    ('Mérida', 'Caracas (La Bandera)',     time(18, 0),  30.00),
+    ('Maracay', 'San Antonio',             time(17, 45), 45.00),
     ('Maracay', 'Maracaibo',               time(18, 0),  32.00),
-    ('Caracas (La Bandera)', 'San Cristóbal', time(15, 0), 30.00),
-    ('Caracas (La Bandera)', 'Maracaibo',  time(9, 0),   35.00),
-    ('Maracaibo', 'Puerto La Cruz',        time(17, 0),  40.00),
-    ('San Antonio', 'Puerto La Cruz',      time(11, 0),  45.00),
-    ('Caracas (La Bandera)', 'Valera',     time(17, 0),  22.00),
+    ('Caracas (La Bandera)', 'San Cristóbal', time(15, 0), 35.00),
+    ('Caracas (La Bandera)', 'Maracaibo',  time(9, 0),   28.00),
+    ('Maracaibo', 'Puerto La Cruz',        time(17, 0),  55.00),
+    ('San Antonio', 'Puerto La Cruz',      time(11, 0),  55.00),
+    ('Caracas (La Bandera)', 'Valera',     time(17, 0),  25.00),
 ]
 
 buses = list(Autobus.objects.all().order_by('placa'))
