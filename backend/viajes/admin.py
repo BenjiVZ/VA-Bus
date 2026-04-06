@@ -72,6 +72,11 @@ class ViajeAdmin(admin.ModelAdmin):
         }),
     )
 
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['portal_url'] = '/admin/portal-viajes/'
+        return super().changelist_view(request, extra_context)
+
     class Media:
         js = ('admin/js/viaje_tipo.js',)
 

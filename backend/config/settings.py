@@ -11,7 +11,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-va-bus-dev-key-change-in-production-2024'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-va-bus-dev-key-change-in-production-2024')
 
 DEBUG = True
 
@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'viajes',
     'reservas',
     'pagos',
+    'api_externa',
 ]
 
 MIDDLEWARE = [
@@ -51,7 +52,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'viajes' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -109,6 +110,18 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
+    # ── Throttling global (proteccion anti-DDoS) ──
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',       # Usuarios no autenticados: 60 req/min
+        'user': '120/minute',      # Usuarios autenticados: 120 req/min
+        'login': '5/minute',       # Login: maximo 5 intentos/min
+        'registro': '3/minute',    # Registro: maximo 3 cuentas/min
+        'externo': '30/minute',    # API externa: 30 req/min
+    },
 }
 
 # JWT Settings
@@ -131,3 +144,12 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Aerorutas de Venezuela <noreply@aerorutas.com>')
 
+# ── Seguridad: Limite de tamaño de archivos (5MB) ──
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5MB
+
+# ── Google OAuth ──
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+
+# ── API Externa (Sistema de Control) ──
+EXTERNAL_API_KEY = os.getenv('EXTERNAL_API_KEY', '')

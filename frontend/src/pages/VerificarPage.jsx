@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { verificarTicket } from '../services/api';
 import { MapPin, Calendar, Clock, Bus, Armchair, User, CreditCard } from 'lucide-react';
-import './TicketPage.css';
+import '../styles/TicketPage.css';
 
 export default function VerificarPage() {
   const { codigoTicket } = useParams();

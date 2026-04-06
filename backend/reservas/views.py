@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import timedelta
 import uuid as uuid_lib
@@ -56,39 +56,61 @@ class CrearReservaView(APIView):
         reservas_creadas = []
         errores = []
 
-        for asiento_data in asientos:
-            numero = asiento_data.get('numero')
-            piso = asiento_data.get('piso', 1)
-            es_menor = asiento_data.get('es_menor', False)
-            para_otra = asiento_data.get('para_otra', False)
-            nombre_asig = asiento_data.get('nombre_asignado', '')
-            cedula_asig = asiento_data.get('cedula_asignado', '')
+        # ── TRANSACCIÓN ATÓMICA: protege contra reservas simultáneas ──
+        try:
+            with transaction.atomic():
+                # 1. Primero, auto-cancelar reservas expiradas de este viaje
+                Reserva.limpiar_expiradas(viaje=viaje)
 
-            try:
-                reserva = Reserva.objects.create(
-                    usuario=request.user,
-                    viaje=viaje,
-                    numero_asiento=numero,
-                    piso_asiento=piso,
-                    nombre_pasajero=nombre,
-                    cedula_pasajero=cedula,
-                    estado='pendiente',
-                    grupo_pago=grupo_pago,
-                    fecha_expiracion=fecha_expiracion,
-                    es_menor_edad=es_menor,
-                    para_otra_persona=para_otra,
-                    nombre_asignado=nombre_asig,
-                    cedula_asignado=cedula_asig,
+                for asiento_data in asientos:
+                    numero = asiento_data.get('numero')
+                    piso = asiento_data.get('piso', 1)
+                    es_menor = asiento_data.get('es_menor', False)
+                    para_otra = asiento_data.get('para_otra', False)
+                    nombre_asig = asiento_data.get('nombre_asignado', '')
+                    cedula_asig = asiento_data.get('cedula_asignado', '')
+
+                    # 2. Bloqueo pesimista: select_for_update() bloquea las filas
+                    #    hasta que la transacción termine, impidiendo que otro
+                    #    usuario reserve el mismo asiento al mismo tiempo.
+                    asiento_ocupado = Reserva.objects.select_for_update().filter(
+                        viaje=viaje,
+                        numero_asiento=numero,
+                        piso_asiento=piso,
+                        estado__in=['pendiente', 'apartado', 'confirmado']
+                    ).exists()
+
+                    if asiento_ocupado:
+                        errores.append(f"Asiento {numero} (Piso {piso}) ya está reservado.")
+                        continue
+
+                    reserva = Reserva.objects.create(
+                        usuario=request.user,
+                        viaje=viaje,
+                        numero_asiento=numero,
+                        piso_asiento=piso,
+                        nombre_pasajero=nombre,
+                        cedula_pasajero=cedula,
+                        estado='pendiente',
+                        grupo_pago=grupo_pago,
+                        fecha_expiracion=fecha_expiracion,
+                        es_menor_edad=es_menor,
+                        para_otra_persona=para_otra,
+                        nombre_asignado=nombre_asig,
+                        cedula_asignado=cedula_asig,
+                    )
+                    reservas_creadas.append(reserva)
+
+                # Si ningún asiento se pudo reservar, revertir todo
+                if not reservas_creadas:
+                    raise IntegrityError("Ningún asiento disponible")
+
+        except IntegrityError:
+            if not reservas_creadas:
+                return Response(
+                    {"error": "No se pudo crear ninguna reserva.", "detalles": errores},
+                    status=status.HTTP_409_CONFLICT
                 )
-                reservas_creadas.append(reserva)
-            except IntegrityError:
-                errores.append(f"Asiento {numero} (Piso {piso}) ya está reservado.")
-
-        if errores and not reservas_creadas:
-            return Response(
-                {"error": "No se pudo crear ninguna reserva.", "detalles": errores},
-                status=status.HTTP_409_CONFLICT
-            )
 
         return Response({
             "mensaje": "Reserva(s) creada(s). Tienes 15 minutos para completar el pago.",
@@ -210,12 +232,13 @@ class AdminCambiarAsientoView(APIView):
         if not nuevo_numero:
             return Response({"error": "Debe especificar numero_asiento."}, status=400)
 
-        # Check if the target seat is available
+        # Limpiar expiradas y verificar disponibilidad
+        Reserva.limpiar_expiradas(viaje=reserva.viaje)
         exists = Reserva.objects.filter(
             viaje=reserva.viaje,
             numero_asiento=nuevo_numero,
             piso_asiento=nuevo_piso,
-            estado__in=['pendiente', 'confirmado']
+            estado__in=['pendiente', 'apartado', 'confirmado']
         ).exclude(pk=reserva.pk).exists()
 
         if exists:
@@ -240,7 +263,7 @@ class AdminViajesListView(APIView):
     def get(self, request):
         from django.db.models import Count, Q
         viajes = Viaje.objects.filter(activo=True).select_related('ruta', 'autobus').annotate(
-            total_reservas=Count('reservas', filter=Q(reservas__estado__in=['pendiente', 'confirmado'])),
+            total_reservas=Count('reservas', filter=Q(reservas__estado__in=['pendiente', 'apartado', 'confirmado'])),
             reservas_confirmadas=Count('reservas', filter=Q(reservas__estado='confirmado')),
             reservas_pendientes=Count('reservas', filter=Q(reservas__estado='pendiente')),
         ).order_by('fecha_salida', 'hora_salida')

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getRutas } from '../services/api';
 import { Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar } from 'lucide-react';
 import FleetGallery from '../components/FleetGallery';
-import '../components/FleetGallery.css';
+import '../styles/FleetGallery.css';
 
 export default function HomePage() {
   const navigate = useNavigate();

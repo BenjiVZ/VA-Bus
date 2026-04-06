@@ -50,6 +50,9 @@ api.interceptors.response.use(
 export const login = (username, password) =>
   api.post('/auth/login/', { username, password });
 
+export const googleLogin = (credential) =>
+  api.post('/auth/google-login/', { credential });
+
 export const registro = (data) =>
   api.post('/auth/registro/', data);
 
@@ -61,6 +64,20 @@ export const actualizarPerfil = (data) =>
 
 export const cambiarPassword = (data) =>
   api.post('/auth/cambiar-password/', data);
+
+// Verificación de email
+export const verificarEmail = (email, codigo) =>
+  api.post('/auth/verificar-email/', { email, codigo });
+
+export const reenviarCodigo = (email) =>
+  api.post('/auth/reenviar-codigo/', { email });
+
+// Recuperar contraseña
+export const solicitarResetPassword = (email) =>
+  api.post('/auth/recuperar-password/', { email });
+
+export const resetPassword = (email, codigo, new_password, new_password2) =>
+  api.post('/auth/reset-password/', { email, codigo, new_password, new_password2 });
 
 // Viajes
 export const getRutas = () =>

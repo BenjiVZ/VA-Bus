@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login, getPerfil } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -45,6 +46,18 @@ export default function LoginPage() {
 
           {error && <div className="alert alert-error">{error}</div>}
 
+          {/* ── Botón Google ── */}
+          <GoogleLoginButton />
+
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '1rem',
+            margin: '1.25rem 0', color: '#94a3b8', fontSize: '0.85rem'
+          }}>
+            <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+            o ingresa con tu usuario
+            <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+          </div>
+
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Usuario</label>
@@ -80,6 +93,12 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+            <Link to="/recuperar-password" style={{ color: '#0052cc', fontSize: '0.9rem' }}>
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+
           <div className="auth-footer">
             ¿No tienes cuenta? <Link to="/registro">Regístrate aquí</Link>
           </div>
@@ -88,3 +107,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

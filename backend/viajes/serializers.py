@@ -39,9 +39,11 @@ class ViajeListSerializer(serializers.ModelSerializer):
     def get_asientos_disponibles(self, obj):
         total = obj.autobus.capacidad_total
         from reservas.models import Reserva
+        # Limpiar expiradas para tener conteo real
+        Reserva.limpiar_expiradas(viaje=obj)
         ocupados = Reserva.objects.filter(
             viaje=obj,
-            estado__in=['pendiente', 'confirmado']
+            estado__in=['pendiente', 'apartado', 'confirmado']
         ).count()
         return total - ocupados
 

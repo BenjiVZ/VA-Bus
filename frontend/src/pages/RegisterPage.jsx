@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registro, login, getPerfil } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import GoogleLoginButton from '../components/GoogleLoginButton';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -49,7 +50,8 @@ export default function RegisterPage() {
       localStorage.setItem('refresh_token', loginRes.data.refresh);
       const perfilRes = await getPerfil();
       loginUser(loginRes.data, perfilRes.data);
-      navigate('/');
+      // Redirigir a verificación de email
+      navigate(`/verificar-email?email=${encodeURIComponent(form.email)}`);
     } catch (err) {
       const data = err.response?.data;
       if (data) {
@@ -73,6 +75,18 @@ export default function RegisterPage() {
           </div>
 
           {error && <div className="alert alert-error">{error}</div>}
+
+          {/* ── Registro rápido con Google ── */}
+          <GoogleLoginButton />
+
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '1rem',
+            margin: '1.25rem 0', color: '#94a3b8', fontSize: '0.85rem'
+          }}>
+            <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+            o regístrate con tus datos
+            <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+          </div>
 
           <form onSubmit={handleSubmit}>
             <div className="passenger-form">

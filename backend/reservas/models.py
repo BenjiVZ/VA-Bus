@@ -92,10 +92,24 @@ class Reserva(models.Model):
             return True
         return False
 
+    @classmethod
+    def limpiar_expiradas(cls, viaje=None):
+        """
+        Cancela automáticamente todas las reservas pendientes que ya expiraron.
+        Si se pasa un viaje, solo limpia las de ese viaje.
+        Retorna la cantidad de reservas canceladas.
+        """
+        filtro = cls.objects.filter(
+            estado='pendiente',
+            fecha_expiracion__lt=timezone.now()
+        )
+        if viaje:
+            filtro = filtro.filter(viaje=viaje)
+        return filtro.update(estado='cancelado')
+
     class Meta:
         verbose_name = "Reserva"
         verbose_name_plural = "Reservas"
-        unique_together = ('viaje', 'numero_asiento', 'piso_asiento')
         ordering = ['-fecha_creacion']
 
     def __str__(self):

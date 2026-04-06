@@ -241,7 +241,8 @@ class AdminValidarComprobanteView(APIView):
                 </div>
             </div>'''
         else:
-            nota = comprobante.nota_admin or 'No se proporcionó motivo.'
+            from html import escape
+            nota = escape(comprobante.nota_admin or 'No se proporcionó motivo.')
             html = f'''
             <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;">
                 <div style="background:linear-gradient(135deg,#0a1628,#1a365d);padding:24px;text-align:center;border-radius:12px 12px 0 0;">

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { getTicket, getTasaCambio } from '../services/api';
 import { Bus, MapPin, Calendar, Clock, Armchair, User, CreditCard, Printer } from 'lucide-react';
-import './TicketPage.css';
+import '../styles/TicketPage.css';
 
 export default function TicketPage() {
   const { grupoPago } = useParams();

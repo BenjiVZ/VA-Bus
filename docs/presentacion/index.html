@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VA-Bus - Presentacion del Sistema</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy: #0e2240;
+      --navy-light: #1a3a6b;
+      --gold: #f5c842;
+      --gold-dark: #d4a730;
+      --bg: #0b1929;
+      --text: #e8edf4;
+      --text-muted: #8899aa;
+      --slide-bg: #111e30;
+      --accent: #3b82f6;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── Slide Container ── */
+    .slides-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      transform: scale(0.95);
+      padding: 2rem;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: scale(1);
+    }
+
+    /* ── Title Slide ── */
+    .slide-title {
+      flex-direction: column;
+      text-align: center;
+      background: linear-gradient(135deg, var(--navy) 0%, #162d4f 50%, var(--navy-light) 100%);
+    }
+
+    .slide-title .logo-area {
+      margin-bottom: 1.5rem;
+    }
+
+    .slide-title .logo-area .icon {
+      font-size: 5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .slide-title h1 {
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 0%, var(--gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .slide-title .subtitle {
+      font-size: 1.3rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-bottom: 2rem;
+    }
+
+    .slide-title .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(245, 200, 66, 0.15);
+      border: 1px solid rgba(245, 200, 66, 0.3);
+      padding: 0.6rem 1.5rem;
+      border-radius: 50px;
+      color: var(--gold);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* ── Content Slides ── */
+    .slide-content {
+      background: var(--slide-bg);
+    }
+
+    .slide-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      max-width: 1200px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .slide-inner.reverse {
+      direction: rtl;
+    }
+
+    .slide-inner.reverse > * {
+      direction: ltr;
+    }
+
+    .slide-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .slide-number {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--gold);
+      opacity: 0.8;
+    }
+
+    .slide-text h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+    }
+
+    .slide-text h2 .highlight {
+      color: var(--gold);
+    }
+
+    .slide-text p {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .feature-list li::before {
+      content: "\2713";
+      color: var(--gold);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Image Area ── */
+    .slide-image {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                  0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    .slide-image img {
+      width: 100%;
+      display: block;
+      border-radius: 16px;
+    }
+
+    .slide-image::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    /* ── Tech Slide ── */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .tech-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .tech-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(245, 200, 66, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .tech-card .tech-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tech-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .tech-card p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* ── Final Slide ── */
+    .slide-final {
+      flex-direction: column;
+      text-align: center;
+      background: linear-gradient(135deg, var(--navy) 0%, #162d4f 100%);
+    }
+
+    .slide-final h2 {
+      font-size: 3rem;
+      font-weight: 900;
+      margin-bottom: 1rem;
+    }
+
+    .slide-final p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    .contact-row {
+      display: flex;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .contact-item {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .contact-item strong {
+      color: var(--gold);
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+
+    /* ── Navigation ── */
+    .nav-controls {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      z-index: 100;
+      background: rgba(14, 34, 64, 0.8);
+      backdrop-filter: blur(12px);
+      padding: 0.6rem 1.2rem;
+      border-radius: 50px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--gold);
+      color: var(--navy);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .nav-btn:disabled:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .nav-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-dot.active {
+      background: var(--gold);
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    .slide-counter {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* ── Keyboard hint ── */
+    .keyboard-hint {
+      position: fixed;
+      bottom: 5.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.72rem;
+      color: rgba(255, 255, 255, 0.2);
+      z-index: 100;
+    }
+
+    .keyboard-hint kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.7rem;
+      margin: 0 2px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .slide-inner {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .slide-inner.reverse { direction: ltr; }
+      .slide-text h2 { font-size: 1.5rem; }
+      .slide-title h1 { font-size: 2.2rem; }
+      .tech-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Print Button ── */
+    .print-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .print-btn:hover {
+      background: var(--gold);
+      color: var(--navy);
+    }
+
+    /* ════════════════════════════════════════════
+       PRINT STYLES - Professional light theme
+       No background graphics required!
+       ════════════════════════════════════════════ */
+    @media print {
+      @page {
+        size: landscape;
+        margin: 1cm;
+      }
+
+      /* ── Reset body ── */
+      body {
+        overflow: visible !important;
+        height: auto !important;
+        width: auto !important;
+        background: #fff !important;
+        color: #1a1a2e !important;
+      }
+
+      /* ── Hide UI elements ── */
+      .nav-controls,
+      .keyboard-hint,
+      .print-btn {
+        display: none !important;
+      }
+
+      /* ── Slides wrapper: normal flow ── */
+      .slides-wrapper {
+        position: static !important;
+        height: auto !important;
+        width: auto !important;
+      }
+
+      /* ── All slides visible, one per page ── */
+      .slide {
+        position: static !important;
+        opacity: 1 !important;
+        pointer-events: all !important;
+        transform: none !important;
+        transition: none !important;
+        display: flex !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 96vh !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        padding: 1.5cm 2cm !important;
+        background: #fff !important;
+        border-bottom: 3px solid #0e2240 !important;
+      }
+
+      .slide:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        border-bottom: none !important;
+      }
+
+      /* ══ Title Slide (portada) ══ */
+      .slide-title {
+        background: #fff !important;
+        border: 4px solid #0e2240 !important;
+        border-radius: 0 !important;
+        position: relative !important;
+      }
+
+      .slide-title::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 8px !important;
+        background: #c8a415 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .slide-title .logo-area .icon {
+        font-size: 4rem !important;
+      }
+
+      .slide-title h1 {
+        background: none !important;
+        -webkit-background-clip: unset !important;
+        background-clip: unset !important;
+        -webkit-text-fill-color: #0e2240 !important;
+        color: #0e2240 !important;
+        font-size: 3rem !important;
+      }
+
+      .slide-title .subtitle {
+        color: #555 !important;
+        font-size: 1.2rem !important;
+      }
+
+      .slide-title .badge {
+        background: none !important;
+        border: 2px solid #0e2240 !important;
+        color: #0e2240 !important;
+        font-weight: 700 !important;
+        padding: 0.5rem 1.5rem !important;
+      }
+
+      /* ══ Content Slides ══ */
+      .slide-content {
+        background: #fff !important;
+      }
+
+      .slide-inner {
+        max-width: 100% !important;
+        gap: 2.5rem !important;
+      }
+
+      .slide-inner.reverse {
+        direction: ltr !important;
+      }
+
+      /* ── Slide Number ── */
+      .slide-number {
+        color: #0e2240 !important;
+        font-size: 0.7rem !important;
+        opacity: 1 !important;
+        border-bottom: 2px solid #c8a415 !important;
+        display: inline-block !important;
+        padding-bottom: 4px !important;
+      }
+
+      /* ── Title ── */
+      .slide-text h2 {
+        font-size: 1.8rem !important;
+        color: #0e2240 !important;
+      }
+
+      .slide-text h2 .highlight {
+        color: #b8941a !important;
+      }
+
+      /* ── Description ── */
+      .slide-text p {
+        font-size: 0.9rem !important;
+        color: #444 !important;
+      }
+
+      /* ── Feature list ── */
+      .feature-list li {
+        font-size: 0.85rem !important;
+        color: #333 !important;
+      }
+
+      .feature-list li::before {
+        content: "\2713" !important;
+        color: #0e2240 !important;
+        font-weight: 900 !important;
+      }
+
+      /* ── Images ── */
+      .slide-image {
+        box-shadow: none !important;
+        border: 2px solid #ddd !important;
+        border-radius: 8px !important;
+      }
+
+      .slide-image::after {
+        display: none !important;
+      }
+
+      .slide-image img {
+        border-radius: 6px !important;
+        max-height: 50vh !important;
+        width: auto !important;
+        max-width: 100% !important;
+        object-fit: contain !important;
+      }
+
+      /* ══ Tech Grid Slide ══ */
+      .tech-grid {
+        max-width: 100% !important;
+        gap: 0.8rem !important;
+      }
+
+      .tech-card {
+        padding: 1rem !important;
+        border: 2px solid #0e2240 !important;
+        border-radius: 8px !important;
+        background: #fff !important;
+      }
+
+      .tech-card h3 {
+        color: #0e2240 !important;
+        font-size: 0.9rem !important;
+      }
+
+      .tech-card p {
+        color: #555 !important;
+        font-size: 0.72rem !important;
+      }
+
+      .tech-card .tech-icon {
+        font-size: 1.8rem !important;
+      }
+
+      /* ══ Final Slide ══ */
+      .slide-final {
+        background: #fff !important;
+        border: 4px solid #0e2240 !important;
+        position: relative !important;
+      }
+
+      .slide-final::before {
+        content: '' !important;
+        position: absolute !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 8px !important;
+        background: #c8a415 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .slide-final h2 {
+        color: #0e2240 !important;
+        font-size: 2.8rem !important;
+      }
+
+      .slide-final p {
+        color: #444 !important;
+      }
+
+      .slide-final p strong {
+        color: #0e2240 !important;
+      }
+
+      .contact-row {
+        gap: 1.5rem !important;
+      }
+
+      .contact-item {
+        border: 2px solid #0e2240 !important;
+        border-radius: 8px !important;
+        background: #fff !important;
+        color: #333 !important;
+      }
+
+      .contact-item strong {
+        color: #0e2240 !important;
+      }
+
+      /* Tech slide heading */
+      .slide[data-slide="12"] h2 {
+        color: #0e2240 !important;
+      }
+
+      .slide[data-slide="12"] h2 span {
+        color: #b8941a !important;
+      }
+
+      .slide[data-slide="12"] > p,
+      .slide[data-slide="12"] > .slide-number {
+        color: #555 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="slides-wrapper" id="slidesWrapper">
+
+  <!-- SLIDE 0: Title -->
+  <div class="slide slide-title active" data-slide="0">
+    <div class="logo-area">
+      <div class="icon">&#x1F68C;</div>
+    </div>
+    <h1>Aerorutas de Venezuela</h1>
+    <p class="subtitle">Sistema de Reservas de Autobuses</p>
+    <div class="badge">&#x1F4CB; Presentacion de Funcionalidades</div>
+  </div>
+
+  <!-- SLIDE 1: Pagina de Inicio -->
+  <div class="slide slide-content" data-slide="1">
+    <div class="slide-inner">
+      <div class="slide-text">
+        <span class="slide-number">01 / 12</span>
+        <h2>Pagina de <span class="highlight">Inicio</span></h2>
+        <p>Portal principal del sistema con acceso directo a la busqueda de viajes.</p>
+        <ul class="feature-list">
+          <li>Hero con buscador rapido de rutas</li>
+          <li>Navegacion intuitiva (Inicio, Viajes, Mis Reservas)</li>
+          <li>Tasa de cambio BCV actualizada en tiempo real</li>
+          <li>Diseno responsive para movil y escritorio</li>
+          <li>Autenticacion con Google OAuth 2.0</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/01_inicio.png" alt="Pagina de inicio">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: Busqueda de Viajes -->
+  <div class="slide slide-content" data-slide="2">
+    <div class="slide-inner reverse">
+      <div class="slide-text">
+        <span class="slide-number">02 / 12</span>
+        <h2>Busqueda de <span class="highlight">Viajes</span></h2>
+        <p>Listado completo de viajes disponibles con filtros avanzados.</p>
+        <ul class="feature-list">
+          <li>Filtros por origen, destino y fecha</li>
+          <li>Precio en USD con equivalente en Bs. (BCV)</li>
+          <li>Asientos disponibles y capacidad del bus</li>
+          <li>Horario de salida y tipo de autobus</li>
+          <li>Actualizacion automatica de disponibilidad</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/02_viajes.png" alt="Lista de viajes">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: Login -->
+  <div class="slide slide-content" data-slide="3">
+    <div class="slide-inner">
+      <div class="slide-text">
+        <span class="slide-number">03 / 12</span>
+        <h2>Inicio de <span class="highlight">Sesion</span></h2>
+        <p>Acceso seguro al sistema con multiples metodos de autenticacion.</p>
+        <ul class="feature-list">
+          <li>Login con usuario y contrasena</li>
+          <li>Google Sign-In (OAuth 2.0)</li>
+          <li>Proteccion anti-fuerza bruta (rate limiting)</li>
+          <li>Recuperacion de contrasena por correo</li>
+          <li>Tokens JWT con expiracion de 12 horas</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/03_login.png" alt="Pagina de login">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Registro -->
+  <div class="slide slide-content" data-slide="4">
+    <div class="slide-inner reverse">
+      <div class="slide-text">
+        <span class="slide-number">04 / 12</span>
+        <h2>Registro de <span class="highlight">Usuarios</span></h2>
+        <p>Formulario completo para nuevos pasajeros con validaciones.</p>
+        <ul class="feature-list">
+          <li>Validacion de cedula venezolana (V/E/P)</li>
+          <li>Validacion de correo electronico</li>
+          <li>Verificacion de correo con enlace</li>
+          <li>Campos obligatorios: nombre, apellido, telefono</li>
+          <li>Limite de 3 registros por minuto (anti-spam)</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/04_registro.png" alt="Registro de usuario">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: Mapa de Asientos -->
+  <div class="slide slide-content" data-slide="5">
+    <div class="slide-inner">
+      <div class="slide-text">
+        <span class="slide-number">05 / 12</span>
+        <h2>Mapa de <span class="highlight">Asientos</span></h2>
+        <p>Mapa interactivo del autobus con seleccion visual de asientos en tiempo real.</p>
+        <ul class="feature-list">
+          <li>Layout real de cada autobus (1 y 2 pisos)</li>
+          <li>Asientos libres, ocupados y seleccionados</li>
+          <li>Soporte para buses de 42 a 63 puestos</li>
+          <li>Refresco automatico cada 30 segundos</li>
+          <li>Bloqueo de asientos reservados por otros usuarios</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/05_mapa.png" alt="Mapa de asientos">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Seleccion -->
+  <div class="slide slide-content" data-slide="6">
+    <div class="slide-inner reverse">
+      <div class="slide-text">
+        <span class="slide-number">06 / 12</span>
+        <h2>Seleccion de <span class="highlight">Asientos</span></h2>
+        <p>Seleccion multiple con resumen de precios y detalles del viaje.</p>
+        <ul class="feature-list">
+          <li>Seleccion multiple de asientos simultaneos</li>
+          <li>Precio total en USD y Bs. (tasa BCV)</li>
+          <li>Detalles de ruta, fecha y hora</li>
+          <li>Auto-deseleccion si otro usuario reserva el asiento</li>
+          <li>Proteccion concurrente con bloqueo pesimista</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/06_seleccion.png" alt="Seleccion de asientos">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Formulario -->
+  <div class="slide slide-content" data-slide="7">
+    <div class="slide-inner">
+      <div class="slide-text">
+        <span class="slide-number">07 / 12</span>
+        <h2>Formulario de <span class="highlight">Pasajeros</span></h2>
+        <p>Datos del pasajero por cada asiento con opciones especiales.</p>
+        <ul class="feature-list">
+          <li>Nombre y cedula del pasajero</li>
+          <li>Opcion "Para otra persona" con datos del asignado</li>
+          <li>Deteccion de menores de edad</li>
+          <li>Validacion: menores deben comprar en taquilla</li>
+          <li>Prevencion de fraude con toggle de menor</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/07_formulario.png" alt="Formulario de pasajeros">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Modal de Atencion -->
+  <div class="slide slide-content" data-slide="8">
+    <div class="slide-inner reverse">
+      <div class="slide-text">
+        <span class="slide-number">08 / 12</span>
+        <h2>Modal de <span class="highlight">Atencion</span></h2>
+        <p>Notificacion tipo isla flotante antes de confirmar la reserva.</p>
+        <ul class="feature-list">
+          <li>Requisitos de documentacion por tipo de pasajero</li>
+          <li>Avisos sobre tasas de terminal y recargos</li>
+          <li>Aceptacion de terminos y condiciones obligatoria</li>
+          <li>Boton deshabilitado hasta aceptar terminos</li>
+          <li>Animacion de entrada suave con backdrop blur</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/08_modal.png" alt="Modal de atencion">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: Mis Reservas -->
+  <div class="slide slide-content" data-slide="9">
+    <div class="slide-inner">
+      <div class="slide-text">
+        <span class="slide-number">09 / 12</span>
+        <h2>Mis <span class="highlight">Reservas</span></h2>
+        <p>Panel personal del usuario para gestionar sus reservas activas.</p>
+        <ul class="feature-list">
+          <li>Listado de reservas con estado (pendiente, confirmada)</li>
+          <li>Subida de comprobante de pago</li>
+          <li>Codigos de ticket unicos por boleto</li>
+          <li>Temporizador de expiracion (15 minutos)</li>
+          <li>Notificacion por email al aprobar/rechazar pago</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/09_reservas.png" alt="Mis reservas">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: Panel Admin -->
+  <div class="slide slide-content" data-slide="10">
+    <div class="slide-inner reverse">
+      <div class="slide-text">
+        <span class="slide-number">10 / 12</span>
+        <h2>Panel de <span class="highlight">Administracion</span></h2>
+        <p>Dashboard completo para la gestion operativa del sistema.</p>
+        <ul class="feature-list">
+          <li>Ocupacion por viaje en tiempo real</li>
+          <li>Gestion de reservas y cambio de asientos</li>
+          <li>Creacion y edicion de rutas/viajes</li>
+          <li>Control de usuarios y permisos</li>
+          <li>Validacion de comprobantes de pago</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/10_admin.png" alt="Panel de administracion">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: Gestion Comprobantes -->
+  <div class="slide slide-content" data-slide="11">
+    <div class="slide-inner">
+      <div class="slide-text">
+        <span class="slide-number">11 / 12</span>
+        <h2>Validacion de <span class="highlight">Comprobantes</span></h2>
+        <p>Flujo de aprobacion/rechazo de pagos con notificacion automatica.</p>
+        <ul class="feature-list">
+          <li>Vista previa de imagenes de comprobante</li>
+          <li>Aprobacion o rechazo con un click</li>
+          <li>Email automatico al cliente con resultado</li>
+          <li>Generacion de codigos de ticket al aprobar</li>
+          <li>Motivo de rechazo obligatorio</li>
+        </ul>
+      </div>
+      <div class="slide-image">
+        <img src="img/11_comprobantes.png" alt="Validacion de comprobantes">
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Stack Tecnologico -->
+  <div class="slide slide-title" data-slide="12" style="flex-direction: column;">
+    <span class="slide-number" style="margin-bottom: 1rem;">12 / 12</span>
+    <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; color: #fff;">Stack <span style="color: var(--gold)">Tecnologico</span></h2>
+    <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1rem;">Tecnologias utilizadas en el desarrollo del sistema</p>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-icon">&#x269B;</div>
+        <h3>React 18</h3>
+        <p>Frontend SPA con React Router y Context API</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F40D;</div>
+        <h3>Django 5</h3>
+        <p>Backend API REST con Django REST Framework</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F512;</div>
+        <h3>JWT + OAuth</h3>
+        <p>Autenticacion segura con tokens y Google Sign-In</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F4E7;</div>
+        <h3>Email SMTP</h3>
+        <p>Notificaciones automaticas con plantillas HTML</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F6E1;</div>
+        <h3>Rate Limiting</h3>
+        <p>Proteccion anti-DDoS y anti-fuerza bruta</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F504;</div>
+        <h3>Concurrencia</h3>
+        <p>Bloqueo pesimista con SELECT FOR UPDATE</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F310;</div>
+        <h3>API Externa</h3>
+        <p>Endpoints REST para sistemas de control de flota</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#x1F4B1;</div>
+        <h3>Tasa BCV</h3>
+        <p>Integracion con API de tasa de cambio oficial</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 13: Final -->
+  <div class="slide slide-final" data-slide="13">
+    <h2>Gracias</h2>
+    <p>Sistema desarrollado para <strong style="color: var(--gold);">Aerorutas de Venezuela</strong> con arquitectura moderna, segura y escalable.</p>
+    <div class="contact-row">
+      <div class="contact-item">
+        <strong>Frontend</strong>
+        localhost:3000
+      </div>
+      <div class="contact-item">
+        <strong>Backend API</strong>
+        localhost:8001/api/
+      </div>
+      <div class="contact-item">
+        <strong>Admin</strong>
+        localhost:3000/admin
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="keyboard-hint">Usa <kbd>&larr;</kbd> <kbd>&rarr;</kbd> o haz clic en las flechas</div>
+<div class="nav-controls">
+  <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">&larr;</button>
+  <div class="nav-dots" id="navDots"></div>
+  <span class="slide-counter" id="slideCounter">1 / 14</span>
+  <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">&rarr;</button>
+  <button class="print-btn" onclick="window.print()" title="Imprimir / Guardar como PDF">&#x1F5A8;</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const dotsContainer = document.getElementById('navDots');
+  const counter = document.getElementById('slideCounter');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  // Create dots
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => goToSlide(i);
+    dotsContainer.appendChild(dot);
+  }
+
+  function updateUI() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    document.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i === current));
+    counter.textContent = `${current + 1} / ${total}`;
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+  }
+
+  function changeSlide(dir) {
+    const next = current + dir;
+    if (next >= 0 && next < total) {
+      current = next;
+      updateUI();
+    }
+  }
+
+  function goToSlide(i) {
+    current = i;
+    updateUI();
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); }
+    if (e.key === 'Home') { e.preventDefault(); goToSlide(0); }
+    if (e.key === 'End') { e.preventDefault(); goToSlide(total - 1); }
+  });
+
+  updateUI();
+</script>
+
+</body>
+</html>

@@ -45,6 +45,33 @@ class CrearComprobanteSerializer(serializers.Serializer):
     monto = serializers.DecimalField(max_digits=12, decimal_places=2)
     moneda = serializers.CharField(max_length=3, required=False, default='BS')
 
+    def validate_imagen(self, value):
+        """Valida tipo y tamano del archivo subido."""
+        # Limite de tamano: 5MB
+        max_size = 5 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                f"El archivo es muy grande ({value.size // (1024*1024)}MB). Maximo permitido: 5MB."
+            )
+
+        # Solo permitir imagenes reales
+        allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
+        if value.content_type not in allowed_types:
+            raise serializers.ValidationError(
+                f"Tipo de archivo no permitido: {value.content_type}. Solo se aceptan JPG, PNG o WebP."
+            )
+
+        # Validar extension
+        import os
+        ext = os.path.splitext(value.name)[1].lower()
+        allowed_exts = ['.jpg', '.jpeg', '.png', '.webp']
+        if ext not in allowed_exts:
+            raise serializers.ValidationError(
+                f"Extension no permitida: {ext}. Solo se aceptan: {', '.join(allowed_exts)}"
+            )
+
+        return value
+
 
 class AdminComprobanteSerializer(serializers.ModelSerializer):
     """Serializer con info completa para el admin."""

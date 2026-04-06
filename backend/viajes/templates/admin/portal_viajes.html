@@ -1,0 +1,762 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Portal de Viajes{% endblock %}
+{% block content_title %}<h1>Portal de Creacion de Viajes</h1>{% endblock %}
+
+{% block extrastyle %}
+<style>
+  :root {
+    --portal-primary: #1a3a6b;
+    --portal-gold: #f5c842;
+    --portal-success: #22c55e;
+    --portal-danger: #ef4444;
+    --portal-bg: #f8fafc;
+    --portal-card: #fff;
+    --portal-border: #e2e8f0;
+    --portal-text: #1e293b;
+    --portal-muted: #64748b;
+    --portal-radius: 12px;
+  }
+
+  #content { background: var(--portal-bg); }
+
+  .portal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 1200px;
+  }
+
+  .portal-card {
+    background: var(--portal-card);
+    border: 1px solid var(--portal-border);
+    border-radius: var(--portal-radius);
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .portal-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--portal-primary);
+    margin: 0 0 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--portal-gold);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .portal-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* ── Form Controls ── */
+  .pf-group {
+    margin-bottom: 1rem;
+  }
+
+  .pf-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--portal-text);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pf-group .hint {
+    font-size: 0.72rem;
+    color: var(--portal-muted);
+    margin-top: 2px;
+  }
+
+  .pf-input, .pf-select {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1.5px solid var(--portal-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--portal-text);
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+  }
+
+  .pf-input:focus, .pf-select:focus {
+    outline: none;
+    border-color: var(--portal-primary);
+    box-shadow: 0 0 0 3px rgba(26, 58, 107, 0.1);
+  }
+
+  .pf-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .pf-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+  }
+
+  /* ── Bus info card ── */
+  .bus-info {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: var(--portal-muted);
+    margin-top: 0.5rem;
+    display: none;
+    animation: fadeInPortal 0.2s ease;
+  }
+
+  .bus-info.visible { display: block; }
+
+  .bus-info strong {
+    color: var(--portal-text);
+  }
+
+  .bus-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem 1rem;
+    margin-top: 0.4rem;
+  }
+
+  /* ── Buttons ── */
+  .pf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .pf-btn-primary {
+    background: var(--portal-primary);
+    color: #fff;
+  }
+
+  .pf-btn-primary:hover {
+    background: #15305a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 58, 107, 0.3);
+  }
+
+  .pf-btn-success {
+    background: var(--portal-success);
+    color: #fff;
+  }
+
+  .pf-btn-success:hover {
+    background: #16a34a;
+  }
+
+  .pf-btn-batch {
+    background: #8b5cf6;
+    color: #fff;
+  }
+
+  .pf-btn-batch:hover {
+    background: #7c3aed;
+  }
+
+  .pf-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  .pf-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--portal-border);
+  }
+
+  /* ── Messages ── */
+  .pf-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    animation: fadeInPortal 0.3s ease;
+  }
+
+  .pf-alert-success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .pf-alert-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  /* ── Recent trips table ── */
+  .pf-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.82rem;
+  }
+
+  .pf-table th {
+    background: #f1f5f9;
+    color: var(--portal-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.7rem;
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--portal-border);
+  }
+
+  .pf-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--portal-text);
+  }
+
+  .pf-table tr:hover td {
+    background: #f8fafc;
+  }
+
+  .pf-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .pf-badge-active {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .pf-badge-inactive {
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
+  /* ── Delete button ── */
+  .pf-btn-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 4px 10px;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    background: #fff;
+    color: #dc2626;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .pf-btn-delete:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+  }
+
+  .pf-btn-delete:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .pf-table td .pf-actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  /* ── Batch section ── */
+  .batch-section {
+    background: #faf5ff;
+    border: 1px dashed #c084fc;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    display: none;
+  }
+
+  .batch-section.visible { display: block; }
+
+  .batch-section h4 {
+    font-size: 0.85rem;
+    color: #7c3aed;
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Quick date buttons ── */
+  .quick-dates {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .quick-date-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--portal-border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    color: var(--portal-muted);
+  }
+
+  .quick-date-btn:hover {
+    border-color: var(--portal-primary);
+    color: var(--portal-primary);
+    background: #eef2ff;
+  }
+
+  /* ── Animation ── */
+  @keyframes fadeInPortal {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Checkbox toggle ── */
+  .pf-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--portal-text);
+  }
+
+  .pf-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--portal-primary);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .portal-grid { grid-template-columns: 1fr; }
+    .pf-row, .pf-row-3 { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="portalMessages"></div>
+
+<form id="viajeForm" method="post">
+  {% csrf_token %}
+  <div class="portal-grid">
+
+    <!-- Left: Route & Bus -->
+    <div class="portal-card">
+      <h3>&#128652; Ruta y Autobus</h3>
+
+      <div class="pf-group">
+        <label for="ruta">Ruta</label>
+        <select class="pf-select" id="ruta" name="ruta" required>
+          <option value="">-- Seleccionar ruta --</option>
+          {% for r in rutas %}
+          <option value="{{ r.id }}">{{ r.origen }} &rarr; {{ r.destino }}{% if r.duracion_estimada %} ({{ r.duracion_estimada }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="pf-group">
+        <label for="autobus">Autobus</label>
+        <select class="pf-select" id="autobus" name="autobus" required onchange="showBusInfo()">
+          <option value="">-- Seleccionar autobus --</option>
+          {% for a in autobuses %}
+          <option value="{{ a.id }}"
+                  data-placa="{{ a.placa }}"
+                  data-marca="{{ a.marca }}"
+                  data-color="{{ a.color }}"
+                  data-anio="{{ a.anio|default:'-' }}"
+                  data-pisos="{{ a.pisos }}"
+                  data-propietario="{{ a.propietario }}"
+                  data-capacidad="{{ a.capacidad_total }}">
+            {{ a.nombre }} ({{ a.placa }}) — {{ a.capacidad_total }} asientos
+          </option>
+          {% endfor %}
+        </select>
+        <div class="bus-info" id="busInfo">
+          <div class="bus-info-grid">
+            <span><strong>Placa:</strong> <span id="bi_placa"></span></span>
+            <span><strong>Marca:</strong> <span id="bi_marca"></span></span>
+            <span><strong>Color:</strong> <span id="bi_color"></span></span>
+            <span><strong>Ano:</strong> <span id="bi_anio"></span></span>
+            <span><strong>Pisos:</strong> <span id="bi_pisos"></span></span>
+            <span><strong>Capacidad:</strong> <span id="bi_capacidad"></span> asientos</span>
+            <span style="grid-column:1/-1"><strong>Propietario:</strong> <span id="bi_prop"></span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-group">
+        <label for="tipo_viaje">Tipo de Viaje</label>
+        <select class="pf-select" id="tipo_viaje" name="tipo_viaje" onchange="toggleVuelta()">
+          <option value="ida">Solo Ida</option>
+          <option value="ida_vuelta">Ida y Vuelta</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Right: Dates & Price -->
+    <div class="portal-card">
+      <h3>&#128197; Fechas y Precio</h3>
+
+      <div class="pf-row">
+        <div class="pf-group">
+          <label for="fecha_salida">Fecha de Salida</label>
+          <input type="date" class="pf-input" id="fecha_salida" name="fecha_salida" required>
+          <div class="quick-dates" id="quickDates"></div>
+        </div>
+        <div class="pf-group">
+          <label for="hora_salida">Hora de Salida</label>
+          <input type="time" class="pf-input" id="hora_salida" name="hora_salida" required>
+          <div class="quick-dates">
+            <button type="button" class="quick-date-btn" onclick="setTime('06:00')">6:00 AM</button>
+            <button type="button" class="quick-date-btn" onclick="setTime('08:00')">8:00 AM</button>
+            <button type="button" class="quick-date-btn" onclick="setTime('12:00')">12:00 PM</button>
+            <button type="button" class="quick-date-btn" onclick="setTime('18:00')">6:00 PM</button>
+            <button type="button" class="quick-date-btn" onclick="setTime('21:00')">9:00 PM</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="vueltaFields" style="display:none;">
+        <div class="pf-row">
+          <div class="pf-group">
+            <label for="fecha_vuelta">Fecha Vuelta</label>
+            <input type="date" class="pf-input" id="fecha_vuelta" name="fecha_vuelta">
+          </div>
+          <div class="pf-group">
+            <label for="hora_vuelta">Hora Vuelta</label>
+            <input type="time" class="pf-input" id="hora_vuelta" name="hora_vuelta">
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-row">
+        <div class="pf-group">
+          <label for="precio_usd">Precio USD ($)</label>
+          <input type="number" class="pf-input" id="precio_usd" name="precio_usd" step="0.01" min="0" required placeholder="28.00">
+          <div class="quick-dates">
+            <button type="button" class="quick-date-btn" onclick="setPrice(18)">$18</button>
+            <button type="button" class="quick-date-btn" onclick="setPrice(22)">$22</button>
+            <button type="button" class="quick-date-btn" onclick="setPrice(25)">$25</button>
+            <button type="button" class="quick-date-btn" onclick="setPrice(28)">$28</button>
+            <button type="button" class="quick-date-btn" onclick="setPrice(35)">$35</button>
+            <button type="button" class="quick-date-btn" onclick="setPrice(45)">$45</button>
+          </div>
+        </div>
+        <div class="pf-group">
+          <label>&nbsp;</label>
+          <label class="pf-toggle">
+            <input type="checkbox" id="activo" name="activo" checked>
+            Viaje activo (visible para clientes)
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="portal-card full-width">
+      <h3>&#9989; Acciones</h3>
+
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <button type="submit" class="pf-btn pf-btn-primary" id="submitBtn">
+          &#10133; Crear Viaje
+        </button>
+
+        <button type="button" class="pf-btn pf-btn-batch" onclick="toggleBatch()">
+          &#128257; Creacion en lote
+        </button>
+
+        <a href="/admin/viajes/viaje/" class="pf-btn" style="background:#e2e8f0; color: var(--portal-text); text-decoration:none;">
+          &#128203; Ver todos los viajes
+        </a>
+      </div>
+
+      <div class="batch-section" id="batchSection">
+        <h4>&#128257; Crear viajes en lote para multiples dias</h4>
+        <p style="font-size:0.8rem; color:var(--portal-muted); margin-bottom:0.75rem;">
+          Se creara el mismo viaje (misma ruta, autobus, hora y precio) para cada dia en el rango seleccionado.
+        </p>
+        <div class="pf-row-3">
+          <div class="pf-group">
+            <label for="batch_desde">Desde</label>
+            <input type="date" class="pf-input" id="batch_desde" name="batch_desde">
+          </div>
+          <div class="pf-group">
+            <label for="batch_hasta">Hasta</label>
+            <input type="date" class="pf-input" id="batch_hasta" name="batch_hasta">
+          </div>
+          <div class="pf-group">
+            <label>&nbsp;</label>
+            <button type="button" class="pf-btn pf-btn-batch" onclick="submitBatch()" id="batchBtn">
+              &#128640; Crear en Lote
+            </button>
+          </div>
+        </div>
+        <div class="pf-group" style="margin-bottom:0;">
+          <label style="font-size:0.72rem;">Dias de la semana</label>
+          <div class="quick-dates">
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="0" checked> Lun</label>
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="1" checked> Mar</label>
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="2" checked> Mie</label>
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="3" checked> Jue</label>
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="4" checked> Vie</label>
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="5" checked> Sab</label>
+            <label class="pf-toggle" style="font-size:0.78rem;"><input type="checkbox" class="batch-day" value="6" checked> Dom</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Trips -->
+    <div class="portal-card full-width">
+      <h3>&#128338; Ultimos viajes creados</h3>
+      {% if recientes %}
+      <table class="pf-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Ruta</th>
+            <th>Autobus</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Precio</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in recientes %}
+          <tr>
+            <td>#{{ v.id }}</td>
+            <td>{{ v.ruta.origen }} &rarr; {{ v.ruta.destino }}</td>
+            <td>{{ v.autobus.nombre }}</td>
+            <td>{{ v.fecha_salida|date:"d/m/Y" }}</td>
+            <td>{{ v.hora_salida|time:"H:i" }}</td>
+            <td><strong>${{ v.precio_usd }}</strong></td>
+            <td>
+              {% if v.activo %}
+              <span class="pf-badge pf-badge-active">Activo</span>
+              {% else %}
+              <span class="pf-badge pf-badge-inactive">Inactivo</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="pf-actions-cell">
+                <a href="/admin/viajes/viaje/{{ v.id }}/change/" style="color:var(--portal-primary); font-size:0.78rem;">Editar</a>
+                <button type="button" class="pf-btn-delete" onclick="eliminarViaje({{ v.id }}, '{{ v.ruta.origen }} → {{ v.ruta.destino }}', '{{ v.fecha_salida|date:"d/m/Y" }}')">
+                  &#128465; Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--portal-muted); font-size:0.85rem;">No hay viajes creados aun.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</form>
+
+<script>
+  // ── Quick Dates ──
+  (function() {
+    const container = document.getElementById('quickDates');
+    const today = new Date();
+    const labels = ['Hoy', 'Manana', '+2 dias', '+3 dias', '+7 dias', '+14 dias'];
+    const offsets = [0, 1, 2, 3, 7, 14];
+    offsets.forEach((off, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + off);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'quick-date-btn';
+      btn.textContent = labels[i];
+      btn.onclick = () => {
+        document.getElementById('fecha_salida').value = d.toISOString().split('T')[0];
+      };
+      container.appendChild(btn);
+    });
+    // Default to tomorrow
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('fecha_salida').value = tomorrow.toISOString().split('T')[0];
+    // Batch defaults
+    document.getElementById('batch_desde').value = tomorrow.toISOString().split('T')[0];
+    const twoWeeks = new Date(today);
+    twoWeeks.setDate(twoWeeks.getDate() + 14);
+    document.getElementById('batch_hasta').value = twoWeeks.toISOString().split('T')[0];
+  })();
+
+  function setTime(t) { document.getElementById('hora_salida').value = t; }
+  function setPrice(p) { document.getElementById('precio_usd').value = p.toFixed(2); }
+
+  function showBusInfo() {
+    const sel = document.getElementById('autobus');
+    const info = document.getElementById('busInfo');
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt.value) { info.classList.remove('visible'); return; }
+    document.getElementById('bi_placa').textContent = opt.dataset.placa;
+    document.getElementById('bi_marca').textContent = opt.dataset.marca || '-';
+    document.getElementById('bi_color').textContent = opt.dataset.color || '-';
+    document.getElementById('bi_anio').textContent = opt.dataset.anio;
+    document.getElementById('bi_pisos').textContent = opt.dataset.pisos;
+    document.getElementById('bi_capacidad').textContent = opt.dataset.capacidad;
+    document.getElementById('bi_prop').textContent = opt.dataset.propietario || '-';
+    info.classList.add('visible');
+  }
+
+  function toggleVuelta() {
+    const tipo = document.getElementById('tipo_viaje').value;
+    document.getElementById('vueltaFields').style.display = tipo === 'ida_vuelta' ? 'block' : 'none';
+  }
+
+  function toggleBatch() {
+    document.getElementById('batchSection').classList.toggle('visible');
+  }
+
+  // ── Single Submit ──
+  document.getElementById('viajeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '&#9203; Creando...';
+
+    const fd = new FormData(this);
+    try {
+      const res = await fetch('', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await res.json();
+      if (data.ok) {
+        showMessage('success', data.msg || 'Viaje creado exitosamente.');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showMessage('error', data.msg || 'Error al crear el viaje.');
+      }
+    } catch (err) {
+      showMessage('error', 'Error de conexion.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '&#10133; Crear Viaje';
+    }
+  });
+
+  // ── Batch Submit ──
+  async function submitBatch() {
+    const btn = document.getElementById('batchBtn');
+    const form = document.getElementById('viajeForm');
+    // Validate required fields first
+    const ruta = document.getElementById('ruta').value;
+    const autobus = document.getElementById('autobus').value;
+    const hora = document.getElementById('hora_salida').value;
+    const precio = document.getElementById('precio_usd').value;
+    const desde = document.getElementById('batch_desde').value;
+    const hasta = document.getElementById('batch_hasta').value;
+
+    if (!ruta || !autobus || !hora || !precio) {
+      showMessage('error', 'Completa ruta, autobus, hora y precio antes de crear en lote.');
+      return;
+    }
+    if (!desde || !hasta) {
+      showMessage('error', 'Selecciona las fechas "Desde" y "Hasta".');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '&#9203; Creando...';
+
+    const days = [...document.querySelectorAll('.batch-day:checked')].map(cb => parseInt(cb.value));
+    const fd = new FormData(form);
+    fd.set('batch', '1');
+    fd.set('batch_desde', desde);
+    fd.set('batch_hasta', hasta);
+    fd.set('batch_dias', JSON.stringify(days));
+
+    try {
+      const res = await fetch('', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await res.json();
+      if (data.ok) {
+        showMessage('success', data.msg);
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showMessage('error', data.msg || 'Error al crear viajes en lote.');
+      }
+    } catch (err) {
+      showMessage('error', 'Error de conexion.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '&#128640; Crear en Lote';
+    }
+  }
+
+  function showMessage(type, text) {
+    const container = document.getElementById('portalMessages');
+    container.innerHTML = `<div class="pf-alert pf-alert-${type}">${text}</div>`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (type === 'success') setTimeout(() => container.innerHTML = '', 5000);
+  }
+
+  // ── Delete Trip ──
+  async function eliminarViaje(id, ruta, fecha) {
+    const confirmar = confirm(`¿Estás seguro de eliminar el viaje #${id}?\n\n${ruta}\nFecha: ${fecha}\n\nEsta acción no se puede deshacer.`);
+    if (!confirmar) return;
+
+    try {
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      const res = await fetch(`/admin/portal-viajes/eliminar/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showMessage('success', data.msg);
+        // Remove the row with animation
+        const btn = event.target.closest('tr');
+        if (btn) {
+          btn.style.transition = 'opacity 0.3s, transform 0.3s';
+          btn.style.opacity = '0';
+          btn.style.transform = 'translateX(20px)';
+          setTimeout(() => btn.remove(), 300);
+        }
+      } else {
+        showMessage('error', data.msg);
+      }
+    } catch (err) {
+      showMessage('error', 'Error de conexión al eliminar.');
+    }
+  }
+</script>
+{% endblock %}

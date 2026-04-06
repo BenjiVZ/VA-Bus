@@ -1,0 +1,48 @@
+# ========================
+# VA-Bus — .gitignore raíz
+# ========================
+
+# === Python / Django ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.env
+db.sqlite3
+media/
+staticfiles/
+
+# === Node / React ===
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# === IDEs ===
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# === OS ===
+*.tmp
+*.bak
+*.swp
+*~
+
+# === Outputs temporales ===
+update_output.txt

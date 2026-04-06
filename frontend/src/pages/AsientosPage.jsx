@@ -4,6 +4,7 @@ import { getAsientos, crearReserva, getTasaCambio } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
+import AtencionModal from '../components/AtencionModal';
 import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle } from 'lucide-react';
 
 export default function AsientosPage() {
@@ -27,29 +28,70 @@ export default function AsientosPage() {
   // Track seats where user toggled "menor" on then off (fraud detection)
   const [menorToggled, setMenorToggled] = useState({});
 
+  // AtencionModal state
+  const [showAtencion, setShowAtencion] = useState(false);
+
   useEffect(() => {
-    Promise.all([
-      getAsientos(id),
-      getTasaCambio().catch(() => ({ data: { tasa_bcv: null } })),
-    ])
-      .then(([asientosRes, tasaRes]) => {
-        setData(asientosRes.data);
-        setTasa(tasaRes.data.tasa_bcv);
-        // Pre-fill passenger info from user profile
-        if (user) {
-          setNombre(`${user.first_name || ''} ${user.last_name || ''}`.trim());
-          const rawCedula = user.cedula || '';
-          const match = rawCedula.match(/^([VJE])-?(.*)$/i);
-          if (match) {
-            setCedulaTipo(match[1].toUpperCase());
-            setCedula(match[2]);
-          } else {
-            setCedula(rawCedula);
+    const cargarAsientos = () => {
+      Promise.all([
+        getAsientos(id),
+        getTasaCambio().catch(() => ({ data: { tasa_bcv: null } })),
+      ])
+        .then(([asientosRes, tasaRes]) => {
+          const newData = asientosRes.data;
+          setData(newData);
+          setTasa(tasaRes.data.tasa_bcv);
+
+          // Auto-deseleccionar asientos que otro usuario ya tomó
+          if (newData?.pisos_config) {
+            const ocupados = new Set();
+            newData.pisos_config.forEach(piso => {
+              (piso.layout || []).forEach(row => {
+                row.forEach(cell => {
+                  if (cell.type === 'seat' && cell.number && !cell.disponible) {
+                    ocupados.add(`${piso.numero_piso}-${cell.number}`);
+                  }
+                });
+              });
+            });
+            setSelectedSeats(prev => {
+              const filtrados = prev.filter(s => !ocupados.has(`${s.piso}-${s.numero}`));
+              if (filtrados.length < prev.length) {
+                // Remove options for deselected seats
+                setSeatOptions(opts => {
+                  const copy = { ...opts };
+                  prev.forEach(s => {
+                    const key = `${s.piso}-${s.numero}`;
+                    if (ocupados.has(key)) delete copy[key];
+                  });
+                  return copy;
+                });
+              }
+              return filtrados;
+            });
           }
-        }
-      })
-      .catch(() => setError('Error al cargar los asientos.'))
-      .finally(() => setLoading(false));
+          // Pre-fill passenger info from user profile (only first load)
+          if (user && !nombre) {
+            setNombre(`${user.first_name || ''} ${user.last_name || ''}`.trim());
+            const rawCedula = user.cedula || '';
+            const match = rawCedula.match(/^([VJE])-?(.*)$/i);
+            if (match) {
+              setCedulaTipo(match[1].toUpperCase());
+              setCedula(match[2]);
+            } else {
+              setCedula(rawCedula);
+            }
+          }
+        })
+        .catch(() => setError('Error al cargar los asientos.'))
+        .finally(() => setLoading(false));
+    };
+
+    cargarAsientos();
+
+    // Auto-refresh cada 5s para detectar asientos que otros reservaron
+    const interval = setInterval(cargarAsientos, 5000);
+    return () => clearInterval(interval);
   }, [id, user]);
 
   const getSeatKey = (seat) => `${seat.piso}-${seat.numero}`;
@@ -103,9 +145,16 @@ export default function AsientosPage() {
   const totalUsd = data ? selectedSeats.length * Number(data.viaje.precio_usd) : 0;
   const totalBs = tasa ? totalUsd * tasa : null;
 
-  const handleReservar = async () => {
+  // Step 1: Validate and show the Atencion modal
+  const handleReservarClick = () => {
     if (!user) {
       navigate('/login');
+      return;
+    }
+
+    if (!user.cedula) {
+      setError('⚠️ Debes registrar tu cédula antes de reservar. Ve a tu perfil para completarla.');
+      setTimeout(() => navigate('/perfil'), 2500);
       return;
     }
 
@@ -120,6 +169,14 @@ export default function AsientosPage() {
         return;
       }
     }
+
+    setError('');
+    setShowAtencion(true);
+  };
+
+  // Step 2: User accepted terms, execute the actual reservation
+  const handleReservar = async () => {
+    setShowAtencion(false);
 
     setSubmitting(true);
     setError('');
@@ -410,7 +467,7 @@ export default function AsientosPage() {
                 <button
                   className="btn btn-success btn-lg"
                   style={{ width: '100%', marginTop: '1rem' }}
-                  onClick={handleReservar}
+                  onClick={handleReservarClick}
                   disabled={submitting || selectedSeats.length === 0 || hasMinorSelected}
                 >
                   {hasMinorSelected ? (
@@ -429,6 +486,17 @@ export default function AsientosPage() {
             )}
           </div>
         </div>
+        <AtencionModal
+          visible={showAtencion}
+          onClose={() => setShowAtencion(false)}
+          onAccept={handleReservar}
+          viajeInfo={data?.viaje ? {
+            origen: data.viaje.ruta.origen,
+            destino: data.viaje.ruta.destino,
+            fecha: data.viaje.fecha_salida,
+            cantidad: selectedSeats.length,
+          } : null}
+        />
       </div>
     </div>
   );
