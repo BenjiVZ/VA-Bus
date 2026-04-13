@@ -18,6 +18,29 @@ class Usuario(AbstractUser):
         verbose_name="Expiración del Código"
     )
 
+    # ── VIP / Pasajero frecuente ──
+    SERVICIO_VIP_CHOICES = [
+        ('ninguno', 'Ninguno'),
+        ('plata', 'Plata'),
+        ('oro', 'Oro'),
+        ('platino', 'Platino'),
+    ]
+    es_vip = models.BooleanField(
+        default=False,
+        verbose_name="¿Es VIP?",
+        help_text="Marca al usuario como pasajero VIP"
+    )
+    servicio_vip = models.CharField(
+        max_length=10,
+        choices=SERVICIO_VIP_CHOICES,
+        default='ninguno',
+        verbose_name="Nivel VIP"
+    )
+    notas_admin = models.TextField(
+        blank=True, default='',
+        verbose_name="Notas del administrador"
+    )
+
     class Meta:
         verbose_name = "Usuario"
         verbose_name_plural = "Usuarios"

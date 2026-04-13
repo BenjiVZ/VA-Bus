@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8001/api';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8001/api').replace(/\/+$/, '');
+const API_ORIGIN = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL;
+
+export const resolveApiFileUrl = (path = '') => {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_ORIGIN}${normalizedPath}`;
+};
 
 const api = axios.create({
   baseURL: API_URL,
@@ -96,6 +104,20 @@ export const getAsientos = (viajeId) =>
 export const crearReserva = (data) =>
   api.post('/reservas/', data);
 
+export const bloquearAsiento = (viajeId, numeroAsiento, pisoAsiento = 1) =>
+  api.post('/reservas/bloquear-asiento/', {
+    viaje_id: viajeId,
+    numero_asiento: numeroAsiento,
+    piso_asiento: pisoAsiento,
+  });
+
+export const liberarAsiento = (viajeId, numeroAsiento, pisoAsiento = 1) =>
+  api.post('/reservas/liberar-asiento/', {
+    viaje_id: viajeId,
+    numero_asiento: numeroAsiento,
+    piso_asiento: pisoAsiento,
+  });
+
 export const getMisReservas = () =>
   api.get('/mis-reservas/');
 
@@ -146,5 +168,15 @@ export const getTicket = (grupoPago) =>
 
 export const verificarTicket = (codigoTicket) =>
   api.get(`/verificar/${codigoTicket}/`);
+
+// Admin — Clientes
+export const adminGetClientesDashboard = () =>
+  api.get('/auth/admin/clientes/dashboard/');
+
+export const adminGetClientes = (query = '') =>
+  api.get('/auth/admin/clientes/', { params: query ? { q: query } : {} });
+
+export const adminToggleVip = (userId, data) =>
+  api.patch(`/auth/admin/clientes/${userId}/vip/`, data);
 
 export default api;

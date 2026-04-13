@@ -25,7 +25,45 @@ class AutobusSerializer(serializers.ModelSerializer):
         fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'pisos_config', 'capacidad_total')
 
 
+class AutobusCompactSerializer(serializers.ModelSerializer):
+    """Serializer liviano para listados: sin pisos_config ni layout."""
+    capacidad_total = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Autobus
+        fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'capacidad_total')
+
+
 class ViajeListSerializer(serializers.ModelSerializer):
+    ruta = RutaSerializer(read_only=True)
+    autobus = AutobusCompactSerializer(read_only=True)
+    asientos_disponibles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Viaje
+        fields = ('id', 'ruta', 'autobus', 'tipo_viaje', 'fecha_salida', 'hora_salida',
+                  'fecha_vuelta', 'hora_vuelta', 'precio_usd', 'activo',
+                  'asientos_disponibles', 'fecha_inicio_venta', 'fecha_fin_venta')
+
+    def get_asientos_disponibles(self, obj):
+        # Use pre-computed annotation if available (fast path)
+        if hasattr(obj, '_asientos_disponibles'):
+            return obj._asientos_disponibles
+        if hasattr(obj, '_reservas_activas_count'):
+            return obj.autobus.capacidad_total - obj._reservas_activas_count
+
+        # Fallback: single query (for detail views)
+        total = obj.autobus.capacidad_total
+        from reservas.models import Reserva
+        ocupados = Reserva.objects.filter(
+            viaje=obj,
+            estado__in=['pendiente', 'apartado', 'confirmado']
+        ).count()
+        return total - ocupados
+
+
+class ViajeDetailSerializer(serializers.ModelSerializer):
+    """Serializer completo con pisos_config (para detalle/asientos)."""
     ruta = RutaSerializer(read_only=True)
     autobus = AutobusSerializer(read_only=True)
     asientos_disponibles = serializers.SerializerMethodField()
@@ -39,8 +77,6 @@ class ViajeListSerializer(serializers.ModelSerializer):
     def get_asientos_disponibles(self, obj):
         total = obj.autobus.capacidad_total
         from reservas.models import Reserva
-        # Limpiar expiradas para tener conteo real
-        Reserva.limpiar_expiradas(viaje=obj)
         ocupados = Reserva.objects.filter(
             viaje=obj,
             estado__in=['pendiente', 'apartado', 'confirmado']

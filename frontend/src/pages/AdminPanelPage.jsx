@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { adminGetViajes } from '../services/api';
-import { ClipboardList, Bus, ArrowRight, Users, CheckCircle, Clock } from 'lucide-react';
+import { ClipboardList, Bus, ArrowRight, Users, CheckCircle, Clock, Receipt } from 'lucide-react';
 
 export default function AdminPanelPage() {
   const { user } = useAuth();
@@ -44,6 +44,12 @@ export default function AdminPanelPage() {
             </button>
             <button className="admin-tab" onClick={() => navigate('/admin/buses')}>
               <Bus size={16} /> Autobuses
+            </button>
+            <button className="admin-tab" onClick={() => navigate('/admin/comprobantes')}>
+              <Receipt size={16} /> Comprobantes
+            </button>
+            <button className="admin-tab" onClick={() => navigate('/admin/clientes')}>
+              <Users size={16} /> Clientes
             </button>
           </div>
         </div>

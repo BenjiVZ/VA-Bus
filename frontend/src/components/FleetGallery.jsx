@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const TOTAL_PHOTOS = 18;
-const photos = Array.from({ length: TOTAL_PHOTOS }, (_, i) => ({
-  src: `/flota/bus-${String(i + 1).padStart(2, '0')}.jpg`,
-  alt: `Autobús Aerorutas de Venezuela #${i + 1}`,
-}));
+// Auto-detect: solo muestra las imágenes que existan en /public/flota/
+const imageModules = import.meta.glob('/public/flota/bus-*.jpg', { eager: true });
+const photos = Object.keys(imageModules)
+  .sort()
+  .map((path, i) => ({
+    src: path.replace('/public', ''),
+    alt: `Autobús Aerorutas de Venezuela #${i + 1}`,
+  }));
 
 export default function FleetGallery() {
   const [current, setCurrent] = useState(0);

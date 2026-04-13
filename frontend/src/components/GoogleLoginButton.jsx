@@ -4,10 +4,16 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+
 export default function GoogleLoginButton() {
   const { loginUser } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+
+  if (!GOOGLE_CLIENT_ID) {
+    return null;
+  }
 
   const handleSuccess = async (credentialResponse) => {
     setError('');

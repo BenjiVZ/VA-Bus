@@ -1,10 +1,12 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Q
+from django.db.models import Q, Count, Subquery, OuterRef, IntegerField, Sum
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 from .models import Ruta, Viaje, Autobus, ConfiguracionGeneral
 from .serializers import (
-    RutaSerializer, ViajeListSerializer,
+    RutaSerializer, ViajeListSerializer, ViajeDetailSerializer,
     ConfiguracionSerializer
 )
 from .services import actualizar_tasa_bcv
@@ -21,14 +23,36 @@ class ViajeListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        from django.utils import timezone
-        from django.db.models import Q
+        from reservas.models import Reserva
         hoy = timezone.now().date()
+
+        # 1) Limpiar expiradas una sola vez (no por viaje)
+        Reserva.limpiar_expiradas()
+
+        # 2) Subquery: contar reservas activas por viaje
+        reservas_count = Reserva.objects.filter(
+            viaje=OuterRef('pk'),
+            estado__in=['pendiente', 'apartado', 'confirmado']
+        ).order_by().values('viaje').annotate(cnt=Count('pk')).values('cnt')
+
+        # 3) Subquery: capacidad total del autobus (sum de capacidad de cada piso)
+        #    Capacidad se calcula desde el layout JSON, pero podemos aproximar
+        #    usando pisos_config. Prefetch pisos_config instead.
+        from viajes.models import PisoAutobus
 
         queryset = Viaje.objects.filter(
             activo=True,
             fecha_salida__gte=hoy,
-        ).select_related('ruta', 'autobus')
+        ).select_related(
+            'ruta', 'autobus'
+        ).prefetch_related(
+            'autobus__pisos_config'
+        ).annotate(
+            _reservas_activas_count=Coalesce(
+                Subquery(reservas_count, output_field=IntegerField()),
+                0
+            )
+        )
 
         # Filter by sales window
         queryset = queryset.filter(
@@ -50,28 +74,59 @@ class ViajeListView(generics.ListAPIView):
 
         return queryset
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        viajes = list(queryset)
+
+        # Pre-compute capacidad_total per autobus (avoid N queries)
+        autobus_cache = {}
+        for viaje in viajes:
+            bus_id = viaje.autobus_id
+            if bus_id not in autobus_cache:
+                autobus_cache[bus_id] = viaje.autobus.capacidad_total
+            viaje._asientos_disponibles = autobus_cache[bus_id] - viaje._reservas_activas_count
+
+        serializer = self.get_serializer(viajes, many=True)
+        return Response(serializer.data)
+
 
 class ViajeDetailView(generics.RetrieveAPIView):
-    queryset = Viaje.objects.filter(activo=True).select_related('ruta', 'autobus')
-    serializer_class = ViajeListSerializer
+    queryset = Viaje.objects.filter(activo=True).select_related('ruta', 'autobus').prefetch_related('autobus__pisos_config')
+    serializer_class = ViajeDetailSerializer
     permission_classes = [permissions.AllowAny]
 
 
-def generar_mapa_desde_layout(viaje):
+def generar_mapa_desde_layout(viaje, user=None):
     """Lee el layout JSON de cada piso y cruza con las reservas activas."""
-    from reservas.models import Reserva
+    from reservas.models import Reserva, BloqueoAsiento
 
     # Limpiar reservas expiradas antes de consultar disponibilidad
     Reserva.limpiar_expiradas(viaje=viaje)
+    BloqueoAsiento.limpiar_expirados(viaje=viaje)
 
     reservas_activas = Reserva.objects.filter(
         viaje=viaje,
         estado__in=['pendiente', 'apartado', 'confirmado']
     ).values_list('numero_asiento', 'piso_asiento', flat=False)
 
+    now = timezone.now()
+    bloqueos_activos = BloqueoAsiento.objects.filter(
+        viaje=viaje,
+        fecha_expiracion__gt=now,
+    ).values_list('numero_asiento', 'piso_asiento', 'usuario_id')
+
     asientos_ocupados = set()
     for numero, piso in reservas_activas:
         asientos_ocupados.add((piso, numero))
+
+    user_id = user.id if user and user.is_authenticated else None
+    asientos_bloqueados_mios = set()
+    for numero, piso, bloqueo_user_id in bloqueos_activos:
+        asiento_key = (piso, numero)
+        if user_id and bloqueo_user_id == user_id:
+            asientos_bloqueados_mios.add(asiento_key)
+            continue
+        asientos_ocupados.add(asiento_key)
 
     resultado = []
 
@@ -87,7 +142,10 @@ def generar_mapa_desde_layout(viaje):
                 cell_copy = dict(cell) if isinstance(cell, dict) else {'type': 'empty'}
                 if cell_copy.get('type') == 'seat' and cell_copy.get('number'):
                     num = cell_copy['number']
-                    cell_copy['disponible'] = (piso_num, num) not in asientos_ocupados
+                    seat_key = (piso_num, num)
+                    cell_copy['disponible'] = seat_key not in asientos_ocupados
+                    if user_id:
+                        cell_copy['bloqueado_por_mi'] = seat_key in asientos_bloqueados_mios
                 fila_result.append(cell_copy)
             layout_con_disponibilidad.append(fila_result)
 
@@ -113,10 +171,10 @@ class ViajeAsientosView(APIView):
         except Viaje.DoesNotExist:
             return Response({"error": "Viaje no encontrado."}, status=404)
 
-        pisos_data = generar_mapa_desde_layout(viaje)
+        pisos_data = generar_mapa_desde_layout(viaje, request.user)
 
         return Response({
-            'viaje': ViajeListSerializer(viaje).data,
+            'viaje': ViajeDetailSerializer(viaje).data,
             'pisos_config': pisos_data,
         })
 
@@ -124,30 +182,44 @@ class ViajeAsientosView(APIView):
 class TasaCambioView(APIView):
     """
     Endpoint para obtener la tasa de cambio.
-    - El frontend SOLO consulta este endpoint del backend.
-    - El backend consulta la API externa (ve.dolarapi.com).
-    - Si la API externa falla, se usa el valor manual del admin.
-    - Cache en memoria de 60s para evitar sobrecarga.
+    - Cache en memoria de 5 min para respuesta instantánea.
+    - Si necesita actualizar, lo hace en background (no bloquea).
     """
     permission_classes = [permissions.AllowAny]
-    _cache = {'tasa': None, 'data': None, 'timestamp': 0}
+    _cache = {'data': None, 'timestamp': 0}
+    _updating = False
 
     def get(self, request):
         import time as _time
+        import threading
         now = _time.time()
 
-        # Cache en memoria: responde instantáneo si <60s
-        if self._cache['data'] and (now - self._cache['timestamp']) < 60:
+        # Cache en memoria: responde instantáneo si <5 min
+        if self._cache['data'] and (now - self._cache['timestamp']) < 300:
             return Response(self._cache['data'])
 
         config = ConfiguracionGeneral.load()
+
+        # Construir respuesta con el valor actual de la DB (inmediato)
+        fuente = 'automatica' if config.tasa_actualizada else 'manual'
+        response_data = {
+            'tasa_bcv': float(config.tasa_bcv) if config.tasa_bcv else 0,
+            'actualizada': config.tasa_actualizada,
+            'fuente': 've.dolarapi.com - BCV Oficial',
+            'fuente_tipo': fuente,
+        }
+
+        # Guardar en cache inmediatamente con lo que hay en DB
+        self.__class__._cache = {
+            'data': response_data,
+            'timestamp': now,
+        }
 
         # Determinar si necesita actualizar desde la API externa
         should_update = False
         if not config.tasa_bcv or config.tasa_bcv == 0:
             should_update = True
         elif config.tasa_actualizada:
-            from django.utils import timezone
             from datetime import timedelta
             age = timezone.now() - config.tasa_actualizada
             if age > timedelta(hours=6):
@@ -155,24 +227,29 @@ class TasaCambioView(APIView):
         else:
             should_update = True
 
-        if should_update:
-            exito, mensaje = actualizar_tasa_bcv()
-            if exito:
-                config.refresh_from_db()
+        # Actualizar en background si es necesario (no bloquea la respuesta)
+        if should_update and not self.__class__._updating:
+            def _update_bg():
+                try:
+                    self.__class__._updating = True
+                    import django
+                    django.db.connections.close_all()
+                    exito, _ = actualizar_tasa_bcv()
+                    if exito:
+                        cfg = ConfiguracionGeneral.load()
+                        self.__class__._cache = {
+                            'data': {
+                                'tasa_bcv': float(cfg.tasa_bcv),
+                                'actualizada': cfg.tasa_actualizada,
+                                'fuente': 've.dolarapi.com - BCV Oficial',
+                                'fuente_tipo': 'automatica',
+                            },
+                            'timestamp': _time.time(),
+                        }
+                finally:
+                    self.__class__._updating = False
 
-        fuente = 'automatica' if config.tasa_actualizada else 'manual'
-        response_data = {
-            'tasa_bcv': float(config.tasa_bcv),
-            'actualizada': config.tasa_actualizada,
-            'fuente': 've.dolarapi.com - BCV Oficial',
-            'fuente_tipo': fuente,
-        }
-
-        # Guardar en cache
-        self.__class__._cache = {
-            'data': response_data,
-            'timestamp': now,
-        }
+            threading.Thread(target=_update_bg, daemon=True).start()
 
         return Response(response_data)
 

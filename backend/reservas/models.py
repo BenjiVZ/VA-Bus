@@ -75,6 +75,16 @@ class Reserva(models.Model):
         verbose_name="Cédula del asignado",
         help_text="Cédula de la persona a quien se asigna el asiento"
     )
+    viaja_con_animal = models.BooleanField(
+        default=False,
+        verbose_name="¿Viaja con animal?",
+        help_text="Si es verdadero, el pasajero debe presentar la tarjeta de vacunación del animal"
+    )
+    es_discapacitado = models.BooleanField(
+        default=False,
+        verbose_name="¿Persona con discapacidad?",
+        help_text="Indica si el pasajero de este asiento es una persona con discapacidad"
+    )
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.fecha_expiracion:
@@ -114,3 +124,44 @@ class Reserva(models.Model):
 
     def __str__(self):
         return f"Reserva #{self.pk} - Asiento {self.numero_asiento} (Piso {self.piso_asiento}) - {self.get_estado_display()}"
+
+
+class BloqueoAsiento(models.Model):
+    """Bloqueo temporal de asiento mientras el usuario completa la compra."""
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='bloqueos_asiento',
+        verbose_name="Usuario"
+    )
+    viaje = models.ForeignKey(
+        'viajes.Viaje',
+        on_delete=models.CASCADE,
+        related_name='bloqueos_asiento',
+        verbose_name="Viaje"
+    )
+    numero_asiento = models.PositiveIntegerField(verbose_name="Número de Asiento")
+    piso_asiento = models.PositiveIntegerField(default=1, verbose_name="Piso del Asiento")
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
+    fecha_expiracion = models.DateTimeField(verbose_name="Fecha de Expiración")
+
+    @property
+    def esta_expirado(self):
+        return timezone.now() >= self.fecha_expiracion
+
+    @classmethod
+    def limpiar_expirados(cls, viaje=None):
+        qs = cls.objects.filter(fecha_expiracion__lt=timezone.now())
+        if viaje:
+            qs = qs.filter(viaje=viaje)
+        deleted_count, _ = qs.delete()
+        return deleted_count
+
+    class Meta:
+        verbose_name = "Bloqueo de Asiento"
+        verbose_name_plural = "Bloqueos de Asientos"
+        ordering = ['-fecha_creacion']
+        unique_together = [('viaje', 'numero_asiento', 'piso_asiento')]
+
+    def __str__(self):
+        return f"Bloqueo {self.viaje_id} - Asiento {self.numero_asiento} (Piso {self.piso_asiento})"

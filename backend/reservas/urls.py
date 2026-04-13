@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     CrearReservaView, MisReservasView,
+    BloquearAsientoView, LiberarAsientoView,
     AdminReservasViajeView, AdminCambiarEstadoView,
     AdminCambiarAsientoView, AdminViajesListView,
     AdminBusesListView,
@@ -9,6 +10,8 @@ from .views import (
 
 urlpatterns = [
     path('reservas/', CrearReservaView.as_view(), name='crear-reserva'),
+    path('reservas/bloquear-asiento/', BloquearAsientoView.as_view(), name='bloquear-asiento'),
+    path('reservas/liberar-asiento/', LiberarAsientoView.as_view(), name='liberar-asiento'),
     path('mis-reservas/', MisReservasView.as_view(), name='mis-reservas'),
 
     # Tickets

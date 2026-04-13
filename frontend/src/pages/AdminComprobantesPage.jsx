@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { adminGetComprobantes, adminValidarComprobante } from '../services/api';
+import { adminGetComprobantes, adminValidarComprobante, resolveApiFileUrl } from '../services/api';
 import {
   CheckCircle, XCircle, Clock, Eye, Search, Filter,
   User, CreditCard, Image as ImageIcon, MessageSquare,
 } from 'lucide-react';
-
-const API_URL = 'http://localhost:8000';
 
 export default function AdminComprobantesPage() {
   const [comprobantes, setComprobantes] = useState([]);
@@ -155,10 +153,10 @@ export default function AdminComprobantesPage() {
                 <div className="comp-section-title"><ImageIcon size={14} /> Comprobante</div>
                 {comp.imagen && (
                   <img
-                    src={comp.imagen.startsWith('http') ? comp.imagen : `${API_URL}${comp.imagen}`}
+                    src={resolveApiFileUrl(comp.imagen)}
                     alt="Comprobante"
                     className="comp-image"
-                    onClick={() => setImgModal(comp.imagen.startsWith('http') ? comp.imagen : `${API_URL}${comp.imagen}`)}
+                    onClick={() => setImgModal(resolveApiFileUrl(comp.imagen))}
                   />
                 )}
               </div>

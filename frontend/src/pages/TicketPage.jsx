@@ -204,6 +204,32 @@ export default function TicketPage() {
               </div>
             )}
 
+            {/* Animal badge */}
+            {ticket.viaja_con_animal && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem',
+                fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px',
+                margin: '0.5rem auto', textTransform: 'uppercase',
+                border: '1px solid #86efac'
+              }}>
+                🐾 Viaja con animal — Presentar tarjeta de vacunación
+              </div>
+            )}
+
+            {/* Disability badge */}
+            {ticket.es_discapacitado && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem',
+                fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px',
+                margin: '0.5rem auto', textTransform: 'uppercase',
+                border: '1px solid #93c5fd'
+              }}>
+                ♿ Persona con discapacidad
+              </div>
+            )}
+
             {/* Tear line + QR */}
             <div className="ticket-tear-line" />
 

@@ -72,6 +72,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,  # Espera hasta 20s si la DB está bloqueada
+        },
     }
 }
 
@@ -153,3 +156,14 @@ GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 
 # ── API Externa (Sistema de Control) ──
 EXTERNAL_API_KEY = os.getenv('EXTERNAL_API_KEY', '')
+
+# ── SQLite WAL mode para mejor concurrencia ──
+from django.db.backends.signals import connection_created
+
+def _activate_wal(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL;')
+        cursor.execute('PRAGMA busy_timeout=20000;')
+
+connection_created.connect(_activate_wal)

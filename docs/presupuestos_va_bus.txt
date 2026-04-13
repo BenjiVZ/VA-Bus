@@ -1,0 +1,391 @@
+================================================================================
+        PRESUPUESTOS DE INFRAESTRUCTURA Y DESPLIEGUE
+        SISTEMA DE RESERVAS — AERORUTAS DE VENEZUELA
+        Fecha: 08 de Abril de 2026
+================================================================================
+
+PROYECTO: Sistema Web de Reservas de Boletos de Autobus
+CLIENTE: Aerorutas de Venezuela
+TECNOLOGIAS: Django REST Framework + React (Vite) + PostgreSQL/MySQL
+PROVEEDOR DE HOSTING: DigitalOcean
+REGION RECOMENDADA: New York (NYC1) — la mas cercana a Venezuela
+
+--------------------------------------------------------------------------------
+ESTADO ACTUAL DEL SISTEMA
+--------------------------------------------------------------------------------
+
+El sistema de reservas se encuentra CASI LISTO PARA DESPLIEGUE.
+
+Modulos completados y funcionales:
+  [x] Registro e inicio de sesion (email + Google OAuth)
+  [x] Verificacion de email con codigo de 6 digitos
+  [x] Recuperacion de contrasena
+  [x] Busqueda y filtrado de viajes (origen, destino, fecha)
+  [x] Seleccion interactiva de asientos con mapa visual por piso
+  [x] Reserva de multiples asientos con expiracion a 15 minutos
+  [x] Subida de comprobante de pago con validacion de imagen
+  [x] Panel de administracion para aprobar/rechazar pagos
+  [x] Generacion de tickets con codigo QR
+  [x] Envio de boletos por email en formato PDF
+  [x] Verificacion de tickets por codigo QR
+  [x] Creacion de viajes en lote desde portal administrativo
+  [x] API externa para integracion con sistema de control
+  [x] Tasa de cambio BCV automatica (ve.dolarapi.com)
+  [x] Proteccion anti-spam y rate limiting
+  [x] Transacciones atomicas para evitar doble reservacion
+
+Modulo pendiente antes del despliegue:
+  [ ] Automatizacion de pagos con R4
+
+  Actualmente, los pagos son validados manualmente por un administrador.
+  La integracion con R4 permitira que los pagos se verifiquen y confirmen
+  de forma automatica, eliminando la intervencion manual y acelerando
+  significativamente el proceso de compra para los pasajeros.
+
+  Una vez completada esta integracion, el sistema estara 100% listo
+  para salir a produccion.
+
+
+--------------------------------------------------------------------------------
+DOMINIOS RECOMENDADOS
+--------------------------------------------------------------------------------
+
+Opcion A (RECOMENDADA):
+  Dominio: aerorutasdevenezuela.net
+  Precio:  11,86 US$/ano
+  Renovacion: 11,86 US$/ano
+  Nota: El .net es confiable, profesional, facil de recordar y
+        ampliamente reconocido en Venezuela y Latinoamerica.
+        Es la mejor relacion calidad-precio disponible.
+
+Opcion B (Alternativa economica):
+  Dominio: aerorutasdevenezuela.org
+  Precio:  7,50 US$/ano (primer ano)
+  Renovacion: 10,13 US$/ano
+  Nota: Buena opcion economica, pero .org se asocia mas a organizaciones
+        sin fines de lucro que a empresas de transporte.
+
+Opcion C (Alternativa premium):
+  Dominio: aerorutasdevenezuela.app
+  Precio:  14,20 US$/ano
+  Renovacion: 14,20 US$/ano
+  Nota: Moderno, incluye HTTPS obligatorio. Ideal si se planea
+        una app movil a futuro. Precio estable en renovacion.
+
+
+--------------------------------------------------------------------------------
+PLANES DE SERVIDOR DISPONIBLES (DigitalOcean — Shared CPU)
+--------------------------------------------------------------------------------
+
+REGULAR (Disco SSD / Red hasta 2 Gbps):
+  $4/mes   — 512 MB / 1 CPU  / 10 GB SSD  / 500 GB transfer
+  $6/mes   — 1 GB   / 1 CPU  / 25 GB SSD  / 1 TB transfer
+  $12/mes  — 2 GB   / 1 CPU  / 50 GB SSD  / 2 TB transfer
+  $18/mes  — 2 GB   / 2 CPUs / 60 GB SSD  / 3 TB transfer
+  $24/mes  — 4 GB   / 2 CPUs / 80 GB SSD  / 4 TB transfer
+  $48/mes  — 8 GB   / 4 CPUs / 160 GB SSD / 5 TB transfer
+
+PREMIUM INTEL (Disco NVMe SSD / Red hasta 10 Gbps):
+  $8/mes   — 1 GB   / 1 CPU  / 35 GB NVMe  / 1 TB transfer
+  $16/mes  — 2 GB   / 1 CPU  / 70 GB NVMe  / 2 TB transfer
+  $24/mes  — 2 GB   / 2 CPUs / 90 GB NVMe  / 3 TB transfer
+  $32/mes  — 4 GB   / 2 CPUs / 120 GB NVMe / 4 TB transfer
+  $48/mes  — 8 GB   / 2 CPUs / 160 GB NVMe / 5 TB transfer
+  $64/mes  — 8 GB   / 4 CPUs / 240 GB NVMe / 6 TB transfer
+
+EXTRAS DISPONIBLES:
+  Base de datos gestionada (MySQL/PostgreSQL):  +15,00 US$/mes
+  Backups semanales (4 semanas retencion):      20% del costo del droplet
+  Backups diarios (7 dias retencion):           30% del costo del droplet
+  Monitoreo y metricas mejoradas:               Gratis
+  SSL (Let's Encrypt):                          Gratis
+
+
+================================================================================
+  PRESUPUESTO ECONOMICO
+  "Para arrancar con solidez"
+================================================================================
+
+CONCEPTO                                    MENSUAL (US$)    ANUAL (US$)
+--------                                    -------------    -----------
+
+DOMINIO
+  aerorutasdevenezuela.net
+  * El dominio se paga anual. No genera
+    cobro mensual, pero se debe adquirir
+    al momento de iniciar el servicio.            —             11,86
+
+SERVIDOR (Regular SSD)
+  2 GB RAM / 1 CPU / 50 GB SSD
+  2 TB transferencia                            12,00          144,00
+
+BASE DE DATOS GESTIONADA
+  MySQL/PostgreSQL administrado por DO
+  Backups diarios automaticos (PITR)
+  SSL de extremo a extremo
+  Conmutacion por error automatizada            15,00          180,00
+
+CERTIFICADO SSL
+  Let's Encrypt (gratuito, auto-renovable)       0,00            0,00
+
+CORREO TRANSACCIONAL
+  Gmail SMTP (hasta 500 emails/dia)              0,00            0,00
+
+MONITOREO
+  DigitalOcean Monitoring (gratuito)             0,00            0,00
+
+BACKUPS DEL SERVIDOR
+  Semanales (20% del droplet)                    2,40           28,80
+
+------------------------------------------------------------------------
+COSTO MENSUAL RECURRENTE:                       29,40 US$/mes
+TOTAL ANUAL (servidor + backups):                             352,80 US$
+
+INVERSION INICIAL (primer mes):
+  Primer mes de servidor + BD + backups:        29,40 US$
+  Compra del dominio (pago unico anual):      + 11,86 US$
+                                               ---------------
+  TOTAL PRIMER MES:                             41,26 US$
+
+TOTAL PRIMER ANO:                                             364,66 US$
+TOTAL ANOS SIGUIENTES:                                        364,66 US$
+------------------------------------------------------------------------
+
+INCLUYE:
+  + 2 GB RAM: suficiente para Django + Nginx
+  + BD gestionada con backups diarios, SSL y failover automatico
+  + Separacion servidor-BD (mejor seguridad)
+  + Monitoreo y SSL gratuitos
+  + Soporta 200-400 usuarios concurrentes
+
+LIMITACIONES:
+  - Disco SSD estandar (no NVMe)
+  - Red de hasta 2 Gbps (vs 10 Gbps en Premium Intel)
+  - CPU compartida
+
+
+================================================================================
+  PRESUPUESTO RECOMENDADO
+  "El equilibrio perfecto para Aerorutas"
+================================================================================
+
+CONCEPTO                                    MENSUAL (US$)    ANUAL (US$)
+--------                                    -------------    -----------
+
+DOMINIO
+  aerorutasdevenezuela.net
+  * El dominio se paga anual. No genera
+    cobro mensual, pero se debe adquirir
+    al momento de iniciar el servicio.            —             11,86
+
+SERVIDOR (Premium Intel NVMe)
+  2 GB RAM / 1 Intel CPU / 70 GB NVMe SSD
+  2 TB transferencia
+  Red hasta 10 Gbps                             16,00          192,00
+
+BASE DE DATOS GESTIONADA
+  MySQL/PostgreSQL administrado por DO
+  Backups diarios automaticos (PITR)
+  SSL de extremo a extremo
+  Conmutacion por error automatizada            15,00          180,00
+
+CERTIFICADO SSL
+  Let's Encrypt (gratuito)                       0,00            0,00
+
+CORREO TRANSACCIONAL
+  Gmail SMTP (ya configurado)                    0,00            0,00
+
+MONITOREO
+  DigitalOcean Monitoring (gratuito)             0,00            0,00
+
+BACKUPS DEL SERVIDOR
+  Semanales (20% del droplet)                    3,20           38,40
+
+------------------------------------------------------------------------
+COSTO MENSUAL RECURRENTE:                       34,20 US$/mes
+TOTAL ANUAL (servidor + backups):                             410,40 US$
+
+INVERSION INICIAL (primer mes):
+  Primer mes de servidor + BD + backups:        34,20 US$
+  Compra del dominio (pago unico anual):      + 11,86 US$
+                                               ---------------
+  TOTAL PRIMER MES:                             46,06 US$
+
+TOTAL PRIMER ANO:                                             422,26 US$
+TOTAL ANOS SIGUIENTES:                                        422,26 US$
+------------------------------------------------------------------------
+
+INCLUYE:
+  + Intel NVMe: 3-5x mas rapido que SSD regular
+  + 70 GB de disco NVMe (40% mas que el plan economico)
+  + Red de hasta 10 Gbps
+  + BD gestionada con backups diarios, SSL y failover
+  + Separacion servidor-BD
+  + Soporta 300-500 usuarios concurrentes
+
+LIMITACIONES:
+  - Un solo servidor de aplicacion
+  - CPU compartida (rendimiento puede variar en picos)
+
+
+================================================================================
+  PRESUPUESTO PROFESIONAL
+  "Para crecer sin preocupaciones"
+================================================================================
+
+CONCEPTO                                    MENSUAL (US$)    ANUAL (US$)
+--------                                    -------------    -----------
+
+DOMINIO
+  aerorutasdevenezuela.net
+  * El dominio se paga anual. No genera
+    cobro mensual, pero se debe adquirir
+    al momento de iniciar el servicio.            —             11,86
+
+SERVIDOR (Premium Intel NVMe)
+  4 GB RAM / 2 Intel CPUs / 120 GB NVMe SSD
+  4 TB transferencia
+  Red hasta 10 Gbps                             32,00          384,00
+
+BASE DE DATOS GESTIONADA
+  PostgreSQL administrado por DO
+  Backups diarios + PITR
+  SSL + failover automatico                     15,00          180,00
+
+CERTIFICADO SSL
+  Let's Encrypt (gratuito)                       0,00            0,00
+
+CORREO TRANSACCIONAL
+  Gmail SMTP (ya configurado)                    0,00            0,00
+
+MONITOREO
+  DigitalOcean Monitoring (gratuito)             0,00            0,00
+
+BACKUPS DEL SERVIDOR
+  Diarios (30% del droplet)                      9,60          115,20
+
+------------------------------------------------------------------------
+COSTO MENSUAL RECURRENTE:                       56,60 US$/mes
+TOTAL ANUAL (servidor + backups):                             679,20 US$
+
+INVERSION INICIAL (primer mes):
+  Primer mes de servidor + BD + backups:        56,60 US$
+  Compra del dominio (pago unico anual):      + 11,86 US$
+                                               ---------------
+  TOTAL PRIMER MES:                             68,46 US$
+
+TOTAL PRIMER ANO:                                             691,06 US$
+TOTAL ANOS SIGUIENTES:                                        691,06 US$
+------------------------------------------------------------------------
+
+INCLUYE:
+  + 4 GB RAM + 2 CPUs: holgura para picos de trafico
+  + 120 GB NVMe: espacio amplio para comprobantes y archivos
+  + Backups DIARIOS del servidor (no solo semanales)
+  + BD gestionada con backups diarios
+  + Red de hasta 10 Gbps
+  + Soporta 500-1000+ usuarios concurrentes
+  + Margen de crecimiento sin necesidad de migrar
+
+LIMITACIONES:
+  - Costo mas elevado
+  - Sobredimensionado para las primeras etapas del proyecto
+
+
+================================================================================
+  TABLA COMPARATIVA RESUMEN
+================================================================================
+
+                    ECONOMICO   RECOMENDADO   PROFESIONAL
+                    ---------   -----------   -----------
+Primer mes:         41,26 US$    46,06 US$     68,46 US$
+  (incluye dominio)
+
+Mensual recurrente: 29,40 US$    34,20 US$     56,60 US$
+  (meses siguientes)
+
+Anual:             364,66 US$   422,26 US$    691,06 US$
+Diario:              0,98 US$     1,14 US$      1,89 US$
+
+Tipo CPU:          Regular      Intel NVMe    Intel NVMe
+RAM:                 2 GB         2 GB          4 GB
+CPUs:                  1            1             2
+Disco:             50 GB SSD    70 GB NVMe    120 GB NVMe
+Red:               2 Gbps       10 Gbps       10 Gbps
+Transferencia:       2 TB         2 TB          4 TB
+BD Gestionada:       Si           Si            Si
+Backups:           Semanal      Semanal        Diario
+Usuarios aprox:    200-400      300-500        500-1000+
+
+
+================================================================================
+  RECOMENDACION FINAL
+================================================================================
+
+Para AERORUTAS DE VENEZUELA recomendamos el:
+
+  >>> PRESUPUESTO RECOMENDADO (34,20 US$/mes) <<<
+
+Razones:
+  1. La base de datos gestionada es CRITICA para un sistema de reservas
+     donde la perdida de datos es inaceptable.
+  2. 2 GB RAM con Intel NVMe corre Django + Nginx holgadamente.
+  3. 70 GB de disco NVMe da espacio suficiente para archivos y
+     comprobantes de pago.
+  4. El monitoreo gratuito permite detectar problemas antes de que
+     afecten al servicio.
+  5. Es facil escalar al Presupuesto Profesional sin migracion compleja.
+  6. Costo razonable: aproximadamente 1,14 US$ diario.
+
+Dominio recomendado:
+  >>> aerorutasdevenezuela.net (11,86 US$/ano) <<<
+  - Profesional y confiable
+  - Precio estable en renovacion
+  - Facil de recordar para clientes venezolanos
+
+Estado del sistema:
+  El sistema de reservas esta CASI LISTO para despliegue. Todos los
+  modulos principales estan desarrollados y funcionales. El unico
+  modulo pendiente es la AUTOMATIZACION DE PAGOS CON R4, que permitira
+  verificar y confirmar pagos de forma automatica sin intervencion
+  del administrador. Una vez completada esta integracion, el sistema
+  estara 100% operativo para produccion.
+
+
+================================================================================
+  COSTOS ADICIONALES OPCIONALES (NO INCLUIDOS)
+================================================================================
+
+CONCEPTO                                          COSTO ESTIMADO
+--------                                          --------------
+Segundo dominio (.com como respaldo)              10,46 US$/ano
+Correo profesional (Google Workspace)              6,00 US$/mes
+SMS para verificacion (Twilio)                     ~0,05 US$/SMS
+Load Balancer (DigitalOcean)                      12,00 US$/mes
+DigitalOcean Spaces CDN (250 GB)                   5,00 US$/mes
+Upgrade a backups diarios (si aplica)              +10% del droplet
+App movil nativa (desarrollo Flutter)              Cotizar aparte
+Soporte tecnico/mantenimiento mensual              Cotizar aparte
+
+
+================================================================================
+  NOTAS IMPORTANTES
+================================================================================
+
+  1. Todos los precios son en dolares americanos (US$) y fueron
+     verificados directamente en DigitalOcean (abril 2026).
+  2. Region recomendada: NYC1 (New York) — la mas cercana a Venezuela
+     entre las opciones disponibles.
+  3. Gmail SMTP tiene un limite de ~500 emails diarios (suficiente
+     para las primeras etapas, pero considerar Mailgun si crece).
+  4. Let's Encrypt se renueva automaticamente cada 90 dias (gratis).
+  5. Los precios de dominios son del proveedor actual del cliente.
+  6. IVA/impuestos no incluidos.
+  7. Todos los droplets usan CPU compartida (Shared CPU — Basic).
+     Para CPU dedicada, los planes inician desde 63 US$/mes.
+
+================================================================================
+  Elaborado para: Aerorutas de Venezuela
+  Preparado por: Equipo de Desarrollo
+  Fecha: 08 de Abril de 2026
+================================================================================

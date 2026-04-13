@@ -5,6 +5,7 @@ from .views import (
     RegistroView, PerfilView, CambiarPasswordView, GoogleLoginView,
     VerificarEmailView, ReenviarCodigoView,
     SolicitarResetPasswordView, ResetPasswordView,
+    ClientesDashboardView, AdminClientesListView, AdminToggleVipView,
 )
 
 
@@ -32,4 +33,10 @@ urlpatterns = [
     # Recuperar contraseña
     path('recuperar-password/', SolicitarResetPasswordView.as_view(), name='recuperar_password'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset_password'),
+
+    # Admin — Clientes
+    path('admin/clientes/dashboard/', ClientesDashboardView.as_view(), name='admin-clientes-dashboard'),
+    path('admin/clientes/', AdminClientesListView.as_view(), name='admin-clientes-list'),
+    path('admin/clientes/<int:user_id>/vip/', AdminToggleVipView.as_view(), name='admin-toggle-vip'),
 ]
+

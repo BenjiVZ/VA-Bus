@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presupuesto — Aerorutas de Venezuela</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* ── Print-safe reset ── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: letter;
+      margin: 18mm 16mm 18mm 16mm;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      font-size: 10.5pt;
+      color: #1e293b;
+      line-height: 1.5;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── Page break controls ── */
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .no-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    h1, h2, h3, h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    table {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ── Header / Cover ── */
+    .cover-header {
+      text-align: center;
+      padding: 2rem 0 1.5rem;
+      border-bottom: 3px solid #1a3a6b;
+      margin-bottom: 1.5rem;
+    }
+
+    .cover-header .company-name {
+      font-size: 22pt;
+      font-weight: 800;
+      color: #1a3a6b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .cover-header .doc-title {
+      font-size: 13pt;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 0.4rem;
+    }
+
+    .cover-header .doc-date {
+      font-size: 9pt;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+    }
+
+    .cover-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 2rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-size: 9.5pt;
+      margin-bottom: 2rem;
+    }
+
+    .cover-meta span {
+      color: #64748b;
+    }
+
+    .cover-meta strong {
+      color: #1e293b;
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1a3a6b;
+      border-bottom: 2px solid #f5c842;
+      padding-bottom: 0.4rem;
+      margin: 1.8rem 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-title .emoji {
+      font-size: 14pt;
+    }
+
+    /* ── Budget card ── */
+    .budget-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .budget-card-header {
+      padding: 0.8rem 1.25rem;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .budget-card-header h3 {
+      font-size: 12pt;
+      font-weight: 700;
+    }
+
+    .budget-card-header .subtitle {
+      font-size: 8.5pt;
+      opacity: 0.85;
+      font-weight: 400;
+    }
+
+    .budget-eco .budget-card-header { background: #16a34a; }
+    .budget-rec .budget-card-header { background: #1a3a6b; }
+    .budget-pro .budget-card-header { background: #7c3aed; }
+
+    .budget-rec {
+      border-color: #1a3a6b;
+      box-shadow: 0 0 0 1.5px #1a3a6b;
+    }
+
+    .badge-rec {
+      background: #f5c842;
+      color: #1a3a6b;
+      font-size: 7.5pt;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .budget-card-body {
+      padding: 1rem 1.25rem;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+    }
+
+    table th {
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 7.5pt;
+      padding: 0.5rem 0.6rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    table th.right, table td.right {
+      text-align: right;
+    }
+
+    table td {
+      padding: 0.45rem 0.6rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+    }
+
+    table td.detail {
+      font-size: 8pt;
+      color: #94a3b8;
+      padding-top: 0;
+      padding-bottom: 0.5rem;
+    }
+
+    table tr.total-row td {
+      font-weight: 700;
+      border-top: 2px solid #1e293b;
+      border-bottom: none;
+      padding-top: 0.6rem;
+      font-size: 10pt;
+    }
+
+    table tr.subtotal-row td {
+      font-weight: 600;
+      border-top: 1px solid #cbd5e1;
+      color: #1e293b;
+    }
+
+    /* ── Summary box ── */
+    .summary-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      margin-top: 0.75rem;
+      font-size: 9pt;
+    }
+
+    .summary-box .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.2rem 0;
+    }
+
+    .summary-box .row.highlight {
+      font-weight: 700;
+      font-size: 11pt;
+      color: #1a3a6b;
+      border-top: 1px solid #cbd5e1;
+      margin-top: 0.3rem;
+      padding-top: 0.5rem;
+    }
+
+    /* ── Includes / Limitations ── */
+    .features {
+      margin-top: 0.75rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 1.5rem;
+      font-size: 8.5pt;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 0.3rem;
+      align-items: flex-start;
+    }
+
+    .feature-item .icon-plus {
+      color: #16a34a;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .feature-item .icon-minus {
+      color: #dc2626;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Comparison table ── */
+    .comparison-table {
+      page-break-inside: avoid;
+    }
+
+    .comparison-table th {
+      text-align: center;
+    }
+
+    .comparison-table th.active {
+      background: #1a3a6b;
+      color: #fff;
+    }
+
+    .comparison-table td {
+      text-align: center;
+      padding: 0.5rem;
+    }
+
+    .comparison-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .comparison-table td.active {
+      background: #eef2ff;
+      font-weight: 600;
+    }
+
+    /* ── Checklist ── */
+    .checklist {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.3rem 1.5rem;
+      font-size: 9pt;
+      margin: 0.5rem 0;
+    }
+
+    .check-item {
+      display: flex;
+      gap: 0.4rem;
+      align-items: flex-start;
+    }
+
+    .check-icon {
+      color: #16a34a;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .pending-icon {
+      color: #f59e0b;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── Recommendation box ── */
+    .recommendation-box {
+      background: linear-gradient(135deg, #1a3a6b 0%, #2d5a9e 100%);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      page-break-inside: avoid;
+    }
+
+    .recommendation-box h3 {
+      font-size: 14pt;
+      margin-bottom: 0.75rem;
+    }
+
+    .recommendation-box .highlight-price {
+      font-size: 20pt;
+      font-weight: 800;
+      color: #f5c842;
+    }
+
+    .recommendation-box .reasons {
+      margin-top: 1rem;
+      font-size: 9pt;
+      line-height: 1.6;
+    }
+
+    .recommendation-box .reasons li {
+      margin-bottom: 0.3rem;
+      margin-left: 1.2rem;
+    }
+
+    /* ── Domain options ── */
+    .domain-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
+      margin: 0.5rem 0;
+    }
+
+    .domain-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    .domain-card.recommended {
+      border-color: #1a3a6b;
+      background: #eef2ff;
+    }
+
+    .domain-card h4 {
+      font-size: 9.5pt;
+      color: #1a3a6b;
+      margin-bottom: 0.3rem;
+    }
+
+    .domain-card .price {
+      font-weight: 700;
+      font-size: 11pt;
+      color: #1e293b;
+    }
+
+    .domain-card .note {
+      color: #64748b;
+      margin-top: 0.3rem;
+      line-height: 1.4;
+    }
+
+    /* ── Server plans table ── */
+    .plan-table td, .plan-table th {
+      font-size: 8pt;
+      padding: 0.35rem 0.5rem;
+    }
+
+    /* ── Pending module box ── */
+    .pending-box {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 8px 8px 0;
+      padding: 0.75rem 1rem;
+      margin: 0.75rem 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+
+    .pending-box strong {
+      color: #92400e;
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 2rem;
+      padding-top: 0.75rem;
+      border-top: 2px solid #1a3a6b;
+      text-align: center;
+      font-size: 8pt;
+      color: #94a3b8;
+    }
+
+    .doc-footer strong {
+      color: #1a3a6b;
+    }
+
+    /* ── Notes section ── */
+    .notes-list {
+      font-size: 8.5pt;
+      color: #64748b;
+      list-style: decimal;
+      padding-left: 1.2rem;
+      line-height: 1.6;
+    }
+
+    .notes-list li {
+      margin-bottom: 0.25rem;
+    }
+
+    /* ── Optional costs table ── */
+    .optional-table td {
+      font-size: 8.5pt;
+    }
+
+    /* ── Print-only adjustments ── */
+    @media print {
+      body {
+        font-size: 10pt;
+      }
+
+      .cover-header {
+        padding: 1.5rem 0 1rem;
+      }
+
+      .budget-card {
+        box-shadow: none !important;
+      }
+    }
+
+    /* ── Screen preview ── */
+    @media screen {
+      body {
+        max-width: 850px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: #f1f5f9;
+      }
+
+      .page-container {
+        background: #fff;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- ═══════════ COVER ═══════════ -->
+  <div class="cover-header">
+    <div class="company-name">Aerorutas de Venezuela</div>
+    <div class="doc-title">Presupuestos de Infraestructura y Despliegue</div>
+    <div class="doc-title" style="font-size: 10pt; color: #94a3b8;">Sistema Web de Reservas de Boletos</div>
+    <div class="doc-date">08 de Abril de 2026</div>
+  </div>
+
+  <div class="cover-meta">
+    <div><span>Proyecto:</span> <strong>Sistema Web de Reservas de Boletos</strong></div>
+    <div><span>Hosting:</span> <strong>DigitalOcean</strong></div>
+    <div><span>Tecnologías:</span> <strong>Django REST + React (Vite) + PostgreSQL</strong></div>
+    <div><span>Región:</span> <strong>New York (NYC1)</strong></div>
+  </div>
+
+
+  <!-- ═══════════ ESTADO ACTUAL ═══════════ -->
+  <div class="section-title"><span class="emoji">📋</span> Estado Actual del Sistema</div>
+
+  <p style="font-size: 9.5pt; margin-bottom: 0.75rem;">
+    El sistema de reservas se encuentra <strong style="color: #16a34a;">casi listo para despliegue</strong>.
+    Módulos completados y funcionales:
+  </p>
+
+  <div class="checklist no-break">
+    <div class="check-item"><span class="check-icon">✓</span> Registro e inicio de sesión (email + Google OAuth)</div>
+    <div class="check-item"><span class="check-icon">✓</span> Verificación de email con código de 6 dígitos</div>
+    <div class="check-item"><span class="check-icon">✓</span> Recuperación de contraseña</div>
+    <div class="check-item"><span class="check-icon">✓</span> Búsqueda y filtrado de viajes</div>
+    <div class="check-item"><span class="check-icon">✓</span> Selección interactiva de asientos con mapa visual</div>
+    <div class="check-item"><span class="check-icon">✓</span> Reserva múltiple con expiración a 15 min</div>
+    <div class="check-item"><span class="check-icon">✓</span> Subida de comprobante de pago</div>
+    <div class="check-item"><span class="check-icon">✓</span> Panel de admin para aprobar/rechazar pagos</div>
+    <div class="check-item"><span class="check-icon">✓</span> Generación de tickets con código QR</div>
+    <div class="check-item"><span class="check-icon">✓</span> Envío de boletos por email en PDF</div>
+    <div class="check-item"><span class="check-icon">✓</span> Verificación de tickets por QR</div>
+    <div class="check-item"><span class="check-icon">✓</span> Creación de viajes en lote</div>
+    <div class="check-item"><span class="check-icon">✓</span> API externa para sistema de control</div>
+    <div class="check-item"><span class="check-icon">✓</span> Tasa de cambio BCV automática</div>
+    <div class="check-item"><span class="check-icon">✓</span> Protección anti-spam y rate limiting</div>
+    <div class="check-item"><span class="check-icon">✓</span> Transacciones atómicas anti doble reserva</div>
+  </div>
+
+  <div class="pending-box no-break">
+    <strong>⏳ Módulo pendiente: Automatización de pagos con R4</strong><br>
+    Actualmente los pagos son validados manualmente. La integración con R4 permitirá verificar y confirmar
+    pagos de forma automática, eliminando la intervención manual. Una vez completada, el sistema estará
+    <strong>100% operativo para producción</strong>.
+  </div>
+
+
+  <!-- ═══════════ DOMINIOS ═══════════ -->
+  <div class="section-title no-break"><span class="emoji">🌐</span> Dominios Recomendados</div>
+
+  <div class="domain-grid no-break">
+    <div class="domain-card recommended">
+      <span class="badge-rec">Recomendado</span>
+      <h4 style="margin-top: 0.4rem;">aerorutasdevenezuela.net</h4>
+      <div class="price">11,86 US$/año</div>
+      <div class="note">Renovación: 11,86 US$/año. Confiable, profesional y fácil de recordar.</div>
+    </div>
+    <div class="domain-card">
+      <h4>aerorutasdevenezuela.org</h4>
+      <div class="price">7,50 US$/año</div>
+      <div class="note">Renovación: 10,13 US$/año. Económico, pero .org se asocia más a ONG.</div>
+    </div>
+    <div class="domain-card">
+      <h4>aerorutasdevenezuela.app</h4>
+      <div class="price">14,20 US$/año</div>
+      <div class="note">Renovación: 14,20 US$/año. Moderno, HTTPS obligatorio. Ideal si habrá app móvil.</div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════ PLANES DE SERVIDOR ═══════════ -->
+  <div class="section-title"><span class="emoji">🖥️</span> Planes de Servidor Disponibles — DigitalOcean</div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" class="no-break">
+    <div>
+      <p style="font-weight: 700; font-size: 9pt; color: #1a3a6b; margin-bottom: 0.3rem;">Regular (SSD / Red 2 Gbps)</p>
+      <table class="plan-table">
+        <thead><tr><th>Precio</th><th>RAM</th><th>CPU</th><th>Disco</th><th>Transfer.</th></tr></thead>
+        <tbody>
+          <tr><td><strong>$4/mes</strong></td><td>512 MB</td><td>1</td><td>10 GB</td><td>500 GB</td></tr>
+          <tr><td><strong>$6/mes</strong></td><td>1 GB</td><td>1</td><td>25 GB</td><td>1 TB</td></tr>
+          <tr><td><strong>$12/mes</strong></td><td>2 GB</td><td>1</td><td>50 GB</td><td>2 TB</td></tr>
+          <tr><td><strong>$18/mes</strong></td><td>2 GB</td><td>2</td><td>60 GB</td><td>3 TB</td></tr>
+          <tr><td><strong>$24/mes</strong></td><td>4 GB</td><td>2</td><td>80 GB</td><td>4 TB</td></tr>
+          <tr><td><strong>$48/mes</strong></td><td>8 GB</td><td>4</td><td>160 GB</td><td>5 TB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <p style="font-weight: 700; font-size: 9pt; color: #1a3a6b; margin-bottom: 0.3rem;">Premium Intel (NVMe / Red 10 Gbps)</p>
+      <table class="plan-table">
+        <thead><tr><th>Precio</th><th>RAM</th><th>CPU</th><th>Disco</th><th>Transfer.</th></tr></thead>
+        <tbody>
+          <tr><td><strong>$8/mes</strong></td><td>1 GB</td><td>1</td><td>35 GB</td><td>1 TB</td></tr>
+          <tr><td><strong>$16/mes</strong></td><td>2 GB</td><td>1</td><td>70 GB</td><td>2 TB</td></tr>
+          <tr><td><strong>$24/mes</strong></td><td>2 GB</td><td>2</td><td>90 GB</td><td>3 TB</td></tr>
+          <tr><td><strong>$32/mes</strong></td><td>4 GB</td><td>2</td><td>120 GB</td><td>4 TB</td></tr>
+          <tr><td><strong>$48/mes</strong></td><td>8 GB</td><td>2</td><td>160 GB</td><td>5 TB</td></tr>
+          <tr><td><strong>$64/mes</strong></td><td>8 GB</td><td>4</td><td>240 GB</td><td>6 TB</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="summary-box no-break" style="margin-top: 1rem;">
+    <p style="font-weight: 600; font-size: 8.5pt; color: #1a3a6b; margin-bottom: 0.3rem;">Extras disponibles:</p>
+    <div class="row"><span>Base de datos gestionada (MySQL/PostgreSQL)</span><span><strong>+15,00 US$/mes</strong></span></div>
+    <div class="row"><span>Backups semanales (4 semanas retención)</span><span><strong>20% del droplet</strong></span></div>
+    <div class="row"><span>Backups diarios (7 días retención)</span><span><strong>30% del droplet</strong></span></div>
+    <div class="row"><span>Monitoreo y métricas mejoradas</span><span><strong>Gratis</strong></span></div>
+    <div class="row"><span>SSL (Let's Encrypt)</span><span><strong>Gratis</strong></span></div>
+  </div>
+
+
+  <!-- ═══════════ PAGE 2: PRESUPUESTOS ═══════════ -->
+  <div class="page-break"></div>
+
+  <!-- ── PRESUPUESTO ECONÓMICO ── -->
+  <div class="budget-card budget-eco no-break">
+    <div class="budget-card-header">
+      <div>
+        <h3>💰 Presupuesto Económico</h3>
+        <div class="subtitle">"Para arrancar con solidez"</div>
+      </div>
+    </div>
+    <div class="budget-card-body">
+      <table>
+        <thead>
+          <tr><th style="width:45%">Concepto</th><th>Detalle</th><th class="right">Mensual</th><th class="right">Anual</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Dominio</strong></td><td>aerorutasdevenezuela.net</td><td class="right">—</td><td class="right">11,86 US$</td></tr>
+          <tr><td><strong>Servidor</strong></td><td>Regular SSD — 2 GB / 1 CPU / 50 GB</td><td class="right">12,00 US$</td><td class="right">144,00 US$</td></tr>
+          <tr><td><strong>Base de Datos</strong></td><td>Gestionada DO — Backups + SSL + failover</td><td class="right">15,00 US$</td><td class="right">180,00 US$</td></tr>
+          <tr><td><strong>SSL</strong></td><td>Let's Encrypt (gratuito)</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Correo</strong></td><td>Gmail SMTP (500 emails/día)</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Monitoreo</strong></td><td>DigitalOcean Monitoring</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Backups</strong></td><td>Semanales (20% del droplet)</td><td class="right">2,40 US$</td><td class="right">28,80 US$</td></tr>
+        </tbody>
+      </table>
+      <div class="summary-box">
+        <div class="row"><span>Costo mensual recurrente</span><span><strong>29,40 US$/mes</strong></span></div>
+        <div class="row"><span>Dominio (pago único anual)</span><span>+ 11,86 US$</span></div>
+        <div class="row highlight"><span>Total primer mes</span><span>41,26 US$</span></div>
+        <div class="row"><span>Total primer año</span><span><strong>364,66 US$</strong></span></div>
+      </div>
+      <div class="features" style="margin-top: 0.5rem;">
+        <div class="feature-item"><span class="icon-plus">+</span> 2 GB RAM: suficiente para Django + Nginx</div>
+        <div class="feature-item"><span class="icon-plus">+</span> BD gestionada con backups, SSL y failover</div>
+        <div class="feature-item"><span class="icon-plus">+</span> Soporta 200-400 usuarios concurrentes</div>
+        <div class="feature-item"><span class="icon-minus">−</span> Disco SSD estándar (no NVMe)</div>
+        <div class="feature-item"><span class="icon-minus">−</span> Red hasta 2 Gbps</div>
+        <div class="feature-item"><span class="icon-minus">−</span> CPU compartida</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── PRESUPUESTO RECOMENDADO ── -->
+  <div class="budget-card budget-rec no-break">
+    <div class="budget-card-header">
+      <div>
+        <h3>⭐ Presupuesto Recomendado</h3>
+        <div class="subtitle">"El equilibrio perfecto para Aerorutas"</div>
+      </div>
+      <span class="badge-rec">★ Recomendado</span>
+    </div>
+    <div class="budget-card-body">
+      <table>
+        <thead>
+          <tr><th style="width:45%">Concepto</th><th>Detalle</th><th class="right">Mensual</th><th class="right">Anual</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Dominio</strong></td><td>aerorutasdevenezuela.net</td><td class="right">—</td><td class="right">11,86 US$</td></tr>
+          <tr><td><strong>Servidor</strong></td><td>Premium Intel NVMe — 2 GB / 1 CPU / 70 GB</td><td class="right">16,00 US$</td><td class="right">192,00 US$</td></tr>
+          <tr><td><strong>Base de Datos</strong></td><td>Gestionada DO — Backups + SSL + failover</td><td class="right">15,00 US$</td><td class="right">180,00 US$</td></tr>
+          <tr><td><strong>SSL</strong></td><td>Let's Encrypt (gratuito)</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Correo</strong></td><td>Gmail SMTP (ya configurado)</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Monitoreo</strong></td><td>DigitalOcean Monitoring</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Backups</strong></td><td>Semanales (20% del droplet)</td><td class="right">3,20 US$</td><td class="right">38,40 US$</td></tr>
+        </tbody>
+      </table>
+      <div class="summary-box">
+        <div class="row"><span>Costo mensual recurrente</span><span><strong>34,20 US$/mes</strong></span></div>
+        <div class="row"><span>Dominio (pago único anual)</span><span>+ 11,86 US$</span></div>
+        <div class="row highlight"><span>Total primer mes</span><span>46,06 US$</span></div>
+        <div class="row"><span>Total primer año</span><span><strong>422,26 US$</strong></span></div>
+      </div>
+      <div class="features" style="margin-top: 0.5rem;">
+        <div class="feature-item"><span class="icon-plus">+</span> Intel NVMe: 3-5x más rápido que SSD regular</div>
+        <div class="feature-item"><span class="icon-plus">+</span> 70 GB disco NVMe (40% más que el económico)</div>
+        <div class="feature-item"><span class="icon-plus">+</span> Red hasta 10 Gbps</div>
+        <div class="feature-item"><span class="icon-plus">+</span> BD gestionada con backups, SSL y failover</div>
+        <div class="feature-item"><span class="icon-plus">+</span> Soporta 300-500 usuarios concurrentes</div>
+        <div class="feature-item"><span class="icon-minus">−</span> Un solo servidor de aplicación</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════ PAGE 3 ═══════════ -->
+  <div class="page-break"></div>
+
+  <!-- ── PRESUPUESTO PROFESIONAL ── -->
+  <div class="budget-card budget-pro no-break">
+    <div class="budget-card-header">
+      <div>
+        <h3>🚀 Presupuesto Profesional</h3>
+        <div class="subtitle">"Para crecer sin preocupaciones"</div>
+      </div>
+    </div>
+    <div class="budget-card-body">
+      <table>
+        <thead>
+          <tr><th style="width:45%">Concepto</th><th>Detalle</th><th class="right">Mensual</th><th class="right">Anual</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Dominio</strong></td><td>aerorutasdevenezuela.net</td><td class="right">—</td><td class="right">11,86 US$</td></tr>
+          <tr><td><strong>Servidor</strong></td><td>Premium Intel NVMe — 4 GB / 2 CPUs / 120 GB</td><td class="right">32,00 US$</td><td class="right">384,00 US$</td></tr>
+          <tr><td><strong>Base de Datos</strong></td><td>PostgreSQL gestionado — Backups + PITR + failover</td><td class="right">15,00 US$</td><td class="right">180,00 US$</td></tr>
+          <tr><td><strong>SSL</strong></td><td>Let's Encrypt (gratuito)</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Correo</strong></td><td>Gmail SMTP (ya configurado)</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Monitoreo</strong></td><td>DigitalOcean Monitoring</td><td class="right">0,00</td><td class="right">0,00</td></tr>
+          <tr><td><strong>Backups</strong></td><td>Diarios (30% del droplet)</td><td class="right">9,60 US$</td><td class="right">115,20 US$</td></tr>
+        </tbody>
+      </table>
+      <div class="summary-box">
+        <div class="row"><span>Costo mensual recurrente</span><span><strong>56,60 US$/mes</strong></span></div>
+        <div class="row"><span>Dominio (pago único anual)</span><span>+ 11,86 US$</span></div>
+        <div class="row highlight"><span>Total primer mes</span><span>68,46 US$</span></div>
+        <div class="row"><span>Total primer año</span><span><strong>691,06 US$</strong></span></div>
+      </div>
+      <div class="features" style="margin-top: 0.5rem;">
+        <div class="feature-item"><span class="icon-plus">+</span> 4 GB RAM + 2 CPUs: holgura para picos</div>
+        <div class="feature-item"><span class="icon-plus">+</span> 120 GB NVMe para comprobantes y archivos</div>
+        <div class="feature-item"><span class="icon-plus">+</span> Backups DIARIOS del servidor</div>
+        <div class="feature-item"><span class="icon-plus">+</span> Soporta 500-1000+ usuarios concurrentes</div>
+        <div class="feature-item"><span class="icon-minus">−</span> Costo más elevado</div>
+        <div class="feature-item"><span class="icon-minus">−</span> Sobredimensionado para primeras etapas</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════ COMPARATIVA ═══════════ -->
+  <div class="section-title"><span class="emoji">📊</span> Tabla Comparativa</div>
+
+  <table class="comparison-table no-break">
+    <thead>
+      <tr>
+        <th style="text-align:left; width: 28%"></th>
+        <th style="width: 24%">💰 Económico</th>
+        <th class="active" style="width: 24%">⭐ Recomendado</th>
+        <th style="width: 24%">🚀 Profesional</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Primer mes</td><td>41,26 US$</td><td class="active"><strong>46,06 US$</strong></td><td>68,46 US$</td></tr>
+      <tr><td>Mensual recurrente</td><td>29,40 US$</td><td class="active"><strong>34,20 US$</strong></td><td>56,60 US$</td></tr>
+      <tr><td>Costo anual</td><td>364,66 US$</td><td class="active"><strong>422,26 US$</strong></td><td>691,06 US$</td></tr>
+      <tr><td>Costo diario</td><td>0,98 US$</td><td class="active"><strong>1,14 US$</strong></td><td>1,89 US$</td></tr>
+      <tr><td>Tipo CPU</td><td>Regular</td><td class="active"><strong>Intel NVMe</strong></td><td>Intel NVMe</td></tr>
+      <tr><td>RAM</td><td>2 GB</td><td class="active"><strong>2 GB</strong></td><td>4 GB</td></tr>
+      <tr><td>CPUs</td><td>1</td><td class="active"><strong>1</strong></td><td>2</td></tr>
+      <tr><td>Disco</td><td>50 GB SSD</td><td class="active"><strong>70 GB NVMe</strong></td><td>120 GB NVMe</td></tr>
+      <tr><td>Red</td><td>2 Gbps</td><td class="active"><strong>10 Gbps</strong></td><td>10 Gbps</td></tr>
+      <tr><td>Transferencia</td><td>2 TB</td><td class="active"><strong>2 TB</strong></td><td>4 TB</td></tr>
+      <tr><td>BD Gestionada</td><td>Sí</td><td class="active"><strong>Sí</strong></td><td>Sí</td></tr>
+      <tr><td>Backups</td><td>Semanal</td><td class="active"><strong>Semanal</strong></td><td>Diario</td></tr>
+      <tr><td>Usuarios aprox.</td><td>200–400</td><td class="active"><strong>300–500</strong></td><td>500–1000+</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════ RECOMENDACIÓN ═══════════ -->
+  <div class="recommendation-box no-break">
+    <h3>✅ Recomendación Final</h3>
+    <p>Para <strong>Aerorutas de Venezuela</strong> recomendamos el:</p>
+    <p style="margin: 0.5rem 0;">
+      <span class="highlight-price">Presupuesto Recomendado — 34,20 US$/mes</span>
+    </p>
+    <p style="font-size: 9pt; opacity: 0.9; margin-top: 0.25rem;">
+      Dominio recomendado: <strong>aerorutasdevenezuela.net</strong> (11,86 US$/año)
+    </p>
+    <ol class="reasons">
+      <li>La <strong>base de datos gestionada</strong> es crítica para un sistema de reservas donde la pérdida de datos es inaceptable.</li>
+      <li>2 GB RAM con <strong>Intel NVMe</strong> corre Django + Nginx holgadamente.</li>
+      <li>70 GB de disco NVMe da espacio suficiente para archivos y comprobantes de pago.</li>
+      <li>El monitoreo gratuito permite detectar problemas antes de que afecten al servicio.</li>
+      <li>Es fácil <strong>escalar al Presupuesto Profesional</strong> sin migración compleja.</li>
+      <li>Costo razonable: aproximadamente <strong>1,14 US$ diario</strong>.</li>
+    </ol>
+  </div>
+
+
+  <!-- ═══════════ PAGE 4: EXTRAS + NOTAS ═══════════ -->
+  <div class="page-break"></div>
+
+  <!-- ═══════════ COSTOS ADICIONALES ═══════════ -->
+  <div class="section-title"><span class="emoji">🔧</span> Costos Adicionales Opcionales (No incluidos)</div>
+
+  <table class="optional-table no-break">
+    <thead>
+      <tr><th style="width: 65%">Concepto</th><th class="right">Costo Estimado</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Segundo dominio (.com como respaldo)</td><td class="right">10,46 US$/año</td></tr>
+      <tr><td>Correo profesional (Google Workspace)</td><td class="right">6,00 US$/mes</td></tr>
+      <tr><td>SMS para verificación (Twilio)</td><td class="right">~0,05 US$/SMS</td></tr>
+      <tr><td>Load Balancer (DigitalOcean)</td><td class="right">12,00 US$/mes</td></tr>
+      <tr><td>DigitalOcean Spaces CDN (250 GB)</td><td class="right">5,00 US$/mes</td></tr>
+      <tr><td>Upgrade a backups diarios (si aplica)</td><td class="right">+10% del droplet</td></tr>
+      <tr><td>App móvil nativa (desarrollo Flutter)</td><td class="right">Cotizar aparte</td></tr>
+      <tr><td>Soporte técnico / mantenimiento mensual</td><td class="right">Cotizar aparte</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════ NOTAS ═══════════ -->
+  <div class="section-title"><span class="emoji">📌</span> Notas Importantes</div>
+
+  <ol class="notes-list no-break">
+    <li>Todos los precios son en dólares americanos (US$) y fueron verificados directamente en DigitalOcean (abril 2026).</li>
+    <li>Región recomendada: NYC1 (New York) — la más cercana a Venezuela entre las opciones disponibles.</li>
+    <li>Gmail SMTP tiene un límite de ~500 emails diarios (suficiente para las primeras etapas, pero considerar Mailgun si crece).</li>
+    <li>Let's Encrypt se renueva automáticamente cada 90 días (gratis).</li>
+    <li>Los precios de dominios son del proveedor actual del cliente.</li>
+    <li>IVA/impuestos no incluidos.</li>
+    <li>Todos los droplets usan CPU compartida (Shared CPU — Basic). Para CPU dedicada, los planes inician desde 63 US$/mes.</li>
+  </ol>
+
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <div class="doc-footer">
+    <strong>Aerorutas de Venezuela</strong> · Presupuestos de Infraestructura y Despliegue<br>
+    Preparado por: Equipo de Desarrollo · Fecha: 08 de Abril de 2026
+  </div>
+
+</div>
+
+</body>
+</html>

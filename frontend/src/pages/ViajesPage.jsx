@@ -59,16 +59,17 @@ export default function ViajesPage() {
     if (destino) params.destino = destino;
     if (fecha) params.fecha = fecha;
 
-    Promise.all([
-      buscarViajes(params),
-      getTasaCambio().catch(() => ({ data: { tasa_bcv: null } })),
-    ])
-      .then(([viajesRes, tasaRes]) => {
+    buscarViajes(params)
+      .then((viajesRes) => {
         setViajes(viajesRes.data);
-        setTasa(tasaRes.data.tasa_bcv);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // Tasa de cambio carga aparte (no bloquea el listado)
+    getTasaCambio()
+      .then((res) => setTasa(res.data.tasa_bcv))
+      .catch(() => null);
   }, [origen, destino, fecha]);
 
   const activeFilterCount = [origen, destino, fecha].filter(Boolean).length;

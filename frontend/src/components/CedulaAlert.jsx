@@ -32,10 +32,6 @@ export default function CedulaAlert() {
       gap: '0.75rem',
       fontSize: '0.9rem',
       fontWeight: '500',
-      position: 'relative',
-      zIndex: 999,
-      boxShadow: '0 2px 8px rgba(230, 57, 70, 0.3)',
-      animation: 'slideDown 0.3s ease-out',
       flexWrap: 'wrap',
     }}>
       <AlertTriangle size={18} style={{ flexShrink: 0 }} />

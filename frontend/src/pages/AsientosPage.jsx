@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAsientos, crearReserva, getTasaCambio } from '../services/api';
+import { getAsientos, crearReserva, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
 import AtencionModal from '../components/AtencionModal';
-import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle } from 'lucide-react';
+import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle, Clock, PawPrint, Accessibility, ShieldCheck } from 'lucide-react';
 
 export default function AsientosPage() {
   const { id } = useParams();
@@ -28,94 +28,208 @@ export default function AsientosPage() {
   // Track seats where user toggled "menor" on then off (fraud detection)
   const [menorToggled, setMenorToggled] = useState({});
 
+  // ── Timer de selección (máximo 10 minutos) ──
+  const [selectionStart, setSelectionStart] = useState(null);
+  const [remainingTime, setRemainingTime] = useState(null);
+  const MAX_SELECTION_MINUTES = 10;
+
   // AtencionModal state
   const [showAtencion, setShowAtencion] = useState(false);
 
-  useEffect(() => {
-    const cargarAsientos = () => {
-      Promise.all([
-        getAsientos(id),
-        getTasaCambio().catch(() => ({ data: { tasa_bcv: null } })),
-      ])
-        .then(([asientosRes, tasaRes]) => {
-          const newData = asientosRes.data;
-          setData(newData);
-          setTasa(tasaRes.data.tasa_bcv);
+  const selectedSeatsRef = useRef([]);
 
-          // Auto-deseleccionar asientos que otro usuario ya tomó
-          if (newData?.pisos_config) {
-            const ocupados = new Set();
-            newData.pisos_config.forEach(piso => {
-              (piso.layout || []).forEach(row => {
-                row.forEach(cell => {
-                  if (cell.type === 'seat' && cell.number && !cell.disponible) {
-                    ocupados.add(`${piso.numero_piso}-${cell.number}`);
-                  }
-                });
+  useEffect(() => {
+    selectedSeatsRef.current = selectedSeats;
+  }, [selectedSeats]);
+
+  // Iniciar/detener timer cuando se selecciona/deselecciona el primer asiento
+  useEffect(() => {
+    if (selectedSeats.length > 0 && !selectionStart) {
+      setSelectionStart(Date.now());
+    } else if (selectedSeats.length === 0) {
+      setSelectionStart(null);
+      setRemainingTime(null);
+    }
+  }, [selectedSeats.length, selectionStart]);
+
+  const cargarAsientos = useCallback(() => {
+    getAsientos(id)
+      .then((asientosRes) => {
+        const newData = asientosRes.data;
+        setData(newData);
+
+        // Auto-deseleccionar asientos que otro usuario ya tomó
+        if (newData?.pisos_config) {
+          const ocupados = new Set();
+          const bloqueadosMios = [];
+          newData.pisos_config.forEach((piso) => {
+            (piso.layout || []).forEach((row) => {
+              row.forEach((cell) => {
+                if (cell.type === 'seat' && cell.number && !cell.disponible) {
+                  ocupados.add(`${piso.numero_piso}-${cell.number}`);
+                }
+                if (cell.type === 'seat' && cell.number && cell.bloqueado_por_mi) {
+                  bloqueadosMios.push({
+                    numero: cell.number,
+                    piso: piso.numero_piso,
+                  });
+                }
               });
             });
-            setSelectedSeats(prev => {
-              const filtrados = prev.filter(s => !ocupados.has(`${s.piso}-${s.numero}`));
-              if (filtrados.length < prev.length) {
-                // Remove options for deselected seats
-                setSeatOptions(opts => {
-                  const copy = { ...opts };
-                  prev.forEach(s => {
-                    const key = `${s.piso}-${s.numero}`;
-                    if (ocupados.has(key)) delete copy[key];
-                  });
-                  return copy;
-                });
-              }
-              return filtrados;
-            });
-          }
-          // Pre-fill passenger info from user profile (only first load)
-          if (user && !nombre) {
-            setNombre(`${user.first_name || ''} ${user.last_name || ''}`.trim());
-            const rawCedula = user.cedula || '';
-            const match = rawCedula.match(/^([VJE])-?(.*)$/i);
-            if (match) {
-              setCedulaTipo(match[1].toUpperCase());
-              setCedula(match[2]);
-            } else {
-              setCedula(rawCedula);
-            }
-          }
-        })
-        .catch(() => setError('Error al cargar los asientos.'))
-        .finally(() => setLoading(false));
-    };
+          });
+          setSelectedSeats((prev) => {
+            const filtrados = prev.filter((s) => !ocupados.has(`${s.piso}-${s.numero}`));
+            const existentes = new Set(filtrados.map((s) => `${s.piso}-${s.numero}`));
 
+            // Rehidrata selección tras refresh usando bloqueos activos del usuario.
+            bloqueadosMios.forEach((seat) => {
+              const seatKey = `${seat.piso}-${seat.numero}`;
+              if (!existentes.has(seatKey)) {
+                filtrados.push(seat);
+                existentes.add(seatKey);
+              }
+            });
+
+            if (filtrados.length < prev.length) {
+              setSeatOptions((opts) => {
+                const copy = { ...opts };
+                prev.forEach((s) => {
+                  const key = `${s.piso}-${s.numero}`;
+                  if (ocupados.has(key)) delete copy[key];
+                });
+                return copy;
+              });
+            }
+            return filtrados;
+          });
+        }
+
+        // Pre-fill passenger info from user profile (only first load)
+        if (user) {
+          const nombreCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+          if (nombreCompleto) {
+            setNombre((prev) => prev || nombreCompleto);
+          }
+          const rawCedula = user.cedula || '';
+          const match = rawCedula.match(/^([VJE])-?(.*)$/i);
+          if (match && !cedula) {
+            setCedulaTipo(match[1].toUpperCase());
+            setCedula(match[2]);
+          } else if (!cedula) {
+            setCedula((prev) => prev || rawCedula);
+          }
+        }
+      })
+      .catch(() => setError('Error al cargar los asientos.'))
+      .finally(() => setLoading(false));
+  }, [id, user, cedula]);
+
+  useEffect(() => {
     cargarAsientos();
 
-    // Auto-refresh cada 5s para detectar asientos que otros reservaron
-    const interval = setInterval(cargarAsientos, 5000);
+    // Cargar tasa de cambio por separado (no bloquea carga de asientos)
+    getTasaCambio()
+      .then((res) => setTasa(res.data.tasa_bcv))
+      .catch(() => null);
+
+    // Auto-refresh + renovación del bloqueo para asientos seleccionados
+    const interval = setInterval(() => {
+      cargarAsientos();
+      if (user && selectedSeatsRef.current.length > 0) {
+        selectedSeatsRef.current.forEach((s) => {
+          bloquearAsiento(Number(id), s.numero, s.piso).catch((err) => {
+            if (err.response?.data?.sesion_expirada) {
+              setSelectedSeats([]);
+              setSeatOptions({});
+              setSelectionStart(null);
+              setRemainingTime(null);
+              setMenorToggled({});
+              setError('⏰ Tu tiempo de selección ha expirado (10 minutos). Los asientos fueron liberados.');
+              cargarAsientos();
+            }
+          });
+        });
+      }
+    }, 5000);
+
     return () => clearInterval(interval);
+  }, [id, user, cargarAsientos]);
+
+  // Countdown timer — libera asientos al expirar
+  useEffect(() => {
+    if (!selectionStart) return;
+
+    const tick = () => {
+      const elapsed = Date.now() - selectionStart;
+      const total = MAX_SELECTION_MINUTES * 60 * 1000;
+      const remaining = total - elapsed;
+
+      if (remaining <= 0) {
+        selectedSeatsRef.current.forEach(s => {
+          liberarAsiento(Number(id), s.numero, s.piso).catch(() => null);
+        });
+        setSelectedSeats([]);
+        setSeatOptions({});
+        setSelectionStart(null);
+        setRemainingTime(null);
+        setMenorToggled({});
+        setError('⏰ Tu tiempo de selección ha expirado (10 minutos). Los asientos fueron liberados. Puedes seleccionar nuevamente.');
+        cargarAsientos();
+        return;
+      }
+
+      setRemainingTime(remaining);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [selectionStart, id, cargarAsientos]);
+
+  useEffect(() => () => {
+    if (!user) return;
+    const seats = selectedSeatsRef.current;
+    seats.forEach((s) => {
+      liberarAsiento(Number(id), s.numero, s.piso).catch(() => null);
+    });
   }, [id, user]);
 
   const getSeatKey = (seat) => `${seat.piso}-${seat.numero}`;
 
-  const handleToggleSeat = (seat) => {
+  const handleToggleSeat = async (seat) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
     const key = getSeatKey(seat);
-    setSelectedSeats((prev) => {
-      const exists = prev.some((s) => s.numero === seat.numero && s.piso === seat.piso);
-      if (exists) {
-        // Remove seat options too
-        setSeatOptions((opts) => {
-          const copy = { ...opts };
-          delete copy[key];
-          return copy;
-        });
-        return prev.filter((s) => !(s.numero === seat.numero && s.piso === seat.piso));
-      }
-      // Initialize seat options
-      setSeatOptions((opts) => ({
-        ...opts,
-        [key]: { es_menor: false, para_otra: false, nombre_asignado: '', cedula_asignado: '', cedula_tipo_asignado: 'V' },
-      }));
-      return [...prev, seat];
-    });
+    const exists = selectedSeats.some((s) => s.numero === seat.numero && s.piso === seat.piso);
+
+    if (exists) {
+      setSelectedSeats((prev) => prev.filter((s) => !(s.numero === seat.numero && s.piso === seat.piso)));
+      setSeatOptions((opts) => {
+        const copy = { ...opts };
+        delete copy[key];
+        return copy;
+      });
+      liberarAsiento(Number(id), seat.numero, seat.piso).catch(() => null);
+      return;
+    }
+
+    try {
+      await bloquearAsiento(Number(id), seat.numero, seat.piso);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Este asiento ya fue tomado por otro usuario.');
+      cargarAsientos();
+      return;
+    }
+
+    setError('');
+    setSeatOptions((opts) => ({
+      ...opts,
+      [key]: { es_menor: false, para_otra: false, viaja_con_animal: false, es_discapacitado: false, nombre_asignado: '', cedula_asignado: '', cedula_tipo_asignado: 'V' },
+    }));
+    setSelectedSeats((prev) => [...prev, seat]);
   };
 
   const updateSeatOption = (key, field, value) => {
@@ -141,6 +255,23 @@ export default function AsientosPage() {
 
   // Check if any seat had minor toggled on then off
   const hasMinorWarning = selectedSeats.some((s) => menorToggled[getSeatKey(s)]);
+
+  // ── Helpers del timer ──
+  const formatTime = (ms) => {
+    if (!ms || ms <= 0) return '0:00';
+    const totalSec = Math.ceil(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const timerPercent = remainingTime !== null
+    ? (remainingTime / (MAX_SELECTION_MINUTES * 60 * 1000)) * 100
+    : 100;
+
+  const timerClass = remainingTime !== null
+    ? remainingTime < 60000 ? 'timer-danger' : remainingTime < 120000 ? 'timer-warning' : ''
+    : '';
 
   const totalUsd = data ? selectedSeats.length * Number(data.viaje.precio_usd) : 0;
   const totalBs = tasa ? totalUsd * tasa : null;
@@ -192,6 +323,8 @@ export default function AsientosPage() {
             piso: s.piso,
             es_menor: opts.es_menor || false,
             para_otra: opts.para_otra || false,
+            viaja_con_animal: opts.viaja_con_animal || false,
+            es_discapacitado: opts.es_discapacitado || false,
             nombre_asignado: opts.nombre_asignado || '',
             cedula_asignado: opts.cedula_asignado
               ? `${opts.cedula_tipo_asignado || 'V'}-${opts.cedula_asignado}`
@@ -274,6 +407,20 @@ export default function AsientosPage() {
           </div>
 
           <div className="selection-sidebar">
+            {remainingTime !== null && (
+              <div className={`selection-timer ${timerClass}`}>
+                <div className="selection-timer-content">
+                  <Clock size={16} />
+                  <span>
+                    {remainingTime < 60000 ? '¡Apresúrate! ' : 'Tiempo restante: '}
+                    <strong>{formatTime(remainingTime)}</strong>
+                  </span>
+                </div>
+                <div className="timer-bar">
+                  <div className="timer-bar-fill" style={{ width: `${timerPercent}%` }} />
+                </div>
+              </div>
+            )}
             <div className="card" style={{ marginBottom: '1rem' }}>
               <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <ClipboardList size={16} /> Resumen
@@ -369,35 +516,75 @@ export default function AsientosPage() {
                             Asiento #{seat.numero} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· Piso {seat.piso}</span>
                           </div>
 
+                          {/* ── Permisos para viajar ── */}
+                          <div className="seat-permisos-section">
+                            <div className="seat-permisos-header">
+                              <ShieldCheck size={14} />
+                              <span>Permisos para viajar</span>
+                            </div>
+
+                            {/* Menores */}
+                            <label className="seat-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={opts.es_menor || false}
+                                onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)}
+                              />
+                              <Baby size={14} />
+                              <span>Es menor de edad</span>
+                            </label>
+
+                            {opts.es_menor && (
+                              <div className="seat-minor-block">
+                                <Baby size={16} />
+                                <div>
+                                  <strong>Pasaje de menor de edad</strong>
+                                  <p>Los pasajes para menores de edad deben ser adquiridos únicamente en taquilla. No es posible comprar este asiento en línea para un menor.</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {!opts.es_menor && menorToggled[key] && (
+                              <div className="seat-minor-warning">
+                                <AlertTriangle size={16} />
+                                <div>
+                                  <strong>⚠️ IMPORTANTE</strong>
+                                  <p>En caso de que el pasaje de este asiento sea para un menor de edad y no haya sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong> al momento del abordaje.</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Mascotas */}
+                            <label className="seat-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={opts.viaja_con_animal || false}
+                                onChange={(e) => updateSeatOption(key, 'viaja_con_animal', e.target.checked)}
+                              />
+                              <PawPrint size={14} />
+                              <span>Viaja con animal</span>
+                            </label>
+
+                            {opts.viaja_con_animal && (
+                              <div className="seat-animal-warning">
+                                <PawPrint size={16} />
+                                <div>
+                                  <strong>🐾 Viaje con mascota</strong>
+                                  <p>Debe presentar la <strong>Tarjeta de Vacunación</strong> del animal al momento del abordaje o en taquilla. De no contar con este documento, <strong>no se permitirá el embarque del animal</strong>.</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                           <label className="seat-checkbox">
                             <input
                               type="checkbox"
-                              checked={opts.es_menor || false}
-                              onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)}
+                              checked={opts.es_discapacitado || false}
+                              onChange={(e) => updateSeatOption(key, 'es_discapacitado', e.target.checked)}
                             />
-                            <Baby size={14} />
-                            <span>Es menor de edad</span>
+                            <Accessibility size={14} />
+                            <span>Persona con discapacidad</span>
                           </label>
-
-                          {opts.es_menor && (
-                            <div className="seat-minor-block">
-                              <Baby size={16} />
-                              <div>
-                                <strong>Pasaje de menor de edad</strong>
-                                <p>Los pasajes para menores de edad deben ser adquiridos únicamente en taquilla. No es posible comprar este asiento en línea para un menor.</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {!opts.es_menor && menorToggled[key] && (
-                            <div className="seat-minor-warning">
-                              <AlertTriangle size={16} />
-                              <div>
-                                <strong>⚠️ IMPORTANTE</strong>
-                                <p>En caso de que el pasaje de este asiento sea para un menor de edad y no haya sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong> al momento del abordaje.</p>
-                              </div>
-                            </div>
-                          )}
 
                           <label className="seat-checkbox">
                             <input

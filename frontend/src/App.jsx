@@ -16,6 +16,7 @@ import AdminPanelPage from './pages/AdminPanelPage';
 import AdminViajePage from './pages/AdminViajePage';
 import AdminBusesPage from './pages/AdminBusesPage';
 import AdminComprobantesPage from './pages/AdminComprobantesPage';
+import AdminClientesPage from './pages/AdminClientesPage';
 import PerfilPage from './pages/PerfilPage';
 import TicketPage from './pages/TicketPage';
 import VerificarPage from './pages/VerificarPage';
@@ -23,15 +24,16 @@ import VerificarEmailPage from './pages/VerificarEmailPage';
 import RecuperarPasswordPage from './pages/RecuperarPasswordPage';
 import './styles/PerfilPage.css';
 
-const GOOGLE_CLIENT_ID = '941001553573-u64s6mjms1jtlk0v5agsrk5qq6bbvoat.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
 function App() {
-  return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+  const appContent = (
     <AuthProvider>
       <BrowserRouter>
-        <Navbar />
-        <CedulaAlert />
+        <div className="sticky-header">
+          <Navbar />
+          <CedulaAlert />
+        </div>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -51,10 +53,20 @@ function App() {
           <Route path="/admin/viajes/:id" element={<AdminViajePage />} />
           <Route path="/admin/buses" element={<AdminBusesPage />} />
           <Route path="/admin/comprobantes" element={<AdminComprobantesPage />} />
+          <Route path="/admin/clientes" element={<AdminClientesPage />} />
         </Routes>
         <Footer />
       </BrowserRouter>
     </AuthProvider>
+  );
+
+  if (!GOOGLE_CLIENT_ID) {
+    return appContent;
+  }
+
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {appContent}
     </GoogleOAuthProvider>
   );
 }

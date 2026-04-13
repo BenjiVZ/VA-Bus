@@ -29,3 +29,19 @@ class RegistroSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+
+class AdminClienteSerializer(serializers.ModelSerializer):
+    total_viajes = serializers.IntegerField(read_only=True, default=0)
+    ultimo_viaje = serializers.DateField(read_only=True, default=None)
+
+    class Meta:
+        model = Usuario
+        fields = (
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'cedula', 'telefono', 'fecha_nacimiento',
+            'es_vip', 'servicio_vip', 'notas_admin',
+            'date_joined', 'total_viajes', 'ultimo_viaje',
+        )
+        read_only_fields = ('id', 'username', 'email', 'date_joined')
+

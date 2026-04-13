@@ -9,7 +9,7 @@ def actualizar_tasa_bcv():
     try:
         response = requests.get(
             'https://ve.dolarapi.com/v1/dolares/oficial',
-            timeout=10
+            timeout=3
         )
         response.raise_for_status()
         data = response.json()

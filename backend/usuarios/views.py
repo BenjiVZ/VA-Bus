@@ -5,8 +5,9 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Count, Max, Q
 from .models import Usuario
-from .serializers import RegistroSerializer, UsuarioSerializer
+from .serializers import RegistroSerializer, UsuarioSerializer, AdminClienteSerializer
 
 
 def _enviar_codigo_email(usuario, asunto, mensaje_intro):
@@ -361,3 +362,129 @@ class GoogleLoginView(APIView):
             'usuario': UsuarioSerializer(user).data,
             'nuevo_usuario': created,
         }, status=status.HTTP_200_OK)
+
+
+# ═══════════════════════════════════════════════════════
+#  Admin — Dashboard de Clientes
+# ═══════════════════════════════════════════════════════
+
+class ClientesDashboardView(APIView):
+    """Estadísticas globales + Top 10 pasajeros frecuentes."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from reservas.models import Reserva
+
+        total_clientes = Usuario.objects.filter(is_staff=False).count()
+
+        # Clientes que tienen al menos 1 reserva confirmada
+        compradores = (
+            Reserva.objects.filter(estado='confirmada')
+            .values('usuario')
+            .distinct()
+            .count()
+        )
+
+        vip_activos = Usuario.objects.filter(es_vip=True, is_staff=False).count()
+
+        # Top 10 pasajeros por reservas confirmadas
+        top_pasajeros_qs = (
+            Usuario.objects.filter(is_staff=False)
+            .annotate(
+                total_viajes=Count(
+                    'reservas',
+                    filter=Q(reservas__estado='confirmada')
+                ),
+                ultimo_viaje=Max(
+                    'reservas__viaje__fecha_salida',
+                    filter=Q(reservas__estado='confirmada')
+                ),
+            )
+            .filter(total_viajes__gt=0)
+            .order_by('-total_viajes')[:10]
+        )
+
+        top_pasajeros = AdminClienteSerializer(top_pasajeros_qs, many=True).data
+
+        return Response({
+            'total_clientes': total_clientes,
+            'compradores': compradores,
+            'vip_activos': vip_activos,
+            'top_pasajeros': top_pasajeros,
+        })
+
+
+class AdminClientesListView(APIView):
+    """Lista paginada de clientes con búsqueda por nombre/cédula/email."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from reservas.models import Reserva
+
+        q = request.query_params.get('q', '').strip()
+
+        qs = Usuario.objects.filter(is_staff=False).annotate(
+            total_viajes=Count(
+                'reservas',
+                filter=Q(reservas__estado='confirmada')
+            ),
+            ultimo_viaje=Max(
+                'reservas__viaje__fecha_salida',
+                filter=Q(reservas__estado='confirmada')
+            ),
+        )
+
+        if q:
+            qs = qs.filter(
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(cedula__icontains=q) |
+                Q(email__icontains=q) |
+                Q(username__icontains=q)
+            )
+
+        qs = qs.order_by('-total_viajes', '-date_joined')[:50]
+
+        return Response(AdminClienteSerializer(qs, many=True).data)
+
+
+class AdminToggleVipView(APIView):
+    """Actualizar estado VIP de un cliente."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def patch(self, request, user_id):
+        try:
+            usuario = Usuario.objects.get(pk=user_id, is_staff=False)
+        except Usuario.DoesNotExist:
+            return Response(
+                {"error": "Cliente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        es_vip = request.data.get('es_vip')
+        servicio_vip = request.data.get('servicio_vip')
+        notas_admin = request.data.get('notas_admin')
+
+        if es_vip is not None:
+            usuario.es_vip = bool(es_vip)
+        if servicio_vip is not None:
+            if servicio_vip in dict(Usuario.SERVICIO_VIP_CHOICES):
+                usuario.servicio_vip = servicio_vip
+        if notas_admin is not None:
+            usuario.notas_admin = notas_admin
+
+        # Si se desactiva VIP, resetear servicio
+        if not usuario.es_vip:
+            usuario.servicio_vip = 'ninguno'
+
+        usuario.save()
+
+        # Re-annotate for serializer
+        from reservas.models import Reserva
+        usuario_qs = Usuario.objects.filter(pk=usuario.pk).annotate(
+            total_viajes=Count('reservas', filter=Q(reservas__estado='confirmada')),
+            ultimo_viaje=Max('reservas__viaje__fecha_salida', filter=Q(reservas__estado='confirmada')),
+        ).first()
+
+        return Response(AdminClienteSerializer(usuario_qs).data)
+

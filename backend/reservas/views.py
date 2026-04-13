@@ -5,15 +5,158 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import timedelta
 import uuid as uuid_lib
-from .models import Reserva
+from .models import Reserva, BloqueoAsiento
 from .serializers import ReservaSerializer, CrearReservaSerializer, AdminReservaSerializer
 from viajes.models import Viaje, Autobus, ConfiguracionGeneral
+
+
+BLOQUEO_ASIENTO_MINUTOS = 2
+MAX_SESION_SELECCION_MINUTOS = 10
 
 
 class IsAdminUser(permissions.BasePermission):
     """Only staff/superuser can access."""
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.is_staff
+
+
+class BloquearAsientoView(APIView):
+    """Bloquea temporalmente un asiento para evitar dobles selecciones."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        viaje_id = request.data.get('viaje_id')
+        numero_asiento = request.data.get('numero_asiento')
+        piso_asiento = request.data.get('piso_asiento', 1)
+
+        if not viaje_id or not numero_asiento:
+            return Response(
+                {"error": "viaje_id y numero_asiento son requeridos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            viaje = Viaje.objects.get(pk=viaje_id, activo=True)
+            numero_asiento = int(numero_asiento)
+            piso_asiento = int(piso_asiento)
+        except (Viaje.DoesNotExist, ValueError, TypeError):
+            return Response(
+                {"error": "Datos de asiento inválidos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        Reserva.limpiar_expiradas(viaje=viaje)
+        BloqueoAsiento.limpiar_expirados(viaje=viaje)
+
+        now = timezone.now()
+
+        # ── Límite máximo de sesión de selección (anti-hoarding) ──
+        primer_bloqueo = BloqueoAsiento.objects.filter(
+            usuario=request.user,
+            viaje=viaje,
+        ).order_by('fecha_creacion').first()
+
+        if primer_bloqueo:
+            tiempo_seleccion = (now - primer_bloqueo.fecha_creacion).total_seconds()
+            if tiempo_seleccion > MAX_SESION_SELECCION_MINUTOS * 60:
+                BloqueoAsiento.objects.filter(usuario=request.user, viaje=viaje).delete()
+                return Response(
+                    {
+                        "error": "Tu tiempo de selección ha expirado (10 minutos). "
+                                 "Los asientos fueron liberados. Puedes seleccionar nuevamente.",
+                        "sesion_expirada": True,
+                    },
+                    status=status.HTTP_408_REQUEST_TIMEOUT
+                )
+
+        fecha_expiracion = now + timedelta(minutes=BLOQUEO_ASIENTO_MINUTOS)
+
+        with transaction.atomic():
+            asiento_reservado = Reserva.objects.select_for_update().filter(
+                viaje=viaje,
+                numero_asiento=numero_asiento,
+                piso_asiento=piso_asiento,
+                estado__in=['pendiente', 'apartado', 'confirmado']
+            ).exists()
+            if asiento_reservado:
+                return Response(
+                    {"error": "Este asiento ya no está disponible."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
+            bloqueo = BloqueoAsiento.objects.select_for_update().filter(
+                viaje=viaje,
+                numero_asiento=numero_asiento,
+                piso_asiento=piso_asiento,
+            ).first()
+
+            if bloqueo and bloqueo.usuario_id != request.user.id and bloqueo.fecha_expiracion > now:
+                return Response(
+                    {"error": "Este asiento está siendo seleccionado por otro usuario."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
+            if bloqueo:
+                bloqueo.usuario = request.user
+                bloqueo.fecha_expiracion = fecha_expiracion
+                bloqueo.save(update_fields=['usuario', 'fecha_expiracion'])
+            else:
+                try:
+                    bloqueo = BloqueoAsiento.objects.create(
+                        usuario=request.user,
+                        viaje=viaje,
+                        numero_asiento=numero_asiento,
+                        piso_asiento=piso_asiento,
+                        fecha_expiracion=fecha_expiracion,
+                    )
+                except IntegrityError:
+                    return Response(
+                        {"error": "Este asiento acaba de ser tomado por otro usuario."},
+                        status=status.HTTP_409_CONFLICT
+                    )
+
+        return Response({
+            "ok": True,
+            "mensaje": "Asiento bloqueado temporalmente.",
+            "fecha_expiracion": bloqueo.fecha_expiracion.isoformat(),
+        })
+
+
+class LiberarAsientoView(APIView):
+    """Libera un asiento previamente bloqueado por el usuario."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        viaje_id = request.data.get('viaje_id')
+        numero_asiento = request.data.get('numero_asiento')
+        piso_asiento = request.data.get('piso_asiento', 1)
+
+        if not viaje_id or not numero_asiento:
+            return Response(
+                {"error": "viaje_id y numero_asiento son requeridos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            numero_asiento = int(numero_asiento)
+            piso_asiento = int(piso_asiento)
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Datos de asiento inválidos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        deleted_count, _ = BloqueoAsiento.objects.filter(
+            usuario=request.user,
+            viaje_id=viaje_id,
+            numero_asiento=numero_asiento,
+            piso_asiento=piso_asiento,
+        ).delete()
+
+        return Response({
+            "ok": True,
+            "liberado": deleted_count > 0,
+        })
 
 
 class CrearReservaView(APIView):
@@ -61,6 +204,7 @@ class CrearReservaView(APIView):
             with transaction.atomic():
                 # 1. Primero, auto-cancelar reservas expiradas de este viaje
                 Reserva.limpiar_expiradas(viaje=viaje)
+                BloqueoAsiento.limpiar_expirados(viaje=viaje)
 
                 for asiento_data in asientos:
                     numero = asiento_data.get('numero')
@@ -69,6 +213,19 @@ class CrearReservaView(APIView):
                     para_otra = asiento_data.get('para_otra', False)
                     nombre_asig = asiento_data.get('nombre_asignado', '')
                     cedula_asig = asiento_data.get('cedula_asignado', '')
+                    viaja_animal = asiento_data.get('viaja_con_animal', False)
+                    es_discap = asiento_data.get('es_discapacitado', False)
+
+                    bloqueo_otro = BloqueoAsiento.objects.select_for_update().filter(
+                        viaje=viaje,
+                        numero_asiento=numero,
+                        piso_asiento=piso,
+                        fecha_expiracion__gt=timezone.now(),
+                    ).exclude(usuario=request.user).exists()
+
+                    if bloqueo_otro:
+                        errores.append(f"Asiento {numero} (Piso {piso}) está siendo seleccionado por otro usuario.")
+                        continue
 
                     # 2. Bloqueo pesimista: select_for_update() bloquea las filas
                     #    hasta que la transacción termine, impidiendo que otro
@@ -98,8 +255,19 @@ class CrearReservaView(APIView):
                         para_otra_persona=para_otra,
                         nombre_asignado=nombre_asig,
                         cedula_asignado=cedula_asig,
+                        viaja_con_animal=viaja_animal,
+                        es_discapacitado=es_discap,
                     )
                     reservas_creadas.append(reserva)
+
+                # Liberar bloqueos temporales de los asientos ya convertidos en reserva
+                for reserva in reservas_creadas:
+                    BloqueoAsiento.objects.filter(
+                        usuario=request.user,
+                        viaje=viaje,
+                        numero_asiento=reserva.numero_asiento,
+                        piso_asiento=reserva.piso_asiento,
+                    ).delete()
 
                 # Si ningún asiento se pudo reservar, revertir todo
                 if not reservas_creadas:
@@ -329,6 +497,8 @@ class TicketView(APIView):
                 'para_otra_persona': r.para_otra_persona,
                 'nombre_asignado': r.nombre_asignado,
                 'cedula_asignado': r.cedula_asignado,
+                'viaja_con_animal': r.viaja_con_animal,
+                'es_discapacitado': r.es_discapacitado,
                 'fecha_confirmacion': r.fecha_actualizacion.isoformat(),
             })
 
@@ -380,6 +550,8 @@ class VerificarTicketView(APIView):
                 'para_otra_persona': reserva.para_otra_persona,
                 'nombre_asignado': reserva.nombre_asignado,
                 'cedula_asignado': reserva.cedula_asignado,
+                'viaja_con_animal': reserva.viaja_con_animal,
+                'es_discapacitado': reserva.es_discapacitado,
                 'numero_asiento': reserva.numero_asiento,
                 'piso_asiento': reserva.piso_asiento,
                 'origen': viaje.ruta.origen,
