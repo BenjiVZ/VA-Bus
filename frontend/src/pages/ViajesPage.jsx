@@ -208,8 +208,10 @@ export default function ViajesPage() {
           </div>
         ) : (
           <div className="trips-grid">
-            {viajes.map((viaje) => (
-              <div key={viaje.id} className="trip-card">
+            {viajes.map((viaje) => {
+              const busNoDisponible = viaje.autobus.disponible === false;
+              return (
+              <div key={viaje.id} className={`trip-card ${busNoDisponible ? 'trip-card-unavailable' : ''}`}>
                 <div className="trip-main">
                   <div className="trip-route-section">
                     <div className="trip-route">
@@ -264,32 +266,44 @@ export default function ViajesPage() {
                 </div>
 
                 <div className="trip-action">
-                  <div className="trip-seats-available">
-                    {viaje.asientos_disponibles} puestos disponibles
-                  </div>
-                  {viaje.fecha_fin_venta && (
-                    <div className="trip-closing-date">
-                      <Clock size={12} />
-                      Cierra {new Date(viaje.fecha_fin_venta + 'T00:00:00').toLocaleDateString('es-VE', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                  {busNoDisponible ? (
+                    <div className="bus-unavailable-banner">
+                      <strong>🚫 Autobús no disponible</strong>
+                      {viaje.autobus.motivo_no_disponible && (
+                        <span>{viaje.autobus.motivo_no_disponible}</span>
+                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className="trip-seats-available">
+                        {viaje.asientos_disponibles} puestos disponibles
+                      </div>
+                      {viaje.fecha_fin_venta && (
+                        <div className="trip-closing-date">
+                          <Clock size={12} />
+                          Cierra {new Date(viaje.fecha_fin_venta + 'T00:00:00').toLocaleDateString('es-VE', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </div>
+                      )}
+                      <div className="trip-price">
+                        <PriceDisplay priceUsd={viaje.precio_usd} />
+                      </div>
+                      <button
+                        className="btn btn-primary"
+                        style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                        onClick={() => navigate(`/viajes/${viaje.id}/asientos`)}
+                      >
+                        <Armchair size={16} /> Seleccionar
+                      </button>
+                    </>
                   )}
-                  <div className="trip-price">
-                    <PriceDisplay priceUsd={viaje.precio_usd} />
-                  </div>
-                  <button
-                    className="btn btn-primary"
-                    style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-                    onClick={() => navigate(`/viajes/${viaje.id}/asientos`)}
-                  >
-                    <Armchair size={16} /> Seleccionar
-                  </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

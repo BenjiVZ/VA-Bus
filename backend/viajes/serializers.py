@@ -22,7 +22,7 @@ class AutobusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Autobus
-        fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'pisos_config', 'capacidad_total')
+        fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'pisos_config', 'capacidad_total', 'disponible', 'motivo_no_disponible')
 
 
 class AutobusCompactSerializer(serializers.ModelSerializer):
@@ -31,7 +31,7 @@ class AutobusCompactSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Autobus
-        fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'capacidad_total')
+        fields = ('id', 'nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos', 'capacidad_total', 'disponible', 'motivo_no_disponible')
 
 
 class ViajeListSerializer(serializers.ModelSerializer):

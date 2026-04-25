@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRutas } from '../services/api';
-import { Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar } from 'lucide-react';
+import { Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar, ShieldCheck, Clock, Users, Star } from 'lucide-react';
 import FleetGallery from '../components/FleetGallery';
+import PromoPopup from '../components/PromoPopup';
 import '../styles/FleetGallery.css';
 
 export default function HomePage() {
@@ -31,22 +32,49 @@ export default function HomePage() {
   };
 
   const steps = [
-    { Icon: Search, title: 'Busca tu viaje', desc: 'Selecciona origen, destino y fecha' },
-    { Icon: Armchair, title: 'Elige tu asiento', desc: 'Visualiza el mapa del autobús' },
-    { Icon: MessageCircle, title: 'Coordina por WhatsApp', desc: 'Confirma tu pago con el vendedor' },
-    { Icon: CheckCircle, title: '¡Viaja tranquilo!', desc: 'Tu puesto queda reservado' },
+    { Icon: Search, title: 'Busca tu viaje', desc: 'Selecciona origen, destino y fecha', color: '#3b82f6' },
+    { Icon: Armchair, title: 'Elige tu asiento', desc: 'Visualiza el mapa del autobús', color: '#8b5cf6' },
+    { Icon: MessageCircle, title: 'Coordina por WhatsApp', desc: 'Confirma tu pago con el vendedor', color: '#22c55e' },
+    { Icon: CheckCircle, title: '¡Viaja tranquilo!', desc: 'Tu puesto queda reservado', color: '#f59e0b' },
+  ];
+
+  const trustItems = [
+    { Icon: ShieldCheck, text: 'Reserva segura' },
+    { Icon: Clock, text: 'Confirmación al instante' },
+    { Icon: Users, text: '+1,000 pasajeros confían' },
+    { Icon: Star, text: 'Flota moderna' },
   ];
 
   return (
-    <div className="page">
-      <div className="container">
-        <section className="hero">
-          <h1>Viaja con Aerorutas de Venezuela</h1>{/* Aerorutas */}
-          <p>
+    <div className="page page-home">
+      <PromoPopup />
+
+      {/* ── HERO SECTION ── */}
+      <section className="hero">
+        <div className="hero-bg" />
+        <div className="hero-content">
+          <span className="hero-badge">🚌 La mejor forma de viajar por Venezuela</span>
+          <h1 className="hero-title">
+            Viaja con <span className="hero-brand">Aerorutas</span>
+          </h1>
+          <p className="hero-desc">
             Reserva tu puesto de autobús de forma rápida y segura.
-            Encuentra las mejores rutas en Venezuela.
+            Las mejores rutas nacionales a los mejores precios.
           </p>
 
+          {/* Trust badges */}
+          <div className="hero-trust">
+            {trustItems.map((item, i) => (
+              <div key={i} className="hero-trust-item">
+                <item.Icon size={16} />
+                <span>{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Search form card */}
+        <div className="container">
           <form className="search-form" onSubmit={handleSearch}>
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -98,22 +126,29 @@ export default function HomePage() {
               Buscar
             </button>
           </form>
-        </section>
+        </div>
+      </section>
 
+      <div className="container">
         <FleetGallery />
 
-        <section style={{ marginTop: '4rem', textAlign: 'center' }}>
-          <h3 style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
-            ¿Cómo funciona?
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+        {/* ── HOW IT WORKS ── */}
+        <section className="how-section">
+          <div className="how-section-header">
+            <span className="how-section-label">PASO A PASO</span>
+            <h3 className="how-section-title">¿Cómo funciona?</h3>
+            <p className="how-section-desc">Reservar tu viaje es fácil, rápido y seguro</p>
+          </div>
+          <div className="how-grid">
             {steps.map((step, i) => (
-              <div key={i} className="card how-it-works-card" style={{ textAlign: 'center', padding: '2rem' }}>
-                <div className="how-icon-wrap">
-                  <step.Icon size={32} strokeWidth={1.8} />
+              <div key={i} className="how-card">
+                <div className="how-step-number">{i + 1}</div>
+                <div className="how-icon-wrap" style={{ background: `${step.color}15`, color: step.color }}>
+                  <step.Icon size={28} strokeWidth={1.8} />
                 </div>
-                <h4 style={{ marginBottom: '0.5rem' }}>{step.title}</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{step.desc}</p>
+                <h4 className="how-card-title">{step.title}</h4>
+                <p className="how-card-desc">{step.desc}</p>
+                {i < steps.length - 1 && <div className="how-connector" />}
               </div>
             ))}
           </div>

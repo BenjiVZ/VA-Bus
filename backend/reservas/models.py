@@ -80,10 +80,56 @@ class Reserva(models.Model):
         verbose_name="¿Viaja con animal?",
         help_text="Si es verdadero, el pasajero debe presentar la tarjeta de vacunación del animal"
     )
+    TIPO_MASCOTA_CHOICES = [
+        ('perro', 'Perro'),
+        ('gato', 'Gato'),
+        ('ave', 'Ave'),
+        ('conejo', 'Conejo'),
+        ('hamster', 'Hámster'),
+        ('otro', 'Otro'),
+    ]
+    tipo_mascota = models.CharField(
+        max_length=20,
+        choices=TIPO_MASCOTA_CHOICES,
+        blank=True, default='',
+        verbose_name="Tipo de mascota",
+        help_text="Tipo de animal que viaja con el pasajero"
+    )
+    doc_vacunacion_animal = models.FileField(
+        upload_to='documentos/animales/vacunacion/',
+        null=True, blank=True,
+        verbose_name="Tarjeta de vacunación",
+        help_text="Documento de vacunación del animal (PDF o imagen)"
+    )
     es_discapacitado = models.BooleanField(
         default=False,
         verbose_name="¿Persona con discapacidad?",
         help_text="Indica si el pasajero de este asiento es una persona con discapacidad"
+    )
+    doc_discapacidad = models.FileField(
+        upload_to='documentos/discapacidad/',
+        null=True, blank=True,
+        verbose_name="Documento de discapacidad",
+        help_text="Certificado médico, RCP o documento que acredite la discapacidad (PDF o imagen)"
+    )
+    # ── Documentos para menores de edad ──
+    doc_partida_nacimiento = models.FileField(
+        upload_to='documentos/menores/partidas/',
+        null=True, blank=True,
+        verbose_name="Partida de nacimiento",
+        help_text="Documento de partida de nacimiento del menor (PDF o imagen)"
+    )
+    doc_foto_menor = models.FileField(
+        upload_to='documentos/menores/fotos/',
+        null=True, blank=True,
+        verbose_name="Foto del menor",
+        help_text="Foto tipo carnet o selfie del menor"
+    )
+    doc_cedula_representante = models.FileField(
+        upload_to='documentos/menores/representantes/',
+        null=True, blank=True,
+        verbose_name="Cédula del representante",
+        help_text="Foto o escaneo de la cédula del representante legal"
     )
 
     def save(self, *args, **kwargs):

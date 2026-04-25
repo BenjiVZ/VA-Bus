@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import timedelta
@@ -12,6 +13,22 @@ from viajes.models import Viaje, Autobus, ConfiguracionGeneral
 
 BLOQUEO_ASIENTO_MINUTOS = 2
 MAX_SESION_SELECCION_MINUTOS = 10
+
+
+EXTENSIONES_PERMITIDAS = {'.jpg', '.jpeg', '.png', '.webp', '.pdf'}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+
+def validar_archivo(archivo, nombre_campo):
+    """Valida extensión y tamaño de un archivo subido."""
+    if not archivo:
+        return f'{nombre_campo} es requerido.'
+    if archivo.size > MAX_FILE_SIZE:
+        return f'{nombre_campo}: El archivo no debe superar 5MB.'
+    ext = '.' + archivo.name.rsplit('.', 1)[-1].lower() if '.' in archivo.name else ''
+    if ext not in EXTENSIONES_PERMITIDAS:
+        return f'{nombre_campo}: Solo se permiten archivos JPG, PNG, WEBP o PDF.'
+    return None
 
 
 class IsAdminUser(permissions.BasePermission):
@@ -214,6 +231,7 @@ class CrearReservaView(APIView):
                     nombre_asig = asiento_data.get('nombre_asignado', '')
                     cedula_asig = asiento_data.get('cedula_asignado', '')
                     viaja_animal = asiento_data.get('viaja_con_animal', False)
+                    tipo_mascota = asiento_data.get('tipo_mascota', '')
                     es_discap = asiento_data.get('es_discapacitado', False)
 
                     bloqueo_otro = BloqueoAsiento.objects.select_for_update().filter(
@@ -256,6 +274,7 @@ class CrearReservaView(APIView):
                         nombre_asignado=nombre_asig,
                         cedula_asignado=cedula_asig,
                         viaja_con_animal=viaja_animal,
+                        tipo_mascota=tipo_mascota if viaja_animal else '',
                         es_discapacitado=es_discap,
                     )
                     reservas_creadas.append(reserva)
@@ -306,6 +325,134 @@ class MisReservasView(generics.ListAPIView):
         return Reserva.objects.filter(
             usuario=self.request.user
         ).select_related('viaje', 'viaje__ruta', 'viaje__autobus')
+
+
+class SubirDocumentosMenorView(APIView):
+    """Sube los documentos requeridos para un pasajero menor de edad."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, reserva_id):
+        try:
+            reserva = Reserva.objects.get(pk=reserva_id, usuario=request.user)
+        except Reserva.DoesNotExist:
+            return Response(
+                {"error": "Reserva no encontrada."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not reserva.es_menor_edad:
+            return Response(
+                {"error": "Esta reserva no está marcada como menor de edad."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        partida = request.FILES.get('doc_partida_nacimiento')
+        foto = request.FILES.get('doc_foto_menor')
+        cedula_rep = request.FILES.get('doc_cedula_representante')
+
+        # Validar archivos
+        errores = []
+        for archivo, nombre in [
+            (partida, 'Partida de nacimiento'),
+            (foto, 'Foto del menor'),
+            (cedula_rep, 'Cédula del representante'),
+        ]:
+            err = validar_archivo(archivo, nombre)
+            if err:
+                errores.append(err)
+
+        if errores:
+            return Response(
+                {"error": "Errores en los documentos.", "detalles": errores},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reserva.doc_partida_nacimiento = partida
+        reserva.doc_foto_menor = foto
+        reserva.doc_cedula_representante = cedula_rep
+        reserva.save(update_fields=[
+            'doc_partida_nacimiento', 'doc_foto_menor', 'doc_cedula_representante'
+        ])
+
+        return Response({
+            "ok": True,
+            "mensaje": "Documentos del menor subidos correctamente.",
+        })
+
+
+class SubirDocVacunacionView(APIView):
+    """Sube el documento de vacunación para un pasajero que viaja con animal."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, reserva_id):
+        try:
+            reserva = Reserva.objects.get(pk=reserva_id, usuario=request.user)
+        except Reserva.DoesNotExist:
+            return Response(
+                {"error": "Reserva no encontrada."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not reserva.viaja_con_animal:
+            return Response(
+                {"error": "Esta reserva no está marcada como viaje con animal."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        archivo = request.FILES.get('doc_vacunacion_animal')
+        err = validar_archivo(archivo, 'Tarjeta de vacunación')
+        if err:
+            return Response(
+                {"error": err},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reserva.doc_vacunacion_animal = archivo
+        reserva.save(update_fields=['doc_vacunacion_animal'])
+
+        return Response({
+            "ok": True,
+            "mensaje": "Documento de vacunación subido correctamente.",
+        })
+
+
+class SubirDocDiscapacidadView(APIView):
+    """Sube el documento de discapacidad (certificado médico, RCP, etc.)."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, reserva_id):
+        try:
+            reserva = Reserva.objects.get(pk=reserva_id, usuario=request.user)
+        except Reserva.DoesNotExist:
+            return Response(
+                {"error": "Reserva no encontrada."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not reserva.es_discapacitado:
+            return Response(
+                {"error": "Esta reserva no está marcada como persona con discapacidad."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        archivo = request.FILES.get('doc_discapacidad')
+        err = validar_archivo(archivo, 'Documento de discapacidad')
+        if err:
+            return Response(
+                {"error": err},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reserva.doc_discapacidad = archivo
+        reserva.save(update_fields=['doc_discapacidad'])
+
+        return Response({
+            "ok": True,
+            "mensaje": "Documento de discapacidad subido correctamente.",
+        })
 
 
 # ═══════════════════════════════════════════════

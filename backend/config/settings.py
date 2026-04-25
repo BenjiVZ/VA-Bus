@@ -138,6 +138,12 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True  # Development only
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF
+CSRF_TRUSTED_ORIGINS = [
+    'https://ardvf.aplicacionesdamasco.com',
+    'https://ardvb.aplicacionesdamasco.com',
+]
+
 # Email Configuration (Gmail SMTP)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'

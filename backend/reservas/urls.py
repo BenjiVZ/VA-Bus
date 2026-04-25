@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CrearReservaView, MisReservasView,
     BloquearAsientoView, LiberarAsientoView,
+    SubirDocumentosMenorView, SubirDocVacunacionView, SubirDocDiscapacidadView,
     AdminReservasViajeView, AdminCambiarEstadoView,
     AdminCambiarAsientoView, AdminViajesListView,
     AdminBusesListView,
@@ -13,6 +14,9 @@ urlpatterns = [
     path('reservas/bloquear-asiento/', BloquearAsientoView.as_view(), name='bloquear-asiento'),
     path('reservas/liberar-asiento/', LiberarAsientoView.as_view(), name='liberar-asiento'),
     path('mis-reservas/', MisReservasView.as_view(), name='mis-reservas'),
+    path('reservas/<int:reserva_id>/documentos-menor/', SubirDocumentosMenorView.as_view(), name='subir-documentos-menor'),
+    path('reservas/<int:reserva_id>/doc-vacunacion/', SubirDocVacunacionView.as_view(), name='subir-doc-vacunacion'),
+    path('reservas/<int:reserva_id>/doc-discapacidad/', SubirDocDiscapacidadView.as_view(), name='subir-doc-discapacidad'),
 
     # Tickets
     path('ticket/<uuid:grupo_pago>/', TicketView.as_view(), name='ticket'),

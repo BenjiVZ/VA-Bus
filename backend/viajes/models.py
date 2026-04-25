@@ -24,6 +24,16 @@ class Autobus(models.Model):
     anio = models.PositiveIntegerField(null=True, blank=True, verbose_name="Año")
     propietario = models.CharField(max_length=200, blank=True, default='', verbose_name="Propietario")
     pisos = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)], verbose_name="Cantidad de Pisos")
+    disponible = models.BooleanField(
+        default=True,
+        verbose_name="Disponible",
+        help_text="Desmarcar si el autobús no está operativo."
+    )
+    motivo_no_disponible = models.CharField(
+        max_length=300, blank=True, default='',
+        verbose_name="Motivo de no disponibilidad",
+        help_text="Ej: En mantenimiento, avería mecánica, revisión técnica, etc."
+    )
 
     class Meta:
         verbose_name = "Autobús"

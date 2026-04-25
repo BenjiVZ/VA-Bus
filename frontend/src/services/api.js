@@ -104,6 +104,20 @@ export const getAsientos = (viajeId) =>
 export const crearReserva = (data) =>
   api.post('/reservas/', data);
 
+export const subirDocumentosMenor = (reservaId, formData) =>
+  api.post(`/reservas/${reservaId}/documentos-menor/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const subirDocVacunacion = (reservaId, formData) =>
+  api.post(`/reservas/${reservaId}/doc-vacunacion/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+export const subirDocDiscapacidad = (reservaId, formData) =>
+  api.post(`/reservas/${reservaId}/doc-discapacidad/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 export const bloquearAsiento = (viajeId, numeroAsiento, pisoAsiento = 1) =>
   api.post('/reservas/bloquear-asiento/', {
     viaje_id: viajeId,

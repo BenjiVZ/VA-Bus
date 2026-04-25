@@ -23,6 +23,7 @@ import VerificarPage from './pages/VerificarPage';
 import VerificarEmailPage from './pages/VerificarEmailPage';
 import RecuperarPasswordPage from './pages/RecuperarPasswordPage';
 import './styles/PerfilPage.css';
+import ChatBot from './components/ChatBot';
 
 const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
@@ -55,6 +56,7 @@ function App() {
           <Route path="/admin/comprobantes" element={<AdminComprobantesPage />} />
           <Route path="/admin/clientes" element={<AdminClientesPage />} />
         </Routes>
+        <ChatBot />
         <Footer />
       </BrowserRouter>
     </AuthProvider>

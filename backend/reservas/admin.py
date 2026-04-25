@@ -25,8 +25,23 @@ class ReservaAdmin(admin.ModelAdmin):
         }),
         ('Pasajero', {
             'fields': ('usuario', 'nombre_pasajero', 'cedula_pasajero',
-                       'es_menor_edad', 'viaja_con_animal', 'es_discapacitado',
+                       'es_menor_edad', 'viaja_con_animal', 'tipo_mascota', 'es_discapacitado',
                        'para_otra_persona', 'nombre_asignado', 'cedula_asignado')
+        }),
+        ('Documentos de Menor de Edad', {
+            'fields': ('doc_partida_nacimiento', 'doc_foto_menor', 'doc_cedula_representante'),
+            'classes': ('collapse',),
+            'description': 'Documentos subidos cuando el pasajero es menor de edad.'
+        }),
+        ('Documentos de Mascota', {
+            'fields': ('doc_vacunacion_animal',),
+            'classes': ('collapse',),
+            'description': 'Tarjeta de vacunación del animal.'
+        }),
+        ('Documento de Discapacidad', {
+            'fields': ('doc_discapacidad',),
+            'classes': ('collapse',),
+            'description': 'Certificado médico, RCP o documento que acredite la discapacidad.'
         }),
         ('Estado', {
             'fields': ('estado',)

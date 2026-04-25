@@ -64,13 +64,23 @@ export default function AdminBusesPage() {
             }));
 
             return (
-              <div key={bus.id} className="admin-bus-card">
+              <div key={bus.id} className={`admin-bus-card ${!bus.disponible ? 'admin-bus-unavailable' : ''}`}>
                 <div className="admin-bus-header" onClick={() => setExpandedBus(isExpanded ? null : bus.id)}>
                   <div>
-                    <h3 className="admin-bus-name">{bus.nombre}</h3>
+                    <h3 className="admin-bus-name">
+                      {bus.nombre}
+                      {!bus.disponible && (
+                        <span className="bus-unavailable-badge">No disponible</span>
+                      )}
+                    </h3>
                     <span className="admin-bus-meta">
                       Placa: {bus.placa} · {bus.pisos} piso{bus.pisos > 1 ? 's' : ''} · {bus.capacidad_total} asientos
                     </span>
+                    {!bus.disponible && bus.motivo_no_disponible && (
+                      <span className="bus-unavailable-reason">
+                        ⚠ {bus.motivo_no_disponible}
+                      </span>
+                    )}
                   </div>
                   <span className="admin-bus-toggle">
                     {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}

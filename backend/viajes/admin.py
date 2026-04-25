@@ -37,9 +37,20 @@ class RutaAdmin(admin.ModelAdmin):
 
 @admin.register(Autobus)
 class AutobusAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'placa', 'marca', 'color', 'anio', 'pisos', 'capacidad_total')
+    list_display = ('nombre', 'placa', 'marca', 'color', 'anio', 'pisos', 'capacidad_total', 'disponible')
+    list_filter = ('disponible',)
+    list_editable = ('disponible',)
     search_fields = ('nombre', 'placa', 'marca')
     inlines = [PisoAutobusInline]
+    fieldsets = (
+        (None, {
+            'fields': ('nombre', 'placa', 'marca', 'color', 'anio', 'propietario', 'pisos')
+        }),
+        ('Disponibilidad', {
+            'fields': ('disponible', 'motivo_no_disponible'),
+            'description': 'Si el autobús no está operativo, desmarca "Disponible" e indica el motivo.'
+        }),
+    )
 
 
 @admin.register(Viaje)
