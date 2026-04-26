@@ -1,4 +1,4 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 /* â”€â”€ Responsive Overrides (UX Pro) â”€â”€ */
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -26,8 +26,33 @@
     flex-direction: column; 
     transform: translateY(0); 
     margin-top: 1.5rem; 
-    position: static;
+    position: relative;
+    z-index: 10;
     box-shadow: var(--shadow-sm);
+    background: #eef2f6;
+    border: none;
+    border-radius: 12px;
+    padding: 1.25rem;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .search-form .form-group {
+    margin-bottom: 0.8rem;
+  }
+  .search-form .form-group label {
+    color: var(--text-tertiary);
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .search-form .form-control {
+    background: #ffffff;
+    border: 1px solid var(--border-standard);
+    border-radius: 6px;
+    padding: 0.75rem;
+  }
+  .search-btn {
+    align-self: flex-end;
+    margin-top: 0.5rem;
   }
   
   /* Trip Cards */
@@ -42,9 +67,7 @@
   .trip-main::before, .trip-main::after { display: none; }
   .trip-route { width: 100%; justify-content: space-between; }
   
-  /* Seat Reservation Layout */
-  .asientos-layout { grid-template-columns: 1fr; }
-  .selection-sidebar { position: static; }
+  /* Seat Reservation Layout – now managed in asientos.css */
   
   /* Admin Layouts */
   .admin-header {
@@ -93,4 +116,15 @@
   .reserva-actions .btn { flex: 1; }
   .reserva-change-seat { flex-direction: column; }
   .reserva-change-seat input, .reserva-change-seat button { width: 100% !important; }
+
+  /* Payment flow responsive */
+  .pago-card { padding: 1.5rem; }
+  .pago-summary-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .pago-data-row {
+    align-items: flex-start;
+  }
 }

@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Count, Subquery, OuterRef, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -12,6 +13,12 @@ from .serializers import (
 from .services import actualizar_tasa_bcv
 
 
+class ViajePagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class RutaListView(generics.ListAPIView):
     queryset = Ruta.objects.all()
     serializer_class = RutaSerializer
@@ -21,6 +28,7 @@ class RutaListView(generics.ListAPIView):
 class ViajeListView(generics.ListAPIView):
     serializer_class = ViajeListSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = ViajePagination
 
     def get_queryset(self):
         from reservas.models import Reserva
@@ -76,7 +84,10 @@ class ViajeListView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        viajes = list(queryset)
+
+        # Paginate first
+        page = self.paginate_queryset(queryset)
+        viajes = page if page is not None else list(queryset)
 
         # Pre-compute capacidad_total per autobus (avoid N queries)
         autobus_cache = {}
@@ -87,6 +98,9 @@ class ViajeListView(generics.ListAPIView):
             viaje._asientos_disponibles = autobus_cache[bus_id] - viaje._reservas_activas_count
 
         serializer = self.get_serializer(viajes, many=True)
+
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
 
@@ -431,3 +445,22 @@ def eliminar_viaje_view(request, viaje_id):
     except Exception as e:
         return JsonResponse({'ok': False, 'msg': f'Error: {str(e)}'})
 
+
+class StatsPublicView(APIView):
+    """Public endpoint returning homepage stats from DB."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from reservas.models import Reserva
+
+        total_rutas = Ruta.objects.count()
+        total_buses = Autobus.objects.filter(disponible=True).count()
+        total_pasajeros = Reserva.objects.filter(
+            estado__in=['confirmado', 'completado']
+        ).count()
+
+        return Response({
+            'rutas': total_rutas,
+            'buses': total_buses,
+            'pasajeros': total_pasajeros,
+        })

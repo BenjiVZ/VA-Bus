@@ -48,19 +48,17 @@ const TIERS = [
  *  3. "modal"  → clicking the banner re-opens the full info as a floating window
  */
 export default function PromoPopup() {
-  const [mode, setMode] = useState('hidden'); // hidden | popup | banner | modal
+  const [mode, setMode] = useState(() => {
+    // Initialize from sessionStorage so re-renders don't reset mode
+    return sessionStorage.getItem('promo_shown') ? 'banner' : 'hidden';
+  });
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
-    const shown = sessionStorage.getItem('promo_shown');
-    if (shown) {
-      // Already seen popup → show banner directly
-      setMode('banner');
-      return;
-    }
+    if (mode !== 'hidden') return;         // already showing something
     const timer = setTimeout(() => setMode('popup'), 1200);
     return () => clearTimeout(timer);
-  }, []);
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClosePopup = () => {
     setClosing(true);

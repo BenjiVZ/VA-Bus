@@ -1,9 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRutas } from '../services/api';
-import { Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar, ShieldCheck, Clock, Users, Star } from 'lucide-react';
+import { getRutas, getStats } from '../services/api';
+import {
+  Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar,
+  ShieldCheck, Clock, Users, Star, Bus, Route, CreditCard,
+  ChevronRight, Phone, Mail, ArrowRight, Zap, Award, Heart,
+  MapPinned, Headphones, Wifi, Umbrella,
+} from 'lucide-react';
 import FleetGallery from '../components/FleetGallery';
 import PromoPopup from '../components/PromoPopup';
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/material_blue.css";
+import { Spanish } from "flatpickr/dist/l10n/es.js";
 import '../styles/FleetGallery.css';
 
 const HERO_IMAGES = [
@@ -14,6 +22,38 @@ const HERO_IMAGES = [
   '/flota/bus-18.jpg',
 ];
 
+/* ── Animated counter hook ── */
+function useCounter(target, duration = 2000, startOnView = true) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (!startOnView) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const step = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            const value = eased * target;
+            setCount(Number.isInteger(target) ? Math.floor(value) : Math.round(value * 10) / 10);
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration, startOnView]);
+
+  return { count, ref };
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [rutas, setRutas] = useState([]);
@@ -21,10 +61,14 @@ export default function HomePage() {
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
   const [heroIdx, setHeroIdx] = useState(0);
+  const [dbStats, setDbStats] = useState({ rutas: 0, buses: 0, pasajeros: 0 });
 
   useEffect(() => {
     getRutas()
       .then((res) => setRutas(res.data))
+      .catch(() => {});
+    getStats()
+      .then((res) => setDbStats(res.data))
       .catch(() => {});
   }, []);
 
@@ -49,10 +93,10 @@ export default function HomePage() {
   };
 
   const steps = [
-    { Icon: Search, title: 'Busca tu viaje', desc: 'Selecciona origen, destino y fecha', color: '#3b82f6' },
-    { Icon: Armchair, title: 'Elige tu asiento', desc: 'Visualiza el mapa del autobús', color: '#8b5cf6' },
-    { Icon: MessageCircle, title: 'Coordina por WhatsApp', desc: 'Confirma tu pago con el vendedor', color: '#22c55e' },
-    { Icon: CheckCircle, title: '¡Viaja tranquilo!', desc: 'Tu puesto queda reservado', color: '#f59e0b' },
+    { Icon: Search, title: 'Busca tu viaje', desc: 'Selecciona origen, destino y fecha para encontrar tu ruta ideal', color: '#3b82f6' },
+    { Icon: Armchair, title: 'Elige tu asiento', desc: 'Visualiza el mapa interactivo del autobús y escoge tu lugar', color: '#8b5cf6' },
+    { Icon: CreditCard, title: 'Paga fácilmente', desc: 'Transferencia, pago móvil o Zelle — tú eliges cómo pagar', color: '#22c55e' },
+    { Icon: CheckCircle, title: '¡Viaja tranquilo!', desc: 'Recibe tu boleto con QR al email y preséntalo al abordar', color: '#f59e0b' },
   ];
 
   const trustItems = [
@@ -62,9 +106,32 @@ export default function HomePage() {
     { Icon: Star, text: 'Flota moderna' },
   ];
 
+  const features = [
+    { Icon: Wifi, title: 'Wi-Fi a bordo', desc: 'Conectado durante todo tu viaje' },
+    { Icon: Armchair, title: 'Asientos reclinables', desc: 'Comodidad premium garantizada' },
+    { Icon: ShieldCheck, title: 'Seguro de viajero', desc: 'Tu seguridad es lo primero' },
+    { Icon: Headphones, title: 'Entretenimiento', desc: 'Pantallas individuales' },
+    { Icon: Zap, title: 'Cargadores USB', desc: 'Mantén tus dispositivos cargados' },
+    { Icon: Award, title: 'Servicio VIP', desc: 'Atención premium para ti' },
+  ];
+
+  const stats = [
+    { target: (dbStats.pasajeros || 0) + 15000, label: 'Pasajeros transportados', suffix: '+' },
+    { target: dbStats.rutas || 0, label: 'Rutas nacionales', suffix: '' },
+    { target: dbStats.buses || 0, label: 'Autobuses operativos', suffix: '' },
+    { target: 99.5, label: 'Satisfacción', suffix: '%' },
+  ];
+
+  const popularRoutes = [
+    { from: 'Caracas', to: 'Maracaibo', time: '~12h', price: 'desde $25' },
+    { from: 'Caracas', to: 'Barquisimeto', time: '~5h', price: 'desde $18' },
+    { from: 'Valencia', to: 'Mérida', time: '~10h', price: 'desde $22' },
+    { from: 'Maracay', to: 'Puerto La Cruz', time: '~6h', price: 'desde $20' },
+  ];
+
   return (
     <div className="page page-home">
-      {/* ── HERO SECTION with Image Slideshow ── */}
+      {/* ── HERO SECTION ── */}
       <section className="hero">
         {/* Background Images */}
         <div className="hero-slideshow">
@@ -78,8 +145,22 @@ export default function HomePage() {
           <div className="hero-overlay" />
         </div>
 
+        {/* Animated floating particles */}
+        <div className="hero-particles">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="hero-particle" style={{
+              '--delay': `${i * 0.8}s`,
+              '--x': `${10 + i * 15}%`,
+              '--size': `${3 + (i % 3) * 2}px`,
+            }} />
+          ))}
+        </div>
+
         <div className="hero-content">
-          <span className="hero-badge">La mejor forma de viajar por Venezuela</span>
+          <span className="hero-badge">
+            <Zap size={13} />
+            La mejor forma de viajar por Venezuela
+          </span>
           <h1 className="hero-title">
             VIAJA CON <span className="hero-brand">AERORUTAS</span>
           </h1>
@@ -120,7 +201,7 @@ export default function HomePage() {
 
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <MapPin size={14} /> Destino
+                <MapPinned size={14} /> Destino
               </label>
               <select
                 className="form-control"
@@ -138,50 +219,170 @@ export default function HomePage() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <Calendar size={14} /> Fecha
               </label>
-              <input
-                type="date"
+              <Flatpickr
                 className="form-control"
                 value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
+                onChange={(dates, dateStr) => setFecha(dateStr)}
+                options={{
+                  locale: Spanish,
+                  dateFormat: "Y-m-d",
+                  minDate: "today",
+                  disableMobile: false // Let flatpickr handle mobile or native gracefully
+                }}
+                placeholder="Seleccionar fecha"
               />
             </div>
 
-            <button type="submit" className="btn btn-primary btn-lg"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <button type="submit" className="btn btn-primary btn-lg search-btn">
               <Search size={18} />
-              Buscar
+              Buscar viajes
             </button>
           </form>
         </div>
       </section>
 
+      {/* ── STATS BAR ── */}
+      <section className="stats-section">
+        <div className="container">
+          <div className="stats-grid">
+            {stats.map((stat, i) => {
+              const { count, ref } = useCounter(stat.target, 2000);
+              return (
+                <div key={i} className="stat-item" ref={ref}>
+                  <span className="stat-number">{count}{stat.suffix}</span>
+                  <span className="stat-label">{stat.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* ── FLEET GALLERY ── */}
       <div className="container">
         <FleetGallery />
-
-        <PromoPopup />
-
-        {/* ── HOW IT WORKS ── */}
-        <section className="how-section">
-          <div className="how-section-header">
-            <span className="how-section-label">PASO A PASO</span>
-            <h3 className="how-section-title">¿Cómo funciona?</h3>
-            <p className="how-section-desc">Reservar tu viaje es fácil, rápido y seguro</p>
-          </div>
-          <div className="how-grid">
-            {steps.map((step, i) => (
-              <div key={i} className="how-card">
-                <div className="how-step-number">{i + 1}</div>
-                <div className="how-icon-wrap" style={{ background: `${step.color}15`, color: step.color }}>
-                  <step.Icon size={28} strokeWidth={1.8} />
-                </div>
-                <h4 className="how-card-title">{step.title}</h4>
-                <p className="how-card-desc">{step.desc}</p>
-                {i < steps.length - 1 && <div className="how-connector" />}
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
+
+
+      {/* ── SERVICES SECTION ── */}
+      <section className="services-section">
+        <div className="container">
+          <div className="section-header">
+            <span className="section-label">
+              <Award size={14} />
+              NUESTROS SERVICIOS
+            </span>
+            <h2 className="section-title">Más que solo pasajes</h2>
+            <p className="section-desc">Ofrecemos soluciones de transporte para cada necesidad</p>
+          </div>
+          <div className="services-grid">
+            <div className="service-card">
+              <Bus size={48} strokeWidth={1.5} className="service-icon" />
+              <h3 className="service-title">Servicio Especial</h3>
+              <p className="service-desc">
+                Prestamos servicios de traslados corporativos, ejecutivos, culturales,
+                institucionales, deportivos y recreativos a nivel nacional con total
+                seguridad y confort.
+              </p>
+              <a
+                href="https://wa.me/584120000000?text=Hola%2C%20me%20interesa%20el%20servicio%20especial"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="service-link"
+              >
+                Solicitar cotización <ArrowRight size={14} />
+              </a>
+            </div>
+
+            <div className="service-card">
+              <Umbrella size={48} strokeWidth={1.5} className="service-icon" />
+              <h3 className="service-title">Turismo</h3>
+              <p className="service-desc">
+                Programación turística desde una región de origen a una región destino
+                y conforme a las condiciones del viaje establecidas con el solicitante.
+              </p>
+              <a
+                href="https://wa.me/584120000000?text=Hola%2C%20me%20interesa%20el%20servicio%20de%20turismo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="service-link"
+              >
+                Consultar paquetes <ArrowRight size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="how-section-wrapper">
+        <div className="container">
+          <section className="how-section">
+            <div className="section-header">
+              <span className="section-label">
+                <Zap size={14} />
+                PASO A PASO
+              </span>
+              <h2 className="section-title">¿Cómo funciona?</h2>
+              <p className="section-desc">Reservar tu viaje es fácil, rápido y seguro</p>
+            </div>
+            <div className="how-grid">
+              {steps.map((step, i) => (
+                <div key={i} className="how-card">
+                  <div className="how-step-number">{i + 1}</div>
+                  <div className="how-icon-wrap" style={{ background: `${step.color}15`, color: step.color }}>
+                    <step.Icon size={28} strokeWidth={1.8} />
+                  </div>
+                  <h4 className="how-card-title">{step.title}</h4>
+                  <p className="how-card-desc">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <div className="container">
+        <PromoPopup />
+      </div>
+
+      {/* ── CTA BANNER ── */}
+      <section className="cta-section">
+        <div className="container">
+          <div className="cta-card">
+            <div className="cta-content">
+              <h2 className="cta-title">¿Listo para tu próximo viaje?</h2>
+              <p className="cta-desc">
+                Reserva ahora y viaja con la comodidad y seguridad que mereces.
+                Miles de pasajeros ya confían en nosotros.
+              </p>
+              <div className="cta-actions">
+                <button
+                  className="btn btn-lg cta-btn-primary"
+                  onClick={() => navigate('/viajes')}
+                >
+                  <Search size={18} />
+                  Buscar viajes ahora
+                </button>
+                <a
+                  href="https://wa.me/584120000000"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-lg cta-btn-secondary"
+                >
+                  <Phone size={18} />
+                  Contáctanos
+                </a>
+              </div>
+            </div>
+            <div className="cta-decoration">
+              <Bus size={120} strokeWidth={0.8} />
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -10,7 +10,22 @@ class MetodoPago(models.Model):
         ('USD', 'Dólares'),
     ]
 
+    TIPO_CHOICES = [
+        ('transferencia', 'Transferencia Bancaria'),
+        ('pago_movil', 'Pago Móvil'),
+        ('divisas', 'Divisas (Efectivo)'),
+        ('zinli', 'Zinli'),
+        ('zelle', 'Zelle'),
+        ('binance', 'Binance'),
+        ('otro', 'Otro'),
+    ]
+
     nombre = models.CharField(max_length=100, verbose_name="Nombre del Método")
+    tipo = models.CharField(
+        max_length=20, choices=TIPO_CHOICES, default='transferencia',
+        verbose_name="Tipo de método",
+        help_text="Categoría del método de pago"
+    )
     moneda = models.CharField(
         max_length=3, choices=MONEDA_CHOICES, default='BS',
         verbose_name="Moneda",
@@ -20,6 +35,11 @@ class MetodoPago(models.Model):
         max_length=200, blank=True,
         verbose_name="Badge / Descripción corta",
         help_text="Ej: 'Se acredita más rápido'. Aparece como badge debajo del nombre."
+    )
+    requiere_foto_billete = models.BooleanField(
+        default=False,
+        verbose_name="¿Requiere foto del billete?",
+        help_text="Si es pago en divisas/efectivo, el cliente debe subir foto del billete"
     )
     activo = models.BooleanField(default=True, verbose_name="Activo")
     orden = models.PositiveIntegerField(default=0, verbose_name="Orden de aparición")
@@ -92,6 +112,12 @@ class ComprobantePago(models.Model):
     imagen = models.ImageField(
         upload_to='comprobantes/%Y/%m/',
         verbose_name="Captura del Pago"
+    )
+    foto_billete = models.ImageField(
+        upload_to='comprobantes/billetes/%Y/%m/',
+        null=True, blank=True,
+        verbose_name="Foto del billete",
+        help_text="Requerida cuando el pago es en divisas/efectivo"
     )
     monto = models.DecimalField(
         max_digits=12, decimal_places=2,

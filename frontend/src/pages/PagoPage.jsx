@@ -3,7 +3,17 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronRight, ChevronLeft, AlertTriangle, Clock, Copy, CheckCircle,
   Upload, CreditCard, Shield, Image as ImageIcon,
+  Wallet, Landmark, Smartphone, DollarSign
 } from 'lucide-react';
+
+const getPaymentIcon = (nombre) => {
+  const nameLower = nombre.toLowerCase();
+  if (nameLower.includes('zelle') || nameLower.includes('dolar') || nameLower.includes('usd') || nameLower.includes('efectivo')) return <DollarSign size={24} />;
+  if (nameLower.includes('pago movil') || nameLower.includes('pago móvil') || nameLower.includes('movil')) return <Smartphone size={24} />;
+  if (nameLower.includes('transferencia') || nameLower.includes('banco') || nameLower.includes('bs')) return <Landmark size={24} />;
+  if (nameLower.includes('binance') || nameLower.includes('crypto') || nameLower.includes('usdt')) return <Wallet size={24} />;
+  return <CreditCard size={24} />;
+};
 import { getMetodosPago, crearComprobante, getEstadoComprobante, getTasaCambio } from '../services/api';
 
 const STORAGE_KEY = 'aerorutas_pago_progreso';
@@ -44,6 +54,8 @@ export default function PagoPage() {
   const [numeroRef, setNumeroRef] = useState('');
   const [imagen, setImagen] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
+  const [fotoBillete, setFotoBillete] = useState(null);
+  const [fotoBilletePreview, setFotoBilletePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [comprobanteEnviado, setComprobanteEnviado] = useState(false);
@@ -167,6 +179,14 @@ export default function PagoPage() {
     }
   };
 
+  const handleFotoBilleteChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFotoBillete(file);
+      setFotoBilletePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmitComprobante = async () => {
     if (!imagen) {
       setError('Debes subir la captura del pago.');
@@ -180,6 +200,7 @@ export default function PagoPage() {
       formData.append('grupo_pago', grupoPago);
       formData.append('metodo_pago_id', metodoSeleccionado.id);
       formData.append('imagen', imagen);
+      if (fotoBillete) formData.append('foto_billete', fotoBillete);
       formData.append('monto', Number(getMonto(metodoSeleccionado).valor).toFixed(2));
       formData.append('moneda', metodoSeleccionado.moneda);
       if (numeroRef) formData.append('numero_referencia', numeroRef);
@@ -249,20 +270,22 @@ export default function PagoPage() {
               Selecciona tu método de pago preferido
             </p>
 
-            <div className="pago-methods-list">
+            <div className="pago-methods-grid">
               {metodos.map(m => (
                 <button
                   key={m.id}
                   className="pago-method-card"
                   onClick={() => { setMetodoSeleccionado(m); setPaso(2); }}
                 >
-                  <div>
+                  <div className="pago-method-icon">
+                    {getPaymentIcon(m.nombre)}
+                  </div>
+                  <div className="pago-method-info">
                     <div className="pago-method-name">{m.nombre}</div>
                     {m.descripcion && (
                       <span className="pago-method-badge">{m.descripcion}</span>
                     )}
                   </div>
-                  <ChevronRight size={20} style={{ color: 'var(--text-muted)' }} />
                 </button>
               ))}
             </div>
@@ -442,11 +465,42 @@ export default function PagoPage() {
                 </div>
               </div>
 
+              {/* Foto billete when required */}
+              {metodoSeleccionado?.requiere_foto_billete && (
+                <div className="form-group">
+                  <label>Foto del billete *</label>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 0.5rem' }}>
+                    Sube una foto clara del billete con el que estás pagando
+                  </p>
+                  <div
+                    className={`pago-upload-area ${fotoBilletePreview ? 'pago-upload-area-has-file' : ''}`}
+                    onClick={() => document.getElementById('pago-billete-input').click()}
+                  >
+                    {fotoBilletePreview ? (
+                      <img src={fotoBilletePreview} alt="Billete" className="pago-upload-preview" />
+                    ) : (
+                      <>
+                        <ImageIcon size={32} style={{ color: 'var(--text-muted)' }} />
+                        <span>Toca aquí para subir la foto del billete</span>
+                        <small>JPG, PNG o WebP</small>
+                      </>
+                    )}
+                    <input
+                      id="pago-billete-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFotoBilleteChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 className="btn btn-primary btn-lg"
                 style={{ width: '100%' }}
                 onClick={handleSubmitComprobante}
-                disabled={submitting || !imagen}
+                disabled={submitting || !imagen || (metodoSeleccionado?.requiere_foto_billete && !fotoBillete)}
               >
                 {submitting ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

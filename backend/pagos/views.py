@@ -74,6 +74,14 @@ class CrearComprobanteView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Validate foto_billete when required
+        foto_billete = serializer.validated_data.get('foto_billete')
+        if metodo.requiere_foto_billete and not foto_billete:
+            return Response(
+                {"error": "Este método de pago requiere que subas una foto del billete."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Create comprobante
         comprobante = ComprobantePago.objects.create(
             grupo_pago=grupo_pago,
@@ -81,6 +89,7 @@ class CrearComprobanteView(APIView):
             metodo_pago=metodo,
             numero_referencia=serializer.validated_data.get('numero_referencia', ''),
             imagen=serializer.validated_data['imagen'],
+            foto_billete=foto_billete,
             monto=serializer.validated_data['monto'],
             moneda=serializer.validated_data.get('moneda', 'BS'),
         )

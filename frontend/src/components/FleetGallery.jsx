@@ -58,6 +58,10 @@ export default function FleetGallery() {
           >
             {photos.map((photo, i) => (
               <div className="fleet-slide" key={i}>
+                <div 
+                  className="fleet-slide-bg" 
+                  style={{ backgroundImage: `url(${photo.src})` }}
+                />
                 <img
                   src={photo.src}
                   alt={photo.alt}

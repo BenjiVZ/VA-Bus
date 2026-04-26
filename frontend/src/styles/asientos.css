@@ -1,4 +1,218 @@
-/* â”€â”€ Minor Document Upload Styles â”€â”€ */
+/* ══════════════════════════════════════════════════
+   ASIENTOS PAGE – Floating Card Grid Layout
+   ══════════════════════════════════════════════════ */
+
+/* ── Wide container override for this page ── */
+.asientos-page-container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ── Page header ── */
+.asientos-page-header {
+  margin-bottom: 1.5rem;
+}
+
+.asientos-page-header h2 {
+  font-size: 1.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.asientos-page-header p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ── Main Grid: Seat Map + Sidebar ── */
+.asientos-layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* ── Floating Card Mixin ── */
+.floating-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+}
+
+.floating-card:hover {
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Seat Map container ── */
+.seat-map-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: 16px;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+  overflow-x: auto;
+}
+
+.seat-map-container:hover {
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Selection Sidebar – sticky floating card ── */
+.selection-sidebar {
+  position: sticky;
+  top: 5rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.selection-sidebar .floating-card {
+  padding: 1.25rem;
+}
+
+/* ── Buyer + Seat Options Section ── */
+.buyer-options-section {
+  margin-top: 1.25rem;
+}
+
+.buyer-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* ── Buyer Card ── */
+.buyer-card {
+  animation: floatCardIn 0.35s ease;
+}
+
+.buyer-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.buyer-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0;
+}
+
+/* ── Seat Options Card ── */
+.seat-options-area {
+  animation: floatCardIn 0.35s ease;
+}
+
+.seat-options-area h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.seat-options-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.seat-options-card:last-child {
+  margin-bottom: 0;
+}
+
+.seat-options-card:hover {
+  border-color: var(--border-strong);
+}
+
+.seat-options-header {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--accent-primary);
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* ── Permisos Section ── */
+.seat-permisos-section {
+  margin-top: 0.25rem;
+}
+
+.seat-permisos-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.seat-permisos-checkboxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.seat-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.seat-checkbox:hover {
+  background: var(--bg-tertiary, #f1f5f9);
+}
+
+.seat-checkbox input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Document Upload Fields ── */
+.docs-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.docs-upload-grid .file-upload-field {
+  margin-bottom: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0.75rem;
+  gap: 0.5rem;
+}
+
+.docs-upload-grid .file-upload-btn {
+  align-self: flex-end;
+}
+
+/* ── Minor Document Upload Styles ── */
 .seat-minor-docs {
   margin-top: 0.5rem;
   padding: 0.75rem;
@@ -100,6 +314,7 @@
   background: #1d4ed8;
 }
 
+/* ── Minor Warning ── */
 .seat-minor-warning {
   display: flex;
   gap: 0.5rem;
@@ -132,39 +347,7 @@
   line-height: 1.4;
 }
 
-.seat-animal-warning {
-  display: flex;
-  gap: 0.5rem;
-  align-items: flex-start;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 0.75rem;
-  margin-top: 0.4rem;
-  animation: fadeIn 0.3s ease;
-}
-
-.seat-animal-warning svg {
-  color: #16a34a;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.seat-animal-warning strong {
-  display: block;
-  font-size: 0.8rem;
-  color: #15803d;
-  margin-bottom: 0.15rem;
-}
-
-.seat-animal-warning p {
-  font-size: 0.75rem;
-  color: #166534;
-  margin: 0;
-  line-height: 1.4;
-}
-
-/* â”€â”€ Animal Document Upload Styles â”€â”€ */
+/* ── Animal Styles ── */
 .seat-animal-docs {
   margin-top: 0.5rem;
   padding: 0.75rem;
@@ -200,7 +383,7 @@
   border-radius: var(--radius-sm);
 }
 
-/* â”€â”€ Disability Document Upload Styles â”€â”€ */
+/* ── Disability Styles ── */
 .seat-disability-docs {
   margin-top: 0.5rem;
   padding: 0.75rem;
@@ -231,7 +414,118 @@
   color: #5b21b6;
 }
 
-/* â”€â”€ Physical Documents Notice â”€â”€ */
+/* ── Doc Island (Collapsible) ── */
+.doc-island {
+  margin-top: 0.4rem;
+  border-radius: 10px;
+  border: 1px solid #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff, #f8faff);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.doc-island.animal {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #f0fdf4, #f5fff8);
+}
+
+.doc-island.disability {
+  border-color: #c4b5fd;
+  background: linear-gradient(135deg, #f5f3ff, #faf8ff);
+}
+
+.doc-island.complete {
+  border-color: #86efac;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+}
+
+.doc-island-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.doc-island-header:hover {
+  background: rgba(0,0,0,0.025);
+}
+
+.doc-island-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.doc-island-left svg {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.doc-island.animal .doc-island-left svg {
+  color: #16a34a;
+}
+
+.doc-island.disability .doc-island-left svg {
+  color: #7c3aed;
+}
+
+.doc-island-left strong {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.doc-island-counter {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+.doc-island.complete .doc-island-counter {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.doc-island-right {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.doc-island-check {
+  color: #16a34a !important;
+}
+
+.doc-island-body {
+  padding: 0.5rem 0.75rem 0.65rem;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  animation: fadeIn 0.2s ease;
+}
+
+.doc-island-body .file-upload-field {
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.doc-island-body .file-upload-field:last-of-type {
+  margin-bottom: 0.25rem;
+}
+
+.doc-island-body .docs-physical-notice {
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  padding: 0.3rem 0.5rem;
+}
+
+/* ── Notices ── */
 .docs-physical-notice {
   display: flex;
   align-items: center;
@@ -286,32 +580,25 @@
   color: #7f1d1d;
 }
 
-.trip-seats-available {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--green-500);
-  background: var(--green-50);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
+/* ── Assign Fields ── */
+.seat-assign-fields {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
 }
 
-/* Layout for AsientosPage */
-.asientos-layout {
-  display: grid;
-  grid-template-columns: 1fr 480px;
-  gap: 2rem;
-  align-items: start;
+/* ── Reserve Button ── */
+.reserve-action-bar {
+  margin-top: 1.25rem;
 }
 
-/* Seat Map container */
-.seat-map-container {
-  background: var(--bg-card);
-  border: 1px solid var(--border-standard);
-  border-radius: var(--radius-lg);
-  padding: 2rem 1.5rem;
-  box-shadow: var(--shadow-sm);
+.reserve-action-bar .btn {
+  width: 100%;
 }
+
+/* ══════════════════════════════════════════════════
+   BUS / SEAT MAP VISUALS
+   ══════════════════════════════════════════════════ */
 
 .floor-tabs {
   display: flex;
@@ -344,7 +631,7 @@
   background: var(--bg-secondary);
 }
 
-/* â”€â”€ Bus Outline â”€â”€ */
+/* ── Bus Outline ── */
 .bus-outline {
   margin: 0 auto;
   border: 2px solid var(--border-strong);
@@ -356,7 +643,6 @@
   min-width: 160px;
 }
 
-/* Side mirrors */
 .bus-outline::before,
 .bus-outline::after {
   content: '';
@@ -395,12 +681,7 @@
   margin-top: 0.25rem;
 }
 
-.bus-windshield-icon {
-  font-size: 1rem;
-  vertical-align: middle;
-}
-
-/* â”€â”€ Layout Grid (reads from JSON) â”€â”€ */
+/* ── Layout Grid ── */
 .bus-layout-grid {
   display: grid;
   gap: 6px;
@@ -408,7 +689,6 @@
   justify-content: center;
 }
 
-/* Generic layout cell */
 .layout-cell {
   display: flex;
   align-items: center;
@@ -418,7 +698,6 @@
 }
 
 .layout-cell-seat {
-  /* container for SVG SeatIcon, no extra styles needed */
   position: relative;
 }
 
@@ -450,7 +729,6 @@
 }
 
 .layout-cell-aisle {
-  /* invisible but takes space, subtle center line */
   position: relative;
 }
 
@@ -465,7 +743,6 @@
 }
 
 .layout-cell-empty {
-  /* intentionally blank â€” empty grid space */
   visibility: hidden;
 }
 
@@ -485,7 +762,6 @@
   filter: drop-shadow(0 2px 6px rgba(0, 82, 204, 0.35));
 }
 
-/* Moving state (amber glow) */
 .seat-svg-moving {
   transform: scale(1.1);
   filter: drop-shadow(0 2px 8px rgba(255, 143, 0, 0.5));
@@ -497,7 +773,6 @@
   50% { filter: drop-shadow(0 4px 16px rgba(255, 143, 0, 0.7)); }
 }
 
-/* Pulse effect for available seats in move mode */
 .seat-cell-pulse .seat-svg-available {
   animation: seatPulse 2s ease-in-out infinite;
 }
@@ -507,7 +782,7 @@
   50% { transform: scale(1.05); filter: drop-shadow(0 1px 4px rgba(0, 82, 204, 0.2)); }
 }
 
-/* â”€â”€ Seat Move Banner â”€â”€ */
+/* ── Seat Move Banner ── */
 .seat-move-banner {
   display: flex;
   align-items: center;
@@ -571,7 +846,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Warning button for active moving state */
 .btn-warning {
   background: #ff8f00;
   color: #fff;
@@ -589,7 +863,7 @@
   50% { box-shadow: 0 0 0 4px rgba(255, 143, 0, 0); }
 }
 
-/* Bus rear end */
+/* Bus rear */
 .bus-rear {
   height: 14px;
   background: var(--gray-200);
@@ -597,7 +871,6 @@
   position: relative;
 }
 
-/* Wheels */
 .bus-rear::before,
 .bus-rear::after {
   content: '';
@@ -611,7 +884,7 @@
 .bus-rear::before { left: 16px; }
 .bus-rear::after { right: 16px; }
 
-/* â”€â”€ Seat Legend â”€â”€ */
+/* ── Seat Legend ── */
 .seat-legend {
   display: flex;
   gap: 1.5rem;
@@ -636,60 +909,146 @@
   height: 26px;
 }
 
-/* Selection Sidebar */
-.selection-sidebar {
-  background: var(--bg-card);
-  border: 1px solid var(--border-standard);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 5rem;
-  min-width: 0;
+/* ── Timer ── */
+.selection-timer {
+  background: linear-gradient(135deg, #eef6ff, #dbeafe);
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
 }
 
-.selection-sidebar h3 {
-  font-size: 1.1rem;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 1rem;
-  margin-bottom: 1rem;
+.selection-timer.timer-warning {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border-color: #fbbf24;
 }
 
-.summary-row {
+.selection-timer.timer-danger {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border-color: #f87171;
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+
+.selection-timer-content {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.timer-bar {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.timer-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 4px;
+  transition: width 1s linear;
+}
+
+.timer-warning .timer-bar-fill {
+  background: #f59e0b;
+}
+
+.timer-danger .timer-bar-fill {
+  background: #ef4444;
+}
+
+/* ── Confirmation rows inside Resumen ── */
+.confirmation-details {
+  margin: 0;
+}
+
+.confirmation-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.88rem;
 }
 
-.summary-label {
+.confirmation-row:last-child {
+  border-bottom: none;
+}
+
+.confirmation-label {
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
-.summary-value {
+.confirmation-value {
   font-weight: 600;
   text-align: right;
   color: var(--text-primary);
 }
 
-.summary-total {
-  border-top: 1px dashed var(--border-strong);
-  margin-top: 1rem;
-  padding-top: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+/* ── Animation ── */
+@keyframes floatCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.summary-total-label {
-  font-weight: 700;
-  font-size: 1.1rem;
+/* ── Trip seats available badge ── */
+.trip-seats-available {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--green-500);
+  background: var(--green-50);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
 }
 
-.passenger-form {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-subtle);
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .asientos-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .selection-sidebar {
+    position: static;
+  }
+
+  .buyer-options-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* Confirmation */
+@media (max-width: 768px) {
+  .asientos-page-container {
+    padding: 0 1rem;
+  }
+
+  .buyer-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-upload-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seat-permisos-checkboxes {
+    grid-template-columns: 1fr;
+  }
+}

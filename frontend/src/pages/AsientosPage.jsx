@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
 import AtencionModal from '../components/AtencionModal';
-import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle, Clock, PawPrint, Accessibility, ShieldCheck, Upload, FileText, Camera, CreditCard } from 'lucide-react';
+import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle, Clock, PawPrint, Accessibility, ShieldCheck, Upload, FileText, Camera, CreditCard, ChevronDown, ChevronRight, CheckCircle } from 'lucide-react';
 
 export default function AsientosPage() {
   const { id } = useParams();
@@ -27,6 +27,9 @@ export default function AsientosPage() {
 
   // Per-seat files for minors: { seatKey: { partida: File, foto: File, cedula_rep: File } }
   const [seatFiles, setSeatFiles] = useState({});
+
+  // Track which doc sections are expanded per seat: { seatKey: { minor: bool, animal: bool, disability: bool } }
+  const [expandedDocs, setExpandedDocs] = useState({});
 
   // Track seats where user toggled "menor" on then off (fraud detection)
   const [menorToggled, setMenorToggled] = useState({});
@@ -447,20 +450,17 @@ export default function AsientosPage() {
 
   return (
     <div className="page">
-      <div className="container">
-        <div style={{ marginBottom: '2rem' }}>
+      <div className="asientos-page-container">
+        <div className="asientos-page-header">
           <h2>Selecciona tus Asientos</h2>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+          <p>
             {viaje.ruta.origen} → {viaje.ruta.destino} · {new Date(viaje.fecha_salida + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })} · {viaje.hora_salida?.slice(0, 5)}
           </p>
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
 
-        <div className="alert alert-info" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          👶 <strong>Nota:</strong> Los menores de edad deben viajar acompañados por un adulto responsable.
-        </div>
-
+        {/* ── Top Row: Seat Map + Summary Sidebar ── */}
         <div className="asientos-layout">
           <div>
             <div className="seat-map-container">
@@ -487,12 +487,11 @@ export default function AsientosPage() {
                 </div>
               </div>
             )}
-            <div className="card" style={{ marginBottom: '1rem' }}>
-              <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div className="floating-card">
+              <h4 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <ClipboardList size={16} /> Resumen
               </h4>
-
-              <div className="confirmation-details" style={{ margin: 0 }}>
+              <div className="confirmation-details">
                 <div className="confirmation-row">
                   <span className="confirmation-label">Ruta</span>
                   <span className="confirmation-value">{viaje.ruta.origen} → {viaje.ruta.destino}</span>
@@ -527,52 +526,108 @@ export default function AsientosPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {selectedSeats.length > 0 && (
-              <div className="card" style={{ animation: 'fadeIn 0.3s ease' }}>
-                <h4 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+        {/* ── Bottom Row: Buyer Data + Seat Options (floating cards) ── */}
+        {selectedSeats.length > 0 && (
+          <div className="buyer-options-section">
+            <div className="buyer-options-grid">
+              {/* Left card: Buyer info */}
+              <div className="floating-card buyer-card">
+                <h4>
                   <User size={16} /> Datos del Comprador
                 </h4>
-                <div className="form-group">
-                  <label>Nombre Completo</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Nombre y apellido"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Cédula</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <select
-                      className="form-control"
-                      value={cedulaTipo}
-                      onChange={(e) => setCedulaTipo(e.target.value)}
-                      style={{ width: '70px', flexShrink: 0 }}
-                    >
-                      <option value="V">V</option>
-                      <option value="J">J</option>
-                      <option value="E">E</option>
-                    </select>
+                <div className="buyer-fields-grid">
+                  <div className="form-group">
+                    <label>Nombre Completo</label>
                     <input
                       type="text"
                       className="form-control"
-                      value={cedula}
-                      onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
-                      placeholder="12345678"
-                      inputMode="numeric"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      placeholder="Nombre y apellido"
                     />
+                  </div>
+                  <div className="form-group">
+                    <label>Cédula</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <select
+                        className="form-control"
+                        value={cedulaTipo}
+                        onChange={(e) => setCedulaTipo(e.target.value)}
+                        style={{ width: '70px', flexShrink: 0 }}
+                      >
+                        <option value="V">V</option>
+                        <option value="J">J</option>
+                        <option value="E">E</option>
+                      </select>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={cedula}
+                        onChange={(e) => setCedula(e.target.value.replace(/\D/g, ''))}
+                        placeholder="12345678"
+                        inputMode="numeric"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Per-seat options */}
-                {selectedSeats.length > 0 && (
-                  <div style={{ marginTop: '1rem' }}>
-                    <h4 style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.9rem' }}>
-                      <Armchair size={16} /> Opciones por Asiento
-                    </h4>
+                {/* ── Datos del asignado (por asiento con "para_otra") ── */}
+                {selectedSeats.filter(s => seatOptions[getSeatKey(s)]?.para_otra).map((seat) => {
+                  const key = getSeatKey(seat);
+                  const opts = seatOptions[key] || {};
+                  return (
+                    <div key={key} className="assignee-section" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px dashed var(--border-color, #e2e4e9)' }}>
+                      <h4 style={{ fontSize: '0.85rem', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <UserPlus size={15} /> Persona Asignada — Asiento #{seat.numero}
+                      </h4>
+                      <div className="buyer-fields-grid">
+                        <div className="form-group">
+                          <label>Nombre del asignado</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={opts.nombre_asignado}
+                            onChange={(e) => updateSeatOption(key, 'nombre_asignado', e.target.value)}
+                            placeholder="Nombre y apellido"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Cédula del asignado</label>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <select
+                              className="form-control"
+                              value={opts.cedula_tipo_asignado || 'V'}
+                              onChange={(e) => updateSeatOption(key, 'cedula_tipo_asignado', e.target.value)}
+                              style={{ width: '70px', flexShrink: 0 }}
+                            >
+                              <option value="V">V</option>
+                              <option value="J">J</option>
+                              <option value="E">E</option>
+                            </select>
+                            <input
+                              type="text"
+                              className="form-control"
+                              value={opts.cedula_asignado}
+                              onChange={(e) => updateSeatOption(key, 'cedula_asignado', e.target.value.replace(/\D/g, ''))}
+                              placeholder="12345678"
+                              inputMode="numeric"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right card: Seat options */}
+              <div className="floating-card seat-options-area">
+                <h4>
+                  <Armchair size={16} /> Opciones por Asiento
+                </h4>
                     {selectedSeats.map((seat) => {
                       const key = getSeatKey(seat);
                       const opts = seatOptions[key] || {};
@@ -589,318 +644,244 @@ export default function AsientosPage() {
                               <span>Permisos para viajar</span>
                             </div>
 
-                            {/* Menores */}
-                            <label className="seat-checkbox">
-                              <input
-                                type="checkbox"
-                                checked={opts.es_menor || false}
-                                onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)}
-                              />
-                              <Baby size={14} />
-                              <span>Es menor de edad</span>
-                            </label>
+                            <div className="seat-permisos-checkboxes">
+                              <label className="seat-checkbox">
+                                <input type="checkbox" checked={opts.es_menor || false} onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)} />
+                                <Baby size={14} /><span>Es menor de edad</span>
+                              </label>
+                              <label className="seat-checkbox">
+                                <input type="checkbox" checked={opts.viaja_con_animal || false} onChange={(e) => updateSeatOption(key, 'viaja_con_animal', e.target.checked)} />
+                                <PawPrint size={14} /><span>Viaja con animal</span>
+                              </label>
+                              <label className="seat-checkbox">
+                                <input type="checkbox" checked={opts.para_otra || false} onChange={(e) => updateSeatOption(key, 'para_otra', e.target.checked)} />
+                                <UserPlus size={14} /><span>Asignar a otra persona</span>
+                              </label>
+                              <label className="seat-checkbox">
+                                <input type="checkbox" checked={opts.es_discapacitado || false} onChange={(e) => updateSeatOption(key, 'es_discapacitado', e.target.checked)} />
+                                <Accessibility size={14} /><span>Persona con discapacidad</span>
+                              </label>
+                            </div>
 
-                            {opts.es_menor && (
-                              <div className="seat-minor-docs">
-                                <div className="seat-minor-docs-header">
-                                  <Upload size={16} />
-                                  <div>
-                                    <strong>Documentos requeridos</strong>
-                                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Suba los siguientes documentos para continuar con la reserva del menor.</p>
+                            {/* ── Compact doc islands ── */}
+                            {opts.es_menor && (() => {
+                              const files = seatFiles[key] || {};
+                              const uploaded = [files.partida, files.foto, files.cedula_rep].filter(Boolean).length;
+                              const total = 3;
+                              const isOpen = expandedDocs[key]?.minor;
+                              return (
+                                <div className={`doc-island ${uploaded === total ? 'complete' : ''}`}>
+                                  <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], minor: !isOpen } }))}>
+                                    <div className="doc-island-left">
+                                      <Baby size={15} />
+                                      <div>
+                                        <strong>Documentos del menor</strong>
+                                        <span className="doc-island-counter">{uploaded}/{total} archivos</span>
+                                      </div>
+                                    </div>
+                                    <div className="doc-island-right">
+                                      {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
+                                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                    </div>
                                   </div>
+                                  {isOpen && (
+                                    <div className="doc-island-body">
+                                      <label className="file-upload-field">
+                                        <FileText size={15} />
+                                        <div className="file-upload-info">
+                                          <span className="file-upload-label">Partida de nacimiento</span>
+                                          <span className="file-upload-hint">{files.partida ? files.partida.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                        </div>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], partida: file } })); }} />
+                                        <span className={`file-upload-btn ${files.partida ? 'uploaded' : ''}`}>{files.partida ? '✓' : 'Subir'}</span>
+                                      </label>
+                                      <label className="file-upload-field">
+                                        <Camera size={15} />
+                                        <div className="file-upload-info">
+                                          <span className="file-upload-label">Foto del menor</span>
+                                          <span className="file-upload-hint">{files.foto ? files.foto.name : 'JPG, PNG o WEBP (máx. 5MB)'}</span>
+                                        </div>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], foto: file } })); }} />
+                                        <span className={`file-upload-btn ${files.foto ? 'uploaded' : ''}`}>{files.foto ? '✓' : 'Subir'}</span>
+                                      </label>
+                                      <label className="file-upload-field">
+                                        <CreditCard size={15} />
+                                        <div className="file-upload-info">
+                                          <span className="file-upload-label">Cédula del representante</span>
+                                          <span className="file-upload-hint">{files.cedula_rep ? files.cedula_rep.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                        </div>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], cedula_rep: file } })); }} />
+                                        <span className={`file-upload-btn ${files.cedula_rep ? 'uploaded' : ''}`}>{files.cedula_rep ? '✓' : 'Subir'}</span>
+                                      </label>
+                                      <div className="docs-physical-notice">
+                                        <AlertTriangle size={13} />
+                                        <span>Llevar documentos <strong>en físico</strong> al abordar.</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-
-                                {/* Partida de nacimiento */}
-                                <label className="file-upload-field">
-                                  <FileText size={16} />
-                                  <div className="file-upload-info">
-                                    <span className="file-upload-label">Partida de nacimiento</span>
-                                    <span className="file-upload-hint">{seatFiles[key]?.partida ? seatFiles[key].partida.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                  </div>
-                                  <input
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png,.webp,.pdf"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                      const file = e.target.files[0];
-                                      if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], partida: file } }));
-                                    }}
-                                  />
-                                  <span className={`file-upload-btn ${seatFiles[key]?.partida ? 'uploaded' : ''}`}>
-                                    {seatFiles[key]?.partida ? '✓' : 'Subir'}
-                                  </span>
-                                </label>
-
-                                {/* Foto del menor */}
-                                <label className="file-upload-field">
-                                  <Camera size={16} />
-                                  <div className="file-upload-info">
-                                    <span className="file-upload-label">Foto del menor (carnet o selfie)</span>
-                                    <span className="file-upload-hint">{seatFiles[key]?.foto ? seatFiles[key].foto.name : 'JPG, PNG o WEBP (máx. 5MB)'}</span>
-                                  </div>
-                                  <input
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png,.webp"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                      const file = e.target.files[0];
-                                      if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], foto: file } }));
-                                    }}
-                                  />
-                                  <span className={`file-upload-btn ${seatFiles[key]?.foto ? 'uploaded' : ''}`}>
-                                    {seatFiles[key]?.foto ? '✓' : 'Subir'}
-                                  </span>
-                                </label>
-
-                                {/* Cédula del representante */}
-                                <label className="file-upload-field">
-                                  <CreditCard size={16} />
-                                  <div className="file-upload-info">
-                                    <span className="file-upload-label">Cédula del representante</span>
-                                    <span className="file-upload-hint">{seatFiles[key]?.cedula_rep ? seatFiles[key].cedula_rep.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                  </div>
-                                  <input
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png,.webp,.pdf"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                      const file = e.target.files[0];
-                                      if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], cedula_rep: file } }));
-                                    }}
-                                  />
-                                  <span className={`file-upload-btn ${seatFiles[key]?.cedula_rep ? 'uploaded' : ''}`}>
-                                    {seatFiles[key]?.cedula_rep ? '✓' : 'Subir'}
-                                  </span>
-                                </label>
-
-                                <div className="docs-physical-notice">
-                                  <AlertTriangle size={14} />
-                                  <span>Debe llevar estos documentos <strong>en físico</strong> al momento del abordaje.</span>
-                                </div>
-                              </div>
-                            )}
+                              );
+                            })()}
 
                             {!opts.es_menor && menorToggled[key] && (
                               <div className="seat-minor-warning">
                                 <AlertTriangle size={16} />
                                 <div>
                                   <strong>⚠️ IMPORTANTE</strong>
-                                  <p>En caso de que el pasaje de este asiento sea para un menor de edad y no haya sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong> al momento del abordaje.</p>
+                                  <p>Si el pasaje es para un menor y no fue comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
                                 </div>
                               </div>
                             )}
 
-                            {/* Mascotas */}
-                            <label className="seat-checkbox">
-                              <input
-                                type="checkbox"
-                                checked={opts.viaja_con_animal || false}
-                                onChange={(e) => updateSeatOption(key, 'viaja_con_animal', e.target.checked)}
-                              />
-                              <PawPrint size={14} />
-                              <span>Viaja con animal</span>
-                            </label>
-
-                            {opts.viaja_con_animal && (
-                              <div className="seat-animal-docs">
-                                <div className="seat-animal-docs-header">
-                                  <PawPrint size={16} />
-                                  <div>
-                                    <strong>🐾 Datos de la mascota</strong>
-                                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Seleccione el tipo de mascota y suba la tarjeta de vacunación.</p>
+                            {opts.viaja_con_animal && (() => {
+                              const files = seatFiles[key] || {};
+                              const uploaded = [files.vacunacion].filter(Boolean).length + (opts.tipo_mascota ? 1 : 0);
+                              const total = 2;
+                              const isOpen = expandedDocs[key]?.animal;
+                              return (
+                                <div className={`doc-island animal ${uploaded === total ? 'complete' : ''}`}>
+                                  <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], animal: !isOpen } }))}>
+                                    <div className="doc-island-left">
+                                      <PawPrint size={15} />
+                                      <div>
+                                        <strong>Datos de la mascota</strong>
+                                        <span className="doc-island-counter">{uploaded}/{total} completados</span>
+                                      </div>
+                                    </div>
+                                    <div className="doc-island-right">
+                                      {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
+                                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                    </div>
                                   </div>
+                                  {isOpen && (
+                                    <div className="doc-island-body">
+                                      <div className="pet-type-selector">
+                                        <label style={{ fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block' }}>Tipo de mascota</label>
+                                        <select
+                                          className="form-control"
+                                          value={opts.tipo_mascota || ''}
+                                          onChange={(e) => updateSeatOption(key, 'tipo_mascota', e.target.value)}
+                                          style={{ fontSize: '0.85rem' }}
+                                        >
+                                          <option value="">Seleccione...</option>
+                                          <option value="perro">🐕 Perro</option>
+                                          <option value="gato">🐈 Gato</option>
+                                          <option value="ave">🐦 Ave</option>
+                                          <option value="conejo">🐰 Conejo</option>
+                                          <option value="hamster">🐹 Hámster</option>
+                                          <option value="otro">🐾 Otro</option>
+                                        </select>
+                                      </div>
+                                      <label className="file-upload-field" style={{ marginTop: '0.4rem' }}>
+                                        <FileText size={15} />
+                                        <div className="file-upload-info">
+                                          <span className="file-upload-label">Tarjeta de vacunación</span>
+                                          <span className="file-upload-hint">{files.vacunacion ? files.vacunacion.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                        </div>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], vacunacion: file } })); }} />
+                                        <span className={`file-upload-btn ${files.vacunacion ? 'uploaded' : ''}`}>{files.vacunacion ? '✓' : 'Subir'}</span>
+                                      </label>
+                                      {!opts.tipo_mascota && (
+                                        <p style={{ fontSize: '0.72rem', color: '#dc2626', margin: '0.3rem 0 0' }}>⚠ Seleccione el tipo de mascota</p>
+                                      )}
+                                      <div className="docs-physical-notice">
+                                        <AlertTriangle size={13} />
+                                        <span>Llevar tarjeta de vacunación <strong>en físico</strong> al abordar.</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
+                              );
+                            })()}
 
-                                {/* Selector de tipo de mascota */}
-                                <div className="pet-type-selector">
-                                  <label className="file-upload-label" style={{ marginBottom: '0.3rem', display: 'block' }}>Tipo de mascota</label>
-                                  <select
-                                    className="form-control"
-                                    value={opts.tipo_mascota || ''}
-                                    onChange={(e) => updateSeatOption(key, 'tipo_mascota', e.target.value)}
-                                    style={{ fontSize: '0.85rem' }}
-                                  >
-                                    <option value="">Seleccione...</option>
-                                    <option value="perro">🐕 Perro</option>
-                                    <option value="gato">🐈 Gato</option>
-                                    <option value="ave">🐦 Ave</option>
-                                    <option value="conejo">🐰 Conejo</option>
-                                    <option value="hamster">🐹 Hámster</option>
-                                    <option value="otro">🐾 Otro</option>
-                                  </select>
-                                </div>
-
-                                {/* Upload de tarjeta de vacunación */}
-                                <label className="file-upload-field" style={{ marginTop: '0.5rem' }}>
-                                  <FileText size={16} />
-                                  <div className="file-upload-info">
-                                    <span className="file-upload-label">Tarjeta de vacunación</span>
-                                    <span className="file-upload-hint">{seatFiles[key]?.vacunacion ? seatFiles[key].vacunacion.name : 'PDF o imagen (máx. 5MB)'}</span>
+                            {opts.es_discapacitado && (() => {
+                              const files = seatFiles[key] || {};
+                              const uploaded = files.discapacidad ? 1 : 0;
+                              const total = 1;
+                              const isOpen = expandedDocs[key]?.disability;
+                              return (
+                                <div className={`doc-island disability ${uploaded === total ? 'complete' : ''}`}>
+                                  <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], disability: !isOpen } }))}>
+                                    <div className="doc-island-left">
+                                      <Accessibility size={15} />
+                                      <div>
+                                        <strong>Documento de discapacidad</strong>
+                                        <span className="doc-island-counter">{uploaded}/{total} archivo</span>
+                                      </div>
+                                    </div>
+                                    <div className="doc-island-right">
+                                      {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
+                                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                    </div>
                                   </div>
-                                  <input
-                                    type="file"
-                                    accept=".jpg,.jpeg,.png,.webp,.pdf"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                      const file = e.target.files[0];
-                                      if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], vacunacion: file } }));
-                                    }}
-                                  />
-                                  <span className={`file-upload-btn ${seatFiles[key]?.vacunacion ? 'uploaded' : ''}`}>
-                                    {seatFiles[key]?.vacunacion ? '✓' : 'Subir'}
-                                  </span>
-                                </label>
-
-                                {!opts.tipo_mascota && (
-                                  <p style={{ fontSize: '0.72rem', color: '#dc2626', margin: '0.35rem 0 0' }}>⚠ Debe seleccionar el tipo de mascota</p>
-                                )}
-
-                                <div className="docs-physical-notice">
-                                  <AlertTriangle size={14} />
-                                  <span>Debe llevar la tarjeta de vacunación <strong>en físico</strong> al momento del abordaje.</span>
+                                  {isOpen && (
+                                    <div className="doc-island-body">
+                                      <label className="file-upload-field">
+                                        <FileText size={15} />
+                                        <div className="file-upload-info">
+                                          <span className="file-upload-label">Certificado médico / RCP</span>
+                                          <span className="file-upload-hint">{files.discapacidad ? files.discapacidad.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                        </div>
+                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], discapacidad: file } })); }} />
+                                        <span className={`file-upload-btn ${files.discapacidad ? 'uploaded' : ''}`}>{files.discapacidad ? '✓' : 'Subir'}</span>
+                                      </label>
+                                      <div className="docs-physical-notice">
+                                        <AlertTriangle size={13} />
+                                        <span>Llevar documento <strong>en físico</strong> al abordar.</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="docs-disclaimer-notice">
-                                  <AlertTriangle size={14} />
-                                  <span>Si no presenta la tarjeta de vacunación del animal, la unidad <strong>no se hace responsable</strong> por cualquier inconveniente que pueda surgir durante el viaje.</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <label className="seat-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={opts.es_discapacitado || false}
-                              onChange={(e) => updateSeatOption(key, 'es_discapacitado', e.target.checked)}
-                            />
-                            <Accessibility size={14} />
-                            <span>Persona con discapacidad</span>
-                          </label>
-
-                          {opts.es_discapacitado && (
-                            <div className="seat-disability-docs">
-                              <div className="seat-disability-docs-header">
-                                <Accessibility size={16} />
-                                <div>
-                                  <strong>Documento de discapacidad</strong>
-                                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Suba un certificado médico, RCP o documento que acredite la condición.</p>
-                                </div>
-                              </div>
-
-                              <label className="file-upload-field">
-                                <FileText size={16} />
-                                <div className="file-upload-info">
-                                  <span className="file-upload-label">Certificado médico / RCP</span>
-                                  <span className="file-upload-hint">{seatFiles[key]?.discapacidad ? seatFiles[key].discapacidad.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                </div>
-                                <input
-                                  type="file"
-                                  accept=".jpg,.jpeg,.png,.webp,.pdf"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], discapacidad: file } }));
-                                  }}
-                                />
-                                <span className={`file-upload-btn ${seatFiles[key]?.discapacidad ? 'uploaded' : ''}`}>
-                                  {seatFiles[key]?.discapacidad ? '✓' : 'Subir'}
-                                </span>
-                              </label>
-
-                              <div className="docs-physical-notice">
-                                <AlertTriangle size={14} />
-                                <span>Debe llevar este documento <strong>en físico</strong> al momento del abordaje.</span>
-                              </div>
-                            </div>
-                          )}
-
-                          <label className="seat-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={opts.para_otra || false}
-                              onChange={(e) => updateSeatOption(key, 'para_otra', e.target.checked)}
-                            />
-                            <UserPlus size={14} />
-                            <span>Asignar a otra persona</span>
-                          </label>
+                              );
+                            })()}
 
                           {opts.para_otra && (
-                            <div className="seat-assign-fields" style={{ animation: 'fadeIn 0.2s ease' }}>
-                              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                                <label style={{ fontSize: '0.75rem' }}>Nombre del asignado</label>
-                                <input
-                                  type="text"
-                                  className="form-control"
-                                  value={opts.nombre_asignado}
-                                  onChange={(e) => updateSeatOption(key, 'nombre_asignado', e.target.value)}
-                                  placeholder="Nombre y apellido"
-                                  style={{ fontSize: '0.85rem' }}
-                                />
-                              </div>
-                              <div className="form-group" style={{ marginBottom: '0.25rem' }}>
-                                <label style={{ fontSize: '0.75rem' }}>Cédula del asignado</label>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                  <select
-                                    className="form-control"
-                                    value={opts.cedula_tipo_asignado || 'V'}
-                                    onChange={(e) => updateSeatOption(key, 'cedula_tipo_asignado', e.target.value)}
-                                    style={{ width: '60px', flexShrink: 0, fontSize: '0.85rem' }}
-                                  >
-                                    <option value="V">V</option>
-                                    <option value="J">J</option>
-                                    <option value="E">E</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    value={opts.cedula_asignado}
-                                    onChange={(e) => updateSeatOption(key, 'cedula_asignado', e.target.value.replace(/\D/g, ''))}
-                                    placeholder="12345678"
-                                    inputMode="numeric"
-                                    style={{ fontSize: '0.85rem' }}
-                                  />
-                                </div>
-                              </div>
+                            <div className="seat-assign-fields" style={{ animation: 'fadeIn 0.2s ease', padding: '0.5rem 0.75rem', background: 'var(--bg-light, #f0f4ff)', borderRadius: '0.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <UserPlus size={13} /> Los datos del asignado se encuentran debajo de <strong>Datos del Comprador</strong>
+                              </span>
                             </div>
                           )}
+                          </div>
                         </div>
                       );
                     })}
-                  </div>
-                )}
+              </div>
+            </div>
 
-                {hasMinorWarning && !hasMinorSelected && (
-                  <div className="seat-minor-warning" style={{ marginTop: '0.75rem' }}>
-                    <AlertTriangle size={16} />
-                    <div>
-                      <strong>⚠️ ADVERTENCIA GENERAL</strong>
-                      <p>Si alguno de los pasajes adquiridos es utilizado por un menor de edad sin haber sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  className="btn btn-success btn-lg"
-                  style={{ width: '100%', marginTop: '1rem' }}
-                  onClick={handleReservarClick}
-                  disabled={submitting || selectedSeats.length === 0 || (hasMinorSelected && !minorDocsComplete)}
-                >
-                  {submitting ? 'Reservando...' : (hasMinorSelected && !minorDocsComplete) ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Upload size={16} />
-                      Suba los documentos del menor
-                    </span>
-                  ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Armchair size={16} />
-                      {`Reservar ${selectedSeats.length} asiento${selectedSeats.length > 1 ? 's' : ''}`}
-                    </span>
-                  )}
-                </button>
+            {hasMinorWarning && !hasMinorSelected && (
+              <div className="seat-minor-warning" style={{ marginTop: '0.75rem', gridColumn: '1 / -1' }}>
+                <AlertTriangle size={16} />
+                <div>
+                  <strong>⚠️ ADVERTENCIA GENERAL</strong>
+                  <p>Si alguno de los pasajes adquiridos es utilizado por un menor de edad sin haber sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
+                </div>
               </div>
             )}
+
+            <div className="reserve-action-bar" style={{ gridColumn: '1 / -1' }}>
+              <button
+                className="btn btn-success btn-lg"
+                style={{ width: '100%' }}
+                onClick={handleReservarClick}
+                disabled={submitting || selectedSeats.length === 0 || (hasMinorSelected && !minorDocsComplete)}
+              >
+                {submitting ? 'Reservando...' : (hasMinorSelected && !minorDocsComplete) ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Upload size={16} />
+                    Suba los documentos del menor
+                  </span>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Armchair size={16} />
+                    {`Reservar ${selectedSeats.length} asiento${selectedSeats.length > 1 ? 's' : ''}`}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
         <AtencionModal
           visible={showAtencion}
           onClose={() => setShowAtencion(false)}

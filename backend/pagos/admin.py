@@ -11,9 +11,9 @@ class DatoMetodoPagoInline(admin.TabularInline):
 
 @admin.register(MetodoPago)
 class MetodoPagoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'moneda', 'descripcion', 'activo', 'orden')
-    list_editable = ('activo', 'orden')
-    list_filter = ('activo', 'moneda')
+    list_display = ('nombre', 'tipo', 'moneda', 'descripcion', 'requiere_foto_billete', 'activo', 'orden')
+    list_editable = ('activo', 'orden', 'requiere_foto_billete')
+    list_filter = ('activo', 'moneda', 'tipo', 'requiere_foto_billete')
     inlines = [DatoMetodoPagoInline]
     ordering = ('orden',)
 
@@ -31,7 +31,7 @@ class ComprobantePagoAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         'id', 'grupo_pago', 'usuario', 'metodo_pago',
-        'numero_referencia', 'imagen', 'monto', 'moneda',
+        'numero_referencia', 'imagen', 'foto_billete', 'monto', 'moneda',
         'fecha_creacion', 'fecha_revision'
     )
     list_editable = ('estado',)
@@ -39,7 +39,7 @@ class ComprobantePagoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Comprobante', {
-            'fields': ('id', 'grupo_pago', 'usuario', 'metodo_pago', 'imagen')
+            'fields': ('id', 'grupo_pago', 'usuario', 'metodo_pago', 'imagen', 'foto_billete')
         }),
         ('Datos del Pago', {
             'fields': ('monto', 'moneda', 'numero_referencia')

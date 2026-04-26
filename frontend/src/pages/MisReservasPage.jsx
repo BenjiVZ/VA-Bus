@@ -108,6 +108,21 @@ export default function MisReservasPage() {
                       🎫 Ver Ticket
                     </button>
                   )}
+                  {reserva.estado === 'pendiente' && reserva.grupo_pago && (
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        marginTop: '0.5rem',
+                        fontSize: '0.8rem',
+                        padding: '0.35rem 0.75rem',
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        border: 'none',
+                      }}
+                      onClick={() => navigate(`/pago?grupo=${reserva.grupo_pago}`)}
+                    >
+                      💳 Ir a pagar
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,4 +1,4 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 /* â”€â”€ Payment Flow Styles â”€â”€ */
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -37,42 +37,96 @@
 .pago-back-btn:hover { color: var(--blue-500); }
 
 /* Method cards */
-.pago-methods-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.pago-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
+
 .pago-method-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 1rem;
+  justify-content: center;
+  padding: 1.5rem 1rem;
   background: var(--surface-primary);
   border: 1px solid var(--border-standard);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
   width: 100%;
+  position: relative;
+  overflow: hidden;
 }
-.pago-method-card:hover {
-  border-color: var(--blue-300);
+
+.pago-method-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.pago-method-card:hover, .pago-method-card:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  transform: translateY(-2px);
+  background: var(--blue-50);
+}
+
+.pago-method-card:hover::before {
+  background: var(--blue-500);
+}
+
+.pago-method-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+}
+
+.pago-method-card:hover .pago-method-icon {
+  background: var(--white);
+  color: var(--blue-600);
   box-shadow: var(--shadow-sm);
+  transform: scale(1.05);
 }
+
+.pago-method-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .pago-method-name {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
+  line-height: 1.2;
 }
+
 .pago-method-badge {
   display: inline-block;
-  margin-top: 0.25rem;
-  padding: 0.15rem 0.5rem;
-  background: var(--yellow-100);
-  color: var(--yellow-700, #92400e);
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--yellow-50);
+  color: var(--yellow-700);
+  border: 1px solid var(--yellow-200);
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
   font-weight: 600;
+  margin-top: 0.25rem;
 }
 
 /* Summary bar */
@@ -188,6 +242,11 @@
   align-items: center;
   padding: 0.85rem 0;
   border-bottom: 1px solid var(--border-standard);
+  gap: 1rem;
+}
+.pago-data-row > div:first-child {
+  flex: 1;
+  min-width: 0;
 }
 .pago-data-row:last-of-type {
   border-bottom: none;
@@ -195,11 +254,15 @@
 .pago-data-label {
   font-size: 0.8rem;
   color: var(--text-tertiary);
+  margin-bottom: 0.15rem;
 }
 .pago-data-value {
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--text-primary);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 .pago-data-value-bold {
   font-weight: 800;

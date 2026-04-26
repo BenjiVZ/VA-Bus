@@ -3,6 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { registro, login, getPerfil } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import GoogleLoginButton from '../components/GoogleLoginButton';
+import { Eye, EyeOff } from 'lucide-react';
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/material_blue.css";
+import { Spanish } from "flatpickr/dist/l10n/es.js";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -20,7 +24,10 @@ export default function RegisterPage() {
     password2: '',
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -29,9 +36,10 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
     if (form.password !== form.password2) {
-      setError('Las contraseñas no coinciden.');
+      setFieldErrors({ password2: ['Las contraseñas no coinciden.'] });
       return;
     }
 
@@ -55,8 +63,13 @@ export default function RegisterPage() {
     } catch (err) {
       const data = err.response?.data;
       if (data) {
-        const messages = Object.values(data).flat().join(' ');
-        setError(messages);
+        if (typeof data === 'object' && !Array.isArray(data)) {
+          setFieldErrors(data);
+          setError('Por favor, corrige los errores en el formulario.');
+        } else {
+          const messages = Object.values(data).flat().join(' ');
+          setError(messages || 'Error al registrar.');
+        }
       } else {
         setError('Error al registrar. Intenta de nuevo.');
       }
@@ -96,11 +109,13 @@ export default function RegisterPage() {
                   type="text"
                   name="first_name"
                   className="form-control"
+                  style={{ borderColor: fieldErrors.first_name ? '#ef4444' : undefined }}
                   placeholder="Tu nombre"
                   value={form.first_name}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.first_name && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.first_name.join(' ')}</span>}
               </div>
               <div className="form-group">
                 <label>Apellido</label>
@@ -108,11 +123,13 @@ export default function RegisterPage() {
                   type="text"
                   name="last_name"
                   className="form-control"
+                  style={{ borderColor: fieldErrors.last_name ? '#ef4444' : undefined }}
                   placeholder="Tu apellido"
                   value={form.last_name}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.last_name && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.last_name.join(' ')}</span>}
               </div>
             </div>
 
@@ -122,11 +139,13 @@ export default function RegisterPage() {
                 type="text"
                 name="username"
                 className="form-control"
+                style={{ borderColor: fieldErrors.username ? '#ef4444' : undefined }}
                 placeholder="Elige un nombre de usuario"
                 value={form.username}
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.username && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.username.join(' ')}</span>}
             </div>
 
             <div className="form-group">
@@ -135,11 +154,13 @@ export default function RegisterPage() {
                 type="email"
                 name="email"
                 className="form-control"
+                style={{ borderColor: fieldErrors.email ? '#ef4444' : undefined }}
                 placeholder="tucorreo@ejemplo.com"
                 value={form.email}
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.email && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.email.join(' ')}</span>}
             </div>
 
             <div className="passenger-form">
@@ -151,7 +172,7 @@ export default function RegisterPage() {
                     className="form-control"
                     value={form.cedula_tipo}
                     onChange={handleChange}
-                    style={{ width: '70px', flexShrink: 0 }}
+                    style={{ width: '70px', flexShrink: 0, borderColor: fieldErrors.cedula ? '#ef4444' : undefined }}
                   >
                     <option value="V">V</option>
                     <option value="J">J</option>
@@ -161,6 +182,7 @@ export default function RegisterPage() {
                     type="text"
                     name="cedula"
                     className="form-control"
+                    style={{ borderColor: fieldErrors.cedula ? '#ef4444' : undefined }}
                     placeholder="12345678"
                     value={form.cedula}
                     onChange={(e) => {
@@ -170,6 +192,7 @@ export default function RegisterPage() {
                     inputMode="numeric"
                   />
                 </div>
+                {fieldErrors.cedula && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.cedula.join(' ')}</span>}
               </div>
               <div className="form-group">
                 <label>Teléfono</label>
@@ -177,49 +200,98 @@ export default function RegisterPage() {
                   type="text"
                   name="telefono"
                   className="form-control"
+                  style={{ borderColor: fieldErrors.telefono ? '#ef4444' : undefined }}
                   placeholder="0412-1234567"
                   value={form.telefono}
                   onChange={handleChange}
                 />
+                {fieldErrors.telefono && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.telefono.join(' ')}</span>}
               </div>
             </div>
 
             <div className="form-group">
               <label>Fecha de Nacimiento</label>
-              <input
-                type="date"
+              <Flatpickr
                 name="fecha_nacimiento"
                 className="form-control"
+                style={{ borderColor: fieldErrors.fecha_nacimiento ? '#ef4444' : undefined }}
                 value={form.fecha_nacimiento}
-                onChange={handleChange}
+                onChange={(dates, dateStr) => setForm(prev => ({ ...prev, fecha_nacimiento: dateStr }))}
+                options={{
+                  locale: Spanish,
+                  dateFormat: "Y-m-d",
+                  disableMobile: false
+                }}
                 required
+                placeholder="Seleccionar fecha"
               />
+              {fieldErrors.fecha_nacimiento && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.fecha_nacimiento.join(' ')}</span>}
             </div>
 
             <div className="passenger-form">
               <div className="form-group">
                 <label>Contraseña</label>
-                <input
-                  type="password"
-                  name="password"
-                  className="form-control"
-                  placeholder="Mínimo 6 caracteres"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    className="form-control"
+                    style={{ borderColor: fieldErrors.password ? '#ef4444' : undefined, paddingRight: '2.8rem' }}
+                    placeholder="Mínimo 6 caracteres"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute', right: '0.6rem', top: '50%',
+                      transform: 'translateY(-50%)', background: 'none',
+                      border: 'none', cursor: 'pointer', color: '#94a3b8',
+                      padding: '0.25rem', display: 'flex', alignItems: 'center',
+                      transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#1e3a5f'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {fieldErrors.password && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.password.join(' ')}</span>}
               </div>
               <div className="form-group">
                 <label>Confirmar Contraseña</label>
-                <input
-                  type="password"
-                  name="password2"
-                  className="form-control"
-                  placeholder="Repite tu contraseña"
-                  value={form.password2}
-                  onChange={handleChange}
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword2 ? 'text' : 'password'}
+                    name="password2"
+                    className="form-control"
+                    style={{ borderColor: fieldErrors.password2 ? '#ef4444' : undefined, paddingRight: '2.8rem' }}
+                    placeholder="Repite tu contraseña"
+                    value={form.password2}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword2(!showPassword2)}
+                    style={{
+                      position: 'absolute', right: '0.6rem', top: '50%',
+                      transform: 'translateY(-50%)', background: 'none',
+                      border: 'none', cursor: 'pointer', color: '#94a3b8',
+                      padding: '0.25rem', display: 'flex', alignItems: 'center',
+                      transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#1e3a5f'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                    tabIndex={-1}
+                  >
+                    {showPassword2 ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {fieldErrors.password2 && <span style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>{fieldErrors.password2.join(' ')}</span>}
               </div>
             </div>
 

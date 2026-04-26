@@ -91,6 +91,9 @@ export const resetPassword = (email, codigo, new_password, new_password2) =>
 export const getRutas = () =>
   api.get('/rutas/');
 
+export const getStats = () =>
+  api.get('/stats/');
+
 export const buscarViajes = (params) =>
   api.get('/viajes/', { params });
 

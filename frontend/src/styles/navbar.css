@@ -6,18 +6,22 @@
 }
 
 .navbar {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.15); /* More transparent */
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Very subtle top border instead of shadow */
+  box-shadow: none; /* Removed shadow to prevent dark edges */
   padding: 0;
+  position: relative;
 }
+
+
 
 .navbar .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  height: 54px; /* Reduced height to have less space */
 }
 
 /* â”€â”€ Brand â”€â”€ */
@@ -92,6 +96,95 @@
 .nav-pill-active:hover {
   background: var(--blue-600);
   color: #fff;
+}
+
+/* ── Dropdown ── */
+.nav-dropdown-wrap {
+  position: relative;
+}
+
+.nav-dropdown-trigger {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.nav-dropdown-chevron {
+  transition: transform 0.2s;
+  margin-left: -0.15rem;
+}
+
+.nav-dropdown-chevron-open {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  background: #1a2332;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.4rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: dropdown-fade 0.15s ease-out;
+}
+
+@keyframes dropdown-fade {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.nav-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-dropdown-item:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #fff;
+}
+
+.nav-drawer-submenu {
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.nav-drawer-sublink {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-drawer-sublink:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--text-primary);
 }
 
 /* â”€â”€ User Area (desktop) â”€â”€ */

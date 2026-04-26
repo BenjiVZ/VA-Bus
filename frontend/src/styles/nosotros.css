@@ -1,0 +1,477 @@
+/* ═══════════════════════════════════════════
+   Nosotros Page — Clean Corporate Style
+   ═══════════════════════════════════════════ */
+
+/* ── Hero ── */
+.nosotros-hero {
+  position: relative;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.nosotros-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #0f172a 100%);
+  z-index: 0;
+}
+
+.nosotros-hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 30%, rgba(59,130,246,0.15), transparent 60%);
+}
+
+.nosotros-hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 5rem 1rem 3rem;
+  text-align: center;
+}
+
+.nosotros-overline {
+  display: block;
+  font-size: 0.82rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 0.6rem;
+  font-weight: 500;
+}
+
+.nosotros-hero-title {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 0.6rem;
+}
+
+.nosotros-hero-subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 400;
+}
+
+/* ── Quienes Somos (Desc + MV) ── */
+.nosotros-about-section {
+  padding: 4rem 0 2rem;
+}
+
+.nosotros-about-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-standard, #e2e8f0);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(14, 21, 37, 0.05);
+  overflow: hidden;
+}
+
+.nosotros-about-desc {
+  padding: 3rem 4rem 2.5rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(245, 247, 250, 0.5) 0%, transparent 100%);
+}
+
+.nosotros-about-desc p {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: justify;
+}
+
+.nosotros-about-desc strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.nosotros-mv-divider {
+  height: 1px;
+  background: var(--border-standard, #e2e8f0);
+  margin: 0 4rem;
+}
+
+.nosotros-mv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3rem 4rem;
+  gap: 4rem;
+}
+
+.nosotros-mv-item {
+  text-align: center;
+}
+
+.nosotros-mv-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-700) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 8px 20px rgba(26, 58, 107, 0.2);
+}
+
+.nosotros-mv-icon-vision {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.nosotros-mv-item h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.nosotros-mv-item p {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  text-align: justify;
+}
+
+/* ── Objetivos ── */
+.nosotros-objetivos {
+  padding: 4rem 0;
+  background-color: #f8fafc;
+}
+
+.nosotros-obj-divider {
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #1e3a5f);
+  border-radius: 99px;
+  margin: 0 auto 1.25rem;
+}
+
+.nosotros-obj-title {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 3rem;
+}
+
+.nosotros-obj-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.nosotros-obj-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.2rem;
+  background: #ffffff;
+  padding: 1.8rem;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 15px rgba(14, 21, 37, 0.02);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nosotros-obj-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #3b82f6, #1e3a5f);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nosotros-obj-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(14, 21, 37, 0.06);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.nosotros-obj-item:hover::before {
+  opacity: 1;
+}
+
+.nosotros-obj-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nosotros-obj-item:hover .nosotros-obj-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e3a5f 100%);
+  color: #fff;
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.nosotros-obj-item p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: justify;
+  padding-top: 0.3rem;
+}
+
+/* ── Fleet Features ── */
+.nosotros-fleet {
+  padding: 4rem 0;
+  background-color: #f8fafc;
+}
+
+.nosotros-fleet-sub {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-bottom: 3rem;
+}
+
+.nosotros-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.nosotros-fleet-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(14, 21, 37, 0.03);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nosotros-fleet-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #1e3a5f);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nosotros-fleet-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(14, 21, 37, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.nosotros-fleet-card:hover::before {
+  opacity: 1;
+}
+
+.nosotros-fleet-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nosotros-fleet-card:hover .nosotros-fleet-icon {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e3a5f 100%);
+  color: #fff;
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.nosotros-fleet-card h4 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.nosotros-fleet-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ── Routes Table ── */
+.nosotros-rutas {
+  padding: 1rem 0 3rem;
+}
+
+.nosotros-rutas-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.nosotros-rutas-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.nosotros-rutas-table thead {
+  background: var(--surface);
+}
+
+.nosotros-rutas-table th {
+  text-align: left;
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.nosotros-rutas-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.nosotros-rutas-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.nosotros-rutas-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.ruta-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3b82f6 0%, #1e3a5f 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
+  width: 40px;
+  height: 26px;
+  border-radius: 6px;
+}
+
+.ruta-horario {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.ruta-horario svg {
+  color: #3b82f6;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+/* ── CTA ── */
+.nosotros-cta {
+  padding: 1rem 0 4rem;
+}
+
+.nosotros-cta-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  border-radius: 20px;
+  padding: 3rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.nosotros-cta-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(59,130,246,0.2), transparent 60%);
+}
+
+.nosotros-cta-card h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.nosotros-cta-card p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.nosotros-cta-card .btn {
+  position: relative;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .nosotros-hero-title {
+    font-size: 1.8rem;
+  }
+
+  .nosotros-about-desc {
+    padding: 2rem 1.5rem;
+  }
+
+  .nosotros-mv-grid {
+    grid-template-columns: 1fr;
+    padding: 2rem 1.5rem;
+    gap: 3rem;
+  }
+
+  .nosotros-mv-divider {
+    margin: 0 1.5rem;
+  }
+
+  .nosotros-obj-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nosotros-fleet-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ruta-horario {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 500px) {
+  .nosotros-fleet-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nosotros-hero-content {
+    padding: 4rem 1rem 2.5rem;
+  }
+}

@@ -13,7 +13,7 @@ class MetodoPagoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MetodoPago
-        fields = ('id', 'nombre', 'moneda', 'descripcion', 'datos')
+        fields = ('id', 'nombre', 'tipo', 'moneda', 'descripcion', 'requiere_foto_billete', 'datos')
 
 
 class ComprobantePagoSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class ComprobantePagoSerializer(serializers.ModelSerializer):
         model = ComprobantePago
         fields = (
             'id', 'grupo_pago', 'metodo_pago', 'metodo_pago_nombre',
-            'numero_referencia', 'imagen', 'monto', 'moneda',
+            'numero_referencia', 'imagen', 'foto_billete', 'monto', 'moneda',
             'estado', 'estado_display', 'fecha_creacion',
             'fecha_revision', 'nota_admin'
         )
@@ -42,6 +42,7 @@ class CrearComprobanteSerializer(serializers.Serializer):
     metodo_pago_id = serializers.IntegerField()
     numero_referencia = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
     imagen = serializers.ImageField()
+    foto_billete = serializers.ImageField(required=False, allow_null=True, default=None)
     monto = serializers.DecimalField(max_digits=12, decimal_places=2)
     moneda = serializers.CharField(max_length=3, required=False, default='BS')
 
@@ -88,7 +89,7 @@ class AdminComprobanteSerializer(serializers.ModelSerializer):
         model = ComprobantePago
         fields = (
             'id', 'grupo_pago', 'metodo_pago', 'metodo_pago_nombre',
-            'numero_referencia', 'imagen', 'monto', 'moneda',
+            'numero_referencia', 'imagen', 'foto_billete', 'monto', 'moneda',
             'estado', 'estado_display', 'fecha_creacion',
             'fecha_revision', 'nota_admin', 'revisado_por',
             'usuario_info', 'reservas_info'

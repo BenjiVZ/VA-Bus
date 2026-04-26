@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     RutaListView, ViajeListView, ViajeDetailView,
-    ViajeAsientosView, TasaCambioView, ConfiguracionPublicaView
+    ViajeAsientosView, TasaCambioView, ConfiguracionPublicaView,
+    StatsPublicView
 )
 
 urlpatterns = [
@@ -11,4 +12,6 @@ urlpatterns = [
     path('viajes/<int:pk>/asientos/', ViajeAsientosView.as_view(), name='viaje-asientos'),
     path('tasa-cambio/', TasaCambioView.as_view(), name='tasa-cambio'),
     path('configuracion/', ConfiguracionPublicaView.as_view(), name='configuracion'),
+    path('stats/', StatsPublicView.as_view(), name='stats-public'),
 ]
+

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Home, MapPin, Ticket, Settings, User,
-  LogOut, LogIn, UserPlus, Menu, X, FileCheck,
+  LogOut, LogIn, UserPlus, Menu, X, FileCheck, Building2, ChevronDown,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -11,11 +11,14 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const navRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
+    setDropdownOpen(false);
   }, [location.pathname]);
 
   // Close mobile menu on click outside
@@ -24,10 +27,13 @@ export default function Navbar() {
       if (navRef.current && !navRef.current.contains(e.target)) {
         setMobileOpen(false);
       }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
     };
-    if (mobileOpen) document.addEventListener('mousedown', handleClickOutside);
+    if (mobileOpen || dropdownOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [mobileOpen]);
+  }, [mobileOpen, dropdownOpen]);
 
   const handleLogout = () => {
     logout();
@@ -45,6 +51,24 @@ export default function Navbar() {
       { to: '/admin/comprobantes', label: 'Comprobantes', icon: FileCheck },
     ] : []),
   ];
+
+  const nosotrosLinks = [
+    { hash: '#quienes-somos', label: 'Quienes Somos' },
+    { hash: '#mision-vision', label: 'Misión y Visión' },
+    { hash: '#objetivos', label: 'Objetivos' },
+    { hash: '#flota', label: 'Nuestra Flota' },
+  ];
+
+  const handleNosotrosClick = (hash) => {
+    setDropdownOpen(false);
+    setMobileOpen(false);
+    if (location.pathname === '/nosotros') {
+      const el = document.querySelector(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      navigate(`/nosotros${hash}`);
+    }
+  };
 
   return (
     <nav className="navbar" ref={navRef}>
@@ -70,6 +94,45 @@ export default function Navbar() {
               <span>{label}</span>
             </Link>
           ))}
+
+          {/* Nosotros Dropdown */}
+          <div className="nav-dropdown-wrap" ref={dropdownRef}>
+            <div
+              className={`nav-pill${isActive('/nosotros') ? ' nav-pill-active' : ''}`}
+              style={{ padding: 0, overflow: 'hidden' }}
+            >
+              <Link
+                to="/nosotros"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.4rem 0.45rem 0.85rem', textDecoration: 'none', color: 'inherit' }}
+              >
+                <Building2 size={16} />
+                <span>Nosotros</span>
+              </Link>
+              <button
+                className="nav-dropdown-trigger"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDropdownOpen(!dropdownOpen);
+                }}
+                style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', padding: '0.45rem 0.6rem 0.45rem 0.2rem', cursor: 'pointer', color: 'inherit' }}
+              >
+                <ChevronDown size={14} className={`nav-dropdown-chevron${dropdownOpen ? ' nav-dropdown-chevron-open' : ''}`} />
+              </button>
+            </div>
+            {dropdownOpen && (
+              <div className="nav-dropdown-menu">
+                {nosotrosLinks.map((link) => (
+                  <button
+                    key={link.hash}
+                    className="nav-dropdown-item"
+                    onClick={() => handleNosotrosClick(link.hash)}
+                  >
+                    {link.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Desktop User Area ── */}
@@ -121,6 +184,15 @@ export default function Navbar() {
               <span>{label}</span>
             </Link>
           ))}
+
+          {/* Nosotros mobile (sin desplegable) */}
+          <Link
+            to="/nosotros"
+            className={`nav-drawer-link${isActive('/nosotros') ? ' nav-drawer-link-active' : ''}`}
+          >
+            <Building2 size={18} />
+            <span>Nosotros</span>
+          </Link>
         </div>
 
         <div className="nav-drawer-divider" />
