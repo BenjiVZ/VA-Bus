@@ -1,0 +1,396 @@
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* â”€â”€ Admin Panel â”€â”€ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+.nav-admin-link {
+  color: var(--blue-600) !important;
+  font-weight: 700 !important;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-tab {
+  padding: 0.5rem 1.25rem;
+  border: 2px solid var(--border-standard);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+}
+
+.admin-tab:hover {
+  border-color: var(--blue-500);
+  color: var(--blue-600);
+}
+
+.admin-tab.active {
+  background: var(--blue-500);
+  border-color: var(--blue-500);
+  color: #fff;
+}
+
+/* Trip cards grid */
+.admin-viajes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.admin-viaje-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-viaje-card:hover {
+  border-color: var(--blue-500);
+  box-shadow: 0 4px 12px rgba(0, 82, 204, 0.1);
+  transform: translateY(-2px);
+}
+
+.admin-viaje-route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.admin-route-text {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.admin-viaje-bus {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: var(--gray-100);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.admin-viaje-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.admin-viaje-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.admin-stat-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--blue-600);
+}
+
+.admin-stat-label {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+}
+
+.admin-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-success { background: #e8f5e9; color: #2e7d32; }
+.badge-warning { background: #fff3e0; color: #e65100; }
+.badge-danger { background: #ffebee; color: #c62828; }
+.badge-neutral { background: var(--gray-100); color: var(--text-tertiary); }
+
+/* Stats bar */
+.admin-stats-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-stat-box {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  text-align: center;
+}
+
+.admin-stat-box .stat-num {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--blue-600);
+}
+
+.admin-stat-box .stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-success .stat-num { color: #2e7d32; }
+.stat-warning .stat-num { color: #e65100; }
+
+/* Viaje detail layout */
+.admin-viaje-layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.admin-seatmap-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  max-width: 400px;
+  position: sticky;
+  top: 5rem;
+}
+
+.admin-reservas-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+.admin-reservas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-reserva-card {
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: border-color 0.15s;
+  border-left: 4px solid var(--border-standard);
+}
+
+.admin-reserva-card.estado-confirmado { border-left-color: #2e7d32; }
+.admin-reserva-card.estado-pendiente { border-left-color: #e65100; }
+.admin-reserva-card.estado-cancelado { border-left-color: #c62828; opacity: 0.6; }
+
+.reserva-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.reserva-seat {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.reserva-seat small {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.reserva-client {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.reserva-user-detail {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-bottom: 0.75rem;
+}
+
+.reserva-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-danger {
+  background: transparent;
+  color: #c62828;
+  border: 1px solid #c62828;
+}
+
+.btn-danger:hover {
+  background: #c62828;
+  color: #fff;
+}
+
+.btn-success {
+  background: #2e7d32;
+  color: #fff;
+  border: 1px solid #2e7d32;
+}
+
+.btn-success:hover {
+  background: #1b5e20;
+}
+
+.reserva-change-seat {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Buses page */
+.admin-buses-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-bus-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-bus-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.admin-bus-header:hover {
+  background: var(--gray-50);
+}
+
+.admin-bus-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.admin-bus-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.admin-bus-toggle {
+  font-size: 1rem;
+  color: var(--text-tertiary);
+}
+
+.admin-bus-preview {
+  border-top: 1px solid var(--border-standard);
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* Bus unavailability */
+.admin-bus-unavailable {
+  opacity: 0.7;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.bus-unavailable-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: #dc2626;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.bus-unavailable-reason {
+  display: block;
+  font-size: 0.78rem;
+  color: #b91c1c;
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
+/* Trip card unavailable */
+.trip-card-unavailable {
+  opacity: 0.65;
+  border-color: #fca5a5;
+}
+
+.bus-unavailable-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.8rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.bus-unavailable-banner strong {
+  font-size: 0.85rem;
+  color: #dc2626;
+}
+
+.bus-unavailable-banner span {
+  font-size: 0.75rem;
+  color: #991b1b;
+  font-style: italic;
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */

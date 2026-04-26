@@ -6,7 +6,7 @@ function SeatIcon({ number, state, onClick, title }) {
   const colors = {
     available: { fill: '#ffffff', stroke: '#c1c7d0', text: '#42526e', headrest: '#dfe1e6' },
     selected:  { fill: '#0052cc', stroke: '#003380', text: '#ffffff', headrest: '#0043a6' },
-    occupied:  { fill: '#ebecf0', stroke: '#dfe1e6', text: '#a5adba', headrest: '#c1c7d0' },
+    occupied:  { fill: '#fef9e7', stroke: '#f0d264', text: '#b8960c', headrest: '#fae8a0' },
     moving:    { fill: '#ff8f00', stroke: '#e65100', text: '#ffffff', headrest: '#f57c00' },
   };
   const c = colors[state] || colors.available;

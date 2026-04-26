@@ -178,16 +178,18 @@ export default function ViajesPage() {
         </div>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div className="viajes-header">
           <div>
-            <h2>Viajes Disponibles</h2>
-            <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+            <h2 className="viajes-header-title">
+              <Bus size={22} strokeWidth={2} /> Viajes Disponibles
+            </h2>
+            <p className="viajes-header-count">
               {viajes.length} viaje{viajes.length !== 1 ? 's' : ''} encontrado{viajes.length !== 1 ? 's' : ''}
             </p>
           </div>
           {tasa && (
-            <div style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Tasa BCV: <strong style={{ color: 'var(--primary-400)' }}>Bs. {Number(tasa).toFixed(2)}</strong> / $1
+            <div className="viajes-header-tasa">
+              Tasa BCV: <strong>Bs. {Number(tasa).toFixed(2)}</strong> / $1
             </div>
           )}
         </div>
@@ -292,8 +294,7 @@ export default function ViajesPage() {
                         <PriceDisplay priceUsd={viaje.precio_usd} />
                       </div>
                       <button
-                        className="btn btn-primary"
-                        style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                        className="btn btn-primary btn-select-trip"
                         onClick={() => navigate(`/viajes/${viaje.id}/asientos`)}
                       >
                         <Armchair size={16} /> Seleccionar

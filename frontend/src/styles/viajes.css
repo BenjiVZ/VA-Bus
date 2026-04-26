@@ -1,0 +1,496 @@
+/* â•â•â• Viajes Filter Bar â•â•â• */
+/* ═══ Viajes Page Header ═══ */
+.viajes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f2f5;
+}
+
+.viajes-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1e3a5f;
+  margin: 0;
+}
+
+.viajes-header-title svg {
+  color: #c9a94e;
+}
+
+.viajes-header-count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.viajes-header-tasa {
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: #f8f9fb;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.viajes-header-tasa strong {
+  color: #1e3a5f;
+}
+
+/* ═══ Viajes Filter Bar ═══ */
+.viajes-filter-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.viajes-filter-form {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.viajes-filter-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.viajes-filter-field label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.viajes-filter-field select,
+.viajes-filter-field input[type="date"] {
+  height: 40px;
+}
+
+.viajes-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+  padding-bottom: 1px;
+}
+
+.viajes-active-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.viajes-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--blue-50);
+  color: var(--blue-500);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.viajes-filter-tag svg {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.viajes-filter-tag svg:hover {
+  opacity: 1;
+}
+
+/* Trip closing date badge */
+.trip-closing-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--yellow-600);
+  background: var(--yellow-50);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+/* Round-trip badge */
+.trip-type-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--blue-50);
+  color: var(--blue-500);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  margin-left: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* â”€â”€ Mobile Filter â”€â”€ */
+@media (max-width: 768px) {
+  .viajes-filter-bar {
+    padding: 1rem;
+  }
+
+  .viajes-filter-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .viajes-filter-field:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .viajes-filter-field label {
+    font-size: 0.72rem;
+  }
+
+  .viajes-filter-field select,
+  .viajes-filter-field input[type="date"] {
+    height: 38px;
+    font-size: 0.85rem;
+  }
+
+  .viajes-filter-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .viajes-filter-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .viajes-active-filters {
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+  }
+}
+
+/* Trip Cards - Premium Ticket Style */
+.trips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.trip-card {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trip-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #1e3a5f, #2d5a8e);
+  border-radius: 14px 0 0 14px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.trip-card:hover {
+  border-color: rgba(30, 58, 95, 0.2);
+  box-shadow: 0 8px 28px rgba(30, 58, 95, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+}
+
+.trip-card:hover::before {
+  opacity: 1;
+}
+
+.trip-main {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-right: 1px dashed var(--border-strong);
+  position: relative;
+}
+
+/* Cutouts for the ticket effect */
+.trip-main::before, .trip-main::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  border: 1px solid var(--border-standard);
+  z-index: 1;
+}
+
+.trip-main::before {
+  top: -9px;
+  clip-path: circle(50% at 50% 100%);
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.trip-main::after {
+  bottom: -9px;
+  clip-path: circle(50% at 50% 0%);
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.trip-route-section {
+  display: flex;
+  align-items: center;
+}
+
+.trip-route {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.trip-city-name {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #1e3a5f;
+  line-height: 1.2;
+}
+
+.trip-city-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
+.trip-arrow {
+  color: #c9a94e;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.trip-info {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle, #f0f0f0);
+}
+
+.trip-detail-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.trip-detail-value {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.trip-action {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-width: 190px;
+  background: linear-gradient(160deg, #f8f9fb 0%, #f0f2f5 100%);
+  gap: 0.4rem;
+}
+
+.trip-seats-available {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  text-align: center;
+}
+
+.trip-price {
+  text-align: center;
+  margin: 0.25rem 0;
+}
+
+.trip-price-usd {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1e3a5f;
+  line-height: 1;
+}
+
+.trip-price-bs {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-top: 0.15rem;
+}
+
+.btn-select-trip {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: #1e3a5f;
+  border: none;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  transition: all 0.2s ease;
+}
+
+.btn-select-trip:hover {
+  background: #2d5a8e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
+}
+
+/* Seat Options per-seat cards */
+.seat-options-card {
+  background: var(--gray-25);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.seat-permisos-section {
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background: var(--bg-primary);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.seat-permisos-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.seat-permisos-header svg {
+  color: var(--blue-500);
+}
+
+.seat-options-header {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.seat-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 0.3rem 0;
+  user-select: none;
+}
+
+.seat-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue-500);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.seat-assign-fields {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.seat-minor-block {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.4rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.seat-minor-block svg {
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.seat-minor-block strong {
+  display: block;
+  font-size: 0.8rem;
+  color: #991b1b;
+  margin-bottom: 0.15rem;
+}
+
+.seat-minor-block p {
+  font-size: 0.75rem;
+  color: #b91c1c;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* â”€â”€ Minor Document Upload Styles â”€â”€ */

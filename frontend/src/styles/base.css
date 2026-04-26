@@ -1,0 +1,178 @@
+/* Base: variables, resets, typography, layout */
+
+:root {
+  /* â•â•â• Aerorutas de Venezuela â•â•â•
+   * 70% Blanco Â· 20% Azul Navy Â· Acentos Rojo/Amarillo
+   * Logo: PÃ¡jaro amarillo dorado + texto azul navy
+   */
+
+  /* Primitives â€” Navy */
+  --blue-50: #e8edf5;
+  --blue-100: #c8d4e8;
+  --blue-500: #1a3a6b;
+  --blue-600: #142e55;
+  --blue-700: #0e2240;
+
+  /* Primitives â€” Grays */
+  --gray-25: #fcfcfc;
+  --gray-50: #f5f6f8;
+  --gray-100: #ebedf1;
+  --gray-200: #dde0e6;
+  --gray-300: #c1c5cf;
+  --gray-400: #a0a6b4;
+  --gray-500: #7d8494;
+  --gray-600: #5a6175;
+  --gray-700: #3d4455;
+  --gray-800: #1e2536;
+  --gray-900: #0e1525;
+
+  /* Accent â€” Yellow (from logo bird) */
+  --yellow-50: #fff8e1;
+  --yellow-400: #f5c842;
+  --yellow-500: #e8a820;
+  --yellow-600: #d49a10;
+
+  /* Accent â€” Red */
+  --red-50: #ffeaea;
+  --red-500: #c62828;
+  --red-600: #a01e1e;
+
+  /* Success â€” Green */
+  --green-50: #e3fcef;
+  --green-500: #00875a;
+
+  /* Semantic - Surfaces (70% white) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f6f8;
+  --bg-tertiary: var(--gray-100);
+  --bg-input: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: var(--gray-25);
+
+  /* Semantic - Text */
+  --text-primary: var(--gray-900);
+  --text-secondary: var(--gray-700);
+  --text-tertiary: var(--gray-600);
+  --text-muted: var(--gray-500);
+
+  /* Semantic - Borders */
+  --border-subtle: var(--gray-100);
+  --border-standard: var(--gray-200);
+  --border-strong: var(--gray-300);
+  --border-focus: var(--blue-500);
+
+  /* Semantic - Accent (Navy Blue) */
+  --accent-primary: var(--blue-500);
+  --accent-primary-hover: var(--blue-600);
+  --accent-surface: var(--blue-50);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(14, 21, 37, 0.06);
+  --shadow-md: 0 4px 8px rgba(14, 21, 37, 0.08), 0 0 1px rgba(14, 21, 37, 0.25);
+  --shadow-lg: 0 8px 16px rgba(14, 21, 37, 0.1), 0 0 1px rgba(14, 21, 37, 0.25);
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* â”€â”€ UX Pro: Global Interactivity â”€â”€ */
+button, a, [role="button"], .trip-card, .admin-viaje-card, .admin-bus-header {
+  cursor: pointer;
+}
+
+button, a, .card, .badge, .trip-card, .admin-viaje-card, .admin-bus-card {
+  transition: all 0.2s ease;
+}
+
+/* Focus-visible for keyboard nav */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* â”€â”€ How It Works Card Icons â”€â”€ */
+.how-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--yellow-50);
+  color: var(--yellow-600);
+  margin: 0 auto 1rem;
+  transition: all 0.25s ease;
+}
+
+.how-it-works-card:hover .how-icon-wrap {
+  background: var(--yellow-500);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+/* Typography Hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1rem; font-weight: 600; }
+
+/* Layout */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.page {
+  flex: 1;
+  padding: 2.5rem 0;
+}
+
+.page.page-home {
+  padding-top: 0;
+}
+

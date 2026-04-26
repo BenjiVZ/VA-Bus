@@ -1,0 +1,338 @@
+/* ═══ Hero Section – Image Slideshow Background ═══ */
+.hero {
+  position: relative;
+  text-align: center;
+  padding: 4rem 0 4.5rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+  min-height: 420px;
+}
+
+/* ── Background Slideshow ── */
+.hero-slideshow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1.2s ease-in-out;
+  will-change: opacity;
+}
+
+.hero-slide-active {
+  opacity: 1;
+}
+
+/* Dark overlay over photos for text readability */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 41, 66, 0.75) 0%,
+    rgba(15, 41, 66, 0.6) 50%,
+    rgba(15, 41, 66, 0.8) 100%
+  );
+  z-index: 1;
+}
+
+/* Fade to white at bottom for seamless transition */
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  background: linear-gradient(
+    to top,
+    var(--bg-secondary) 0%,
+    rgba(245, 247, 250, 0.85) 25%,
+    rgba(245, 247, 250, 0.4) 55%,
+    transparent 100%
+  );
+  z-index: 2;
+}
+
+/* ── Hero Content ── */
+.hero-content {
+  position: relative;
+  z-index: 3;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.hero-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  margin-bottom: 1.2rem;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(4px);
+}
+
+.hero-title {
+  font-size: 3.8rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.8rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.hero-brand {
+  background: linear-gradient(135deg, #fde68a, #fbbf24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-desc {
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 520px;
+  margin: 0 auto 1.5rem;
+  line-height: 1.6;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Trust Badges ── */
+.hero-trust {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.hero-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-trust-item svg {
+  color: #22c55e;
+}
+
+/* ── Search Form (floating card) ── */
+.search-form {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  max-width: 800px;
+  margin: 0 auto;
+  transform: translateY(1.5rem);
+  text-align: left;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.search-form:hover {
+  background: rgba(255, 255, 255, 0.96);
+  transform: translateY(1.2rem) scale(1.015);
+  box-shadow: 0 28px 56px rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.search-form .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.search-form .btn {
+  align-self: flex-end;
+}
+
+/* ── Home Content ── */
+.home-content {
+  padding-top: 3rem;
+}
+
+/* ═══ How It Works Section ═══ */
+.how-section {
+  margin-top: 4rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.how-section-header {
+  margin-bottom: 2.5rem;
+}
+
+.how-section-label {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #1e3a5f;
+  background: rgba(30, 58, 95, 0.08);
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  margin-bottom: 0.7rem;
+}
+
+.how-section-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.how-section-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.how-card {
+  position: relative;
+  text-align: center;
+  padding: 2rem 1.2rem 1.8rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+}
+
+.how-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-hover);
+}
+
+.how-step-number {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.3);
+}
+
+.how-card .how-icon-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  transition: all 0.25s ease;
+}
+
+.how-card:hover .how-icon-wrap {
+  transform: scale(1.08);
+}
+
+.how-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.how-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.how-connector {
+  display: none;
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 768px) {
+  .hero {
+    padding: 3rem 0 3.5rem;
+    min-height: 360px;
+  }
+
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .hero-trust {
+    gap: 0.8rem;
+  }
+
+  .hero-trust-item {
+    font-size: 0.7rem;
+  }
+
+  .search-form {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .how-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 2.5rem 0 3rem;
+    min-height: 320px;
+  }
+
+  .hero-title {
+    font-size: 1.8rem;
+    letter-spacing: 0.02em;
+  }
+
+  .hero-trust {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .how-grid {
+    grid-template-columns: 1fr;
+  }
+}

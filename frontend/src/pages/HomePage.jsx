@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRutas } from '../services/api';
 import { Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar, ShieldCheck, Clock, Users, Star } from 'lucide-react';
@@ -6,17 +6,34 @@ import FleetGallery from '../components/FleetGallery';
 import PromoPopup from '../components/PromoPopup';
 import '../styles/FleetGallery.css';
 
+const HERO_IMAGES = [
+  '/flota/bus-01.jpg',
+  '/flota/bus-04.jpg',
+  '/flota/bus-08.jpg',
+  '/flota/bus-14.jpg',
+  '/flota/bus-18.jpg',
+];
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [rutas, setRutas] = useState([]);
   const [origen, setOrigen] = useState('');
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
+  const [heroIdx, setHeroIdx] = useState(0);
 
   useEffect(() => {
     getRutas()
       .then((res) => setRutas(res.data))
       .catch(() => {});
+  }, []);
+
+  // Hero background slideshow
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroIdx((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   const origenes = [...new Set(rutas.map((r) => r.origen))].sort();
@@ -47,15 +64,24 @@ export default function HomePage() {
 
   return (
     <div className="page page-home">
-      <PromoPopup />
-
-      {/* ── HERO SECTION ── */}
+      {/* ── HERO SECTION with Image Slideshow ── */}
       <section className="hero">
-        <div className="hero-bg" />
+        {/* Background Images */}
+        <div className="hero-slideshow">
+          {HERO_IMAGES.map((src, i) => (
+            <div
+              key={src}
+              className={`hero-slide ${i === heroIdx ? 'hero-slide-active' : ''}`}
+              style={{ backgroundImage: `url(${src})` }}
+            />
+          ))}
+          <div className="hero-overlay" />
+        </div>
+
         <div className="hero-content">
-          <span className="hero-badge">🚌 La mejor forma de viajar por Venezuela</span>
+          <span className="hero-badge">La mejor forma de viajar por Venezuela</span>
           <h1 className="hero-title">
-            Viaja con <span className="hero-brand">Aerorutas</span>
+            VIAJA CON <span className="hero-brand">AERORUTAS</span>
           </h1>
           <p className="hero-desc">
             Reserva tu puesto de autobús de forma rápida y segura.
@@ -131,6 +157,8 @@ export default function HomePage() {
 
       <div className="container">
         <FleetGallery />
+
+        <PromoPopup />
 
         {/* ── HOW IT WORKS ── */}
         <section className="how-section">

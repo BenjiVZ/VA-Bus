@@ -182,6 +182,77 @@
   color: var(--primary-400);
 }
 
+/* ── Passenger Permissions Section ── */
+.ticket-permisos {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-subtle, #e5e7eb);
+}
+
+.ticket-permisos-title {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #6b7280);
+  margin-bottom: 0.65rem;
+}
+
+.ticket-permisos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ticket-permiso-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.ticket-permiso-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ticket-permiso-badge strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ticket-permiso-badge span:not(.ticket-permiso-icon) {
+  font-size: 0.72rem;
+  opacity: 0.8;
+  line-height: 1.3;
+}
+
+/* Menor */
+.ticket-permiso-menor {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+/* Animal */
+.ticket-permiso-animal {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+/* Discapacidad */
+.ticket-permiso-discapacidad {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
 /* Tear line */
 .ticket-tear-line {
   position: relative;

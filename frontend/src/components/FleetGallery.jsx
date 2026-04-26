@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Auto-detect: solo muestra las imágenes que existan en /public/flota/
-const imageModules = import.meta.glob('/public/flota/bus-*.jpg', { eager: true });
-const photos = Object.keys(imageModules)
-  .sort()
-  .map((path, i) => ({
-    src: path.replace('/public', ''),
-    alt: `Autobús Aerorutas de Venezuela #${i + 1}`,
-  }));
+// Las imágenes están en /public/flota/ — se referencian por URL directa (no import)
+const BUS_NUMBERS = ['01','02','03','04','08','09','11','12','14','15','16','17','18'];
+const photos = BUS_NUMBERS.map((num, i) => ({
+  src: `/flota/bus-${num}.jpg`,
+  alt: `Autobús Aerorutas de Venezuela #${i + 1}`,
+}));
 
 export default function FleetGallery() {
   const [current, setCurrent] = useState(0);

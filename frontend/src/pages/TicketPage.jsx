@@ -192,41 +192,39 @@ export default function TicketPage() {
               </div>
             )}
 
-            {/* Minor badge */}
-            {ticket.es_menor_edad && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                background: '#fef3c7', color: '#92400e', fontSize: '0.75rem',
-                fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px',
-                margin: '0.5rem auto', textTransform: 'uppercase'
-              }}>
-                👶 Menor de edad
-              </div>
-            )}
-
-            {/* Animal badge */}
-            {ticket.viaja_con_animal && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem',
-                fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px',
-                margin: '0.5rem auto', textTransform: 'uppercase',
-                border: '1px solid #86efac'
-              }}>
-                🐾 Viaja con animal — Presentar tarjeta de vacunación
-              </div>
-            )}
-
-            {/* Disability badge */}
-            {ticket.es_discapacitado && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem',
-                fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px',
-                margin: '0.5rem auto', textTransform: 'uppercase',
-                border: '1px solid #93c5fd'
-              }}>
-                ♿ Persona con discapacidad
+            {/* Permission badges */}
+            {(ticket.es_menor_edad || ticket.viaja_con_animal || ticket.es_discapacitado) && (
+              <div className="ticket-permisos">
+                <span className="ticket-permisos-title">Condiciones del pasajero</span>
+                <div className="ticket-permisos-list">
+                  {ticket.es_menor_edad && (
+                    <div className="ticket-permiso-badge ticket-permiso-menor">
+                      <span className="ticket-permiso-icon">👶</span>
+                      <div>
+                        <strong>Menor de edad</strong>
+                        <span>Debe viajar con representante autorizado</span>
+                      </div>
+                    </div>
+                  )}
+                  {ticket.viaja_con_animal && (
+                    <div className="ticket-permiso-badge ticket-permiso-animal">
+                      <span className="ticket-permiso-icon">🐾</span>
+                      <div>
+                        <strong>Viaja con animal</strong>
+                        <span>Presentar tarjeta de vacunación vigente</span>
+                      </div>
+                    </div>
+                  )}
+                  {ticket.es_discapacitado && (
+                    <div className="ticket-permiso-badge ticket-permiso-discapacidad">
+                      <span className="ticket-permiso-icon">♿</span>
+                      <div>
+                        <strong>Persona con discapacidad</strong>
+                        <span>Asistencia especial garantizada</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -101,14 +101,29 @@ export default function VerificarPage() {
                   )}
                 </>
               )}
-              {data.datos.es_menor_edad && (
-                <div className="verificar-row">
-                  <span className="verificar-value" style={{
-                    background: '#fef3c7', color: '#92400e', fontSize: '0.75rem',
-                    fontWeight: 600, padding: '0.2rem 0.6rem', borderRadius: '999px',
-                  }}>
-                    👶 Menor de edad
-                  </span>
+              {(data.datos.es_menor_edad || data.datos.viaja_con_animal || data.datos.es_discapacitado) && (
+                <div className="ticket-permisos" style={{ padding: '0.75rem 0 0', borderTop: 'none' }}>
+                  <span className="ticket-permisos-title">Condiciones</span>
+                  <div className="ticket-permisos-list">
+                    {data.datos.es_menor_edad && (
+                      <div className="ticket-permiso-badge ticket-permiso-menor">
+                        <span className="ticket-permiso-icon">👶</span>
+                        <div><strong>Menor de edad</strong></div>
+                      </div>
+                    )}
+                    {data.datos.viaja_con_animal && (
+                      <div className="ticket-permiso-badge ticket-permiso-animal">
+                        <span className="ticket-permiso-icon">🐾</span>
+                        <div><strong>Viaja con animal</strong></div>
+                      </div>
+                    )}
+                    {data.datos.es_discapacitado && (
+                      <div className="ticket-permiso-badge ticket-permiso-discapacidad">
+                        <span className="ticket-permiso-icon">♿</span>
+                        <div><strong>Persona con discapacidad</strong></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
