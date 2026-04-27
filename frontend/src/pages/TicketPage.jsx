@@ -78,7 +78,9 @@ export default function TicketPage() {
 
             {/* Header */}
             <div className="ticket-empresa">
-              <div className="ticket-empresa-logo">🚌</div>
+              <div className="ticket-empresa-logo">
+                <img src="/logo.svg" alt="Aerorutas" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+              </div>
               <div>
                 <h3 className="ticket-empresa-name">{empresa}</h3>
                 {rif && <span className="ticket-empresa-rif">RIF: {rif}</span>}

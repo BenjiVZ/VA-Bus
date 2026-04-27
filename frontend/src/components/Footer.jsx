@@ -9,7 +9,7 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="footer-col footer-col-brand">
             <Link to="/" className="footer-brand">
-              <img src="/logo.jpg" alt="Aerorutas" className="footer-logo" />
+              <img src="/logo.svg" alt="Aerorutas" className="footer-logo" />
               <div>
                 <strong>Aerorutas</strong>
                 <small>de Venezuela</small>

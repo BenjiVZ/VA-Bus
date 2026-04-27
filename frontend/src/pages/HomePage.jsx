@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRutas, getStats } from '../services/api';
 import {
@@ -60,6 +60,15 @@ export default function HomePage() {
   const [origen, setOrigen] = useState('');
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
+
+  // Memoize Flatpickr options so the calendar doesn't close on hero re-renders
+  const flatpickrOptions = useMemo(() => ({
+    locale: Spanish,
+    dateFormat: "Y-m-d",
+    minDate: "today",
+    disableMobile: true,
+    static: true,
+  }), []);
   const [heroIdx, setHeroIdx] = useState(0);
   const [dbStats, setDbStats] = useState({ rutas: 0, buses: 0, pasajeros: 0 });
 
@@ -223,12 +232,7 @@ export default function HomePage() {
                 className="form-control"
                 value={fecha}
                 onChange={(dates, dateStr) => setFecha(dateStr)}
-                options={{
-                  locale: Spanish,
-                  dateFormat: "Y-m-d",
-                  minDate: "today",
-                  disableMobile: false // Let flatpickr handle mobile or native gracefully
-                }}
+                options={flatpickrOptions}
                 placeholder="Seleccionar fecha"
               />
             </div>

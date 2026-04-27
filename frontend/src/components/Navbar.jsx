@@ -75,7 +75,7 @@ export default function Navbar() {
       <div className="container">
         {/* ── Brand ── */}
         <Link to="/" className="navbar-brand">
-          <img src="/logo.jpg" alt="Aerorutas de Venezuela" className="navbar-logo" />
+          <img src="/logo.svg" alt="Aerorutas de Venezuela" className="navbar-logo" />
           <span className="navbar-brand-text">
             <strong>Aerorutas</strong>
             <small>de Venezuela</small>
