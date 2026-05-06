@@ -29,8 +29,9 @@ export default function LoginPage() {
       loginUser(tokens, perfilRes.data);
       navigate('/');
     } catch (err) {
+      const data = err.response?.data;
       setError(
-        err.response?.data?.detail || 'Credenciales inválidas. Intenta de nuevo.'
+        data?.detail || 'Credenciales inválidas. Intenta de nuevo.'
       );
     } finally {
       setLoading(false);

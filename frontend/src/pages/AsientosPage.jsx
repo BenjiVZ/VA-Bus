@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
 import AtencionModal from '../components/AtencionModal';
-import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle, Clock, PawPrint, Accessibility, ShieldCheck, Upload, FileText, Camera, CreditCard, ChevronDown, ChevronRight, CheckCircle } from 'lucide-react';
+import { ClipboardList, User, Armchair, Baby, UserPlus, AlertTriangle, Clock, PawPrint, Accessibility, ShieldCheck, FileText, Camera, CreditCard, ChevronDown, ChevronRight, CheckCircle } from 'lucide-react';
 
 export default function AsientosPage() {
   const { id } = useParams();
@@ -41,6 +41,9 @@ export default function AsientosPage() {
 
   // AtencionModal state
   const [showAtencion, setShowAtencion] = useState(false);
+
+  // Warnings overlay state (floating doc islands)
+  const [showWarnings, setShowWarnings] = useState(false);
 
   const selectedSeatsRef = useRef([]);
 
@@ -271,6 +274,27 @@ export default function AsientosPage() {
   // Check if any seat had minor toggled on then off
   const hasMinorWarning = selectedSeats.some((s) => menorToggled[getSeatKey(s)]);
 
+  // Check if any seat has animal without vaccination or missing tipo_mascota
+  const hasAnimalPending = selectedSeats.some((s) => {
+    const key = getSeatKey(s);
+    const opts = seatOptions[key] || {};
+    if (!opts.viaja_con_animal) return false;
+    const files = seatFiles[key] || {};
+    return !files.vacunacion || !opts.tipo_mascota;
+  });
+
+  // Check if any seat has disability without document
+  const hasDisabilityPending = selectedSeats.some((s) => {
+    const key = getSeatKey(s);
+    const opts = seatOptions[key] || {};
+    if (!opts.es_discapacitado) return false;
+    const files = seatFiles[key] || {};
+    return !files.discapacidad;
+  });
+
+  // Check if there are any pending warnings/docs to show
+  const hasPendingWarnings = (hasMinorSelected && !minorDocsComplete) || hasAnimalPending || hasDisabilityPending || hasMinorWarning;
+
   // ── Helpers del timer ──
   const formatTime = (ms) => {
     if (!ms || ms <= 0) return '0:00';
@@ -291,7 +315,7 @@ export default function AsientosPage() {
   const totalUsd = data ? selectedSeats.length * Number(data.viaje.precio_usd) : 0;
   const totalBs = tasa ? totalUsd * tasa : null;
 
-  // Step 1: Validate and show the Atencion modal
+  // Step 1: Validate and show warnings overlay or Atencion modal
   const handleReservarClick = () => {
     if (!user) {
       navigate('/login');
@@ -317,6 +341,14 @@ export default function AsientosPage() {
     }
 
     setError('');
+
+    // If there are any pending doc islands/warnings, show the warnings overlay
+    if (hasPendingWarnings) {
+      setShowWarnings(true);
+      return;
+    }
+
+    // No warnings pending, go straight to Atencion modal
     setShowAtencion(true);
   };
 
@@ -628,256 +660,322 @@ export default function AsientosPage() {
                 <h4>
                   <Armchair size={16} /> Opciones por Asiento
                 </h4>
-                    {selectedSeats.map((seat) => {
-                      const key = getSeatKey(seat);
-                      const opts = seatOptions[key] || {};
-                      return (
-                        <div key={key} className="seat-options-card">
-                          <div className="seat-options-header">
-                            Asiento #{seat.numero} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· Piso {seat.piso}</span>
-                          </div>
+                {selectedSeats.map((seat) => {
+                  const key = getSeatKey(seat);
+                  const opts = seatOptions[key] || {};
+                  return (
+                    <div key={key} className="seat-options-card">
+                      <div className="seat-options-header">
+                        Asiento #{seat.numero} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· Piso {seat.piso}</span>
+                      </div>
 
-                          {/* ── Permisos para viajar ── */}
-                          <div className="seat-permisos-section">
-                            <div className="seat-permisos-header">
-                              <ShieldCheck size={14} />
-                              <span>Permisos para viajar</span>
-                            </div>
-
-                            <div className="seat-permisos-checkboxes">
-                              <label className="seat-checkbox">
-                                <input type="checkbox" checked={opts.es_menor || false} onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)} />
-                                <Baby size={14} /><span>Es menor de edad</span>
-                              </label>
-                              <label className="seat-checkbox">
-                                <input type="checkbox" checked={opts.viaja_con_animal || false} onChange={(e) => updateSeatOption(key, 'viaja_con_animal', e.target.checked)} />
-                                <PawPrint size={14} /><span>Viaja con animal</span>
-                              </label>
-                              <label className="seat-checkbox">
-                                <input type="checkbox" checked={opts.para_otra || false} onChange={(e) => updateSeatOption(key, 'para_otra', e.target.checked)} />
-                                <UserPlus size={14} /><span>Asignar a otra persona</span>
-                              </label>
-                              <label className="seat-checkbox">
-                                <input type="checkbox" checked={opts.es_discapacitado || false} onChange={(e) => updateSeatOption(key, 'es_discapacitado', e.target.checked)} />
-                                <Accessibility size={14} /><span>Persona con discapacidad</span>
-                              </label>
-                            </div>
-
-                            {/* ── Compact doc islands ── */}
-                            {opts.es_menor && (() => {
-                              const files = seatFiles[key] || {};
-                              const uploaded = [files.partida, files.foto, files.cedula_rep].filter(Boolean).length;
-                              const total = 3;
-                              const isOpen = expandedDocs[key]?.minor;
-                              return (
-                                <div className={`doc-island ${uploaded === total ? 'complete' : ''}`}>
-                                  <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], minor: !isOpen } }))}>
-                                    <div className="doc-island-left">
-                                      <Baby size={15} />
-                                      <div>
-                                        <strong>Documentos del menor</strong>
-                                        <span className="doc-island-counter">{uploaded}/{total} archivos</span>
-                                      </div>
-                                    </div>
-                                    <div className="doc-island-right">
-                                      {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
-                                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                    </div>
-                                  </div>
-                                  {isOpen && (
-                                    <div className="doc-island-body">
-                                      <label className="file-upload-field">
-                                        <FileText size={15} />
-                                        <div className="file-upload-info">
-                                          <span className="file-upload-label">Partida de nacimiento</span>
-                                          <span className="file-upload-hint">{files.partida ? files.partida.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                        </div>
-                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], partida: file } })); }} />
-                                        <span className={`file-upload-btn ${files.partida ? 'uploaded' : ''}`}>{files.partida ? '✓' : 'Subir'}</span>
-                                      </label>
-                                      <label className="file-upload-field">
-                                        <Camera size={15} />
-                                        <div className="file-upload-info">
-                                          <span className="file-upload-label">Foto del menor</span>
-                                          <span className="file-upload-hint">{files.foto ? files.foto.name : 'JPG, PNG o WEBP (máx. 5MB)'}</span>
-                                        </div>
-                                        <input type="file" accept=".jpg,.jpeg,.png,.webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], foto: file } })); }} />
-                                        <span className={`file-upload-btn ${files.foto ? 'uploaded' : ''}`}>{files.foto ? '✓' : 'Subir'}</span>
-                                      </label>
-                                      <label className="file-upload-field">
-                                        <CreditCard size={15} />
-                                        <div className="file-upload-info">
-                                          <span className="file-upload-label">Cédula del representante</span>
-                                          <span className="file-upload-hint">{files.cedula_rep ? files.cedula_rep.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                        </div>
-                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], cedula_rep: file } })); }} />
-                                        <span className={`file-upload-btn ${files.cedula_rep ? 'uploaded' : ''}`}>{files.cedula_rep ? '✓' : 'Subir'}</span>
-                                      </label>
-                                      <div className="docs-physical-notice">
-                                        <AlertTriangle size={13} />
-                                        <span>Llevar documentos <strong>en físico</strong> al abordar.</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {!opts.es_menor && menorToggled[key] && (
-                              <div className="seat-minor-warning">
-                                <AlertTriangle size={16} />
-                                <div>
-                                  <strong>⚠️ IMPORTANTE</strong>
-                                  <p>Si el pasaje es para un menor y no fue comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
-                                </div>
-                              </div>
-                            )}
-
-                            {opts.viaja_con_animal && (() => {
-                              const files = seatFiles[key] || {};
-                              const uploaded = [files.vacunacion].filter(Boolean).length + (opts.tipo_mascota ? 1 : 0);
-                              const total = 2;
-                              const isOpen = expandedDocs[key]?.animal;
-                              return (
-                                <div className={`doc-island animal ${uploaded === total ? 'complete' : ''}`}>
-                                  <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], animal: !isOpen } }))}>
-                                    <div className="doc-island-left">
-                                      <PawPrint size={15} />
-                                      <div>
-                                        <strong>Datos de la mascota</strong>
-                                        <span className="doc-island-counter">{uploaded}/{total} completados</span>
-                                      </div>
-                                    </div>
-                                    <div className="doc-island-right">
-                                      {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
-                                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                    </div>
-                                  </div>
-                                  {isOpen && (
-                                    <div className="doc-island-body">
-                                      <div className="pet-type-selector">
-                                        <label style={{ fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block' }}>Tipo de mascota</label>
-                                        <select
-                                          className="form-control"
-                                          value={opts.tipo_mascota || ''}
-                                          onChange={(e) => updateSeatOption(key, 'tipo_mascota', e.target.value)}
-                                          style={{ fontSize: '0.85rem' }}
-                                        >
-                                          <option value="">Seleccione...</option>
-                                          <option value="perro">🐕 Perro</option>
-                                          <option value="gato">🐈 Gato</option>
-                                          <option value="ave">🐦 Ave</option>
-                                          <option value="conejo">🐰 Conejo</option>
-                                          <option value="hamster">🐹 Hámster</option>
-                                          <option value="otro">🐾 Otro</option>
-                                        </select>
-                                      </div>
-                                      <label className="file-upload-field" style={{ marginTop: '0.4rem' }}>
-                                        <FileText size={15} />
-                                        <div className="file-upload-info">
-                                          <span className="file-upload-label">Tarjeta de vacunación</span>
-                                          <span className="file-upload-hint">{files.vacunacion ? files.vacunacion.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                        </div>
-                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], vacunacion: file } })); }} />
-                                        <span className={`file-upload-btn ${files.vacunacion ? 'uploaded' : ''}`}>{files.vacunacion ? '✓' : 'Subir'}</span>
-                                      </label>
-                                      {!opts.tipo_mascota && (
-                                        <p style={{ fontSize: '0.72rem', color: '#dc2626', margin: '0.3rem 0 0' }}>⚠ Seleccione el tipo de mascota</p>
-                                      )}
-                                      <div className="docs-physical-notice">
-                                        <AlertTriangle size={13} />
-                                        <span>Llevar tarjeta de vacunación <strong>en físico</strong> al abordar.</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {opts.es_discapacitado && (() => {
-                              const files = seatFiles[key] || {};
-                              const uploaded = files.discapacidad ? 1 : 0;
-                              const total = 1;
-                              const isOpen = expandedDocs[key]?.disability;
-                              return (
-                                <div className={`doc-island disability ${uploaded === total ? 'complete' : ''}`}>
-                                  <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], disability: !isOpen } }))}>
-                                    <div className="doc-island-left">
-                                      <Accessibility size={15} />
-                                      <div>
-                                        <strong>Documento de discapacidad</strong>
-                                        <span className="doc-island-counter">{uploaded}/{total} archivo</span>
-                                      </div>
-                                    </div>
-                                    <div className="doc-island-right">
-                                      {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
-                                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                    </div>
-                                  </div>
-                                  {isOpen && (
-                                    <div className="doc-island-body">
-                                      <label className="file-upload-field">
-                                        <FileText size={15} />
-                                        <div className="file-upload-info">
-                                          <span className="file-upload-label">Certificado médico / RCP</span>
-                                          <span className="file-upload-hint">{files.discapacidad ? files.discapacidad.name : 'PDF o imagen (máx. 5MB)'}</span>
-                                        </div>
-                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], discapacidad: file } })); }} />
-                                        <span className={`file-upload-btn ${files.discapacidad ? 'uploaded' : ''}`}>{files.discapacidad ? '✓' : 'Subir'}</span>
-                                      </label>
-                                      <div className="docs-physical-notice">
-                                        <AlertTriangle size={13} />
-                                        <span>Llevar documento <strong>en físico</strong> al abordar.</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                          {opts.para_otra && (
-                            <div className="seat-assign-fields" style={{ animation: 'fadeIn 0.2s ease', padding: '0.5rem 0.75rem', background: 'var(--bg-light, #f0f4ff)', borderRadius: '0.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                                <UserPlus size={13} /> Los datos del asignado se encuentran debajo de <strong>Datos del Comprador</strong>
-                              </span>
-                            </div>
-                          )}
-                          </div>
+                      {/* ── Permisos para viajar ── */}
+                      <div className="seat-permisos-section">
+                        <div className="seat-permisos-header">
+                          <ShieldCheck size={14} />
+                          <span>Permisos para viajar</span>
                         </div>
-                      );
-                    })}
+
+                        <div className="seat-permisos-checkboxes">
+                          <label className="seat-checkbox">
+                            <input type="checkbox" checked={opts.es_menor || false} onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)} />
+                            <Baby size={14} /><span>Es menor de edad</span>
+                          </label>
+                          <label className="seat-checkbox">
+                            <input type="checkbox" checked={opts.viaja_con_animal || false} onChange={(e) => updateSeatOption(key, 'viaja_con_animal', e.target.checked)} />
+                            <PawPrint size={14} /><span>Viaja con animal</span>
+                          </label>
+                          <label className="seat-checkbox">
+                            <input type="checkbox" checked={opts.para_otra || false} onChange={(e) => updateSeatOption(key, 'para_otra', e.target.checked)} />
+                            <UserPlus size={14} /><span>Asignar a otra persona</span>
+                          </label>
+                          <label className="seat-checkbox">
+                            <input type="checkbox" checked={opts.es_discapacitado || false} onChange={(e) => updateSeatOption(key, 'es_discapacitado', e.target.checked)} />
+                            <Accessibility size={14} /><span>Persona con discapacidad</span>
+                          </label>
+                        </div>
+
+                        {/* ── Compact status badges (docs handled in floating overlay) ── */}
+                        {opts.es_menor && (() => {
+                          const files = seatFiles[key] || {};
+                          const uploaded = [files.partida, files.foto, files.cedula_rep].filter(Boolean).length;
+                          return (
+                            <div className="doc-status-badge minor">
+                              <Baby size={13} />
+                              <span>Menor de edad — Docs: {uploaded}/3</span>
+                              {uploaded === 3 && <CheckCircle size={13} className="doc-island-check" />}
+                            </div>
+                          );
+                        })()}
+                        {!opts.es_menor && menorToggled[key] && (
+                          <div className="doc-status-badge warning">
+                            <AlertTriangle size={13} />
+                            <span>Verificar si es menor</span>
+                          </div>
+                        )}
+                        {opts.viaja_con_animal && (() => {
+                          const files = seatFiles[key] || {};
+                          const done = !!(files.vacunacion && opts.tipo_mascota);
+                          return (
+                            <div className="doc-status-badge animal">
+                              <PawPrint size={13} />
+                              <span>Mascota — {done ? 'Completo' : 'Pendiente'}</span>
+                              {done && <CheckCircle size={13} className="doc-island-check" />}
+                            </div>
+                          );
+                        })()}
+                        {opts.es_discapacitado && (() => {
+                          const files = seatFiles[key] || {};
+                          return (
+                            <div className="doc-status-badge disability">
+                              <Accessibility size={13} />
+                              <span>Discapacidad — {files.discapacidad ? 'Completo' : 'Pendiente'}</span>
+                              {files.discapacidad && <CheckCircle size={13} className="doc-island-check" />}
+                            </div>
+                          );
+                        })()}
+
+                        {opts.para_otra && (
+                          <div className="seat-assign-fields" style={{ animation: 'fadeIn 0.2s ease', padding: '0.5rem 0.75rem', background: 'var(--bg-light, #f0f4ff)', borderRadius: '0.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <UserPlus size={13} /> Los datos del asignado se encuentran debajo de <strong>Datos del Comprador</strong>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            {hasMinorWarning && !hasMinorSelected && (
-              <div className="seat-minor-warning" style={{ marginTop: '0.75rem', gridColumn: '1 / -1' }}>
-                <AlertTriangle size={16} />
-                <div>
-                  <strong>⚠️ ADVERTENCIA GENERAL</strong>
-                  <p>Si alguno de los pasajes adquiridos es utilizado por un menor de edad sin haber sido comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
-                </div>
-              </div>
-            )}
 
             <div className="reserve-action-bar" style={{ gridColumn: '1 / -1' }}>
               <button
                 className="btn btn-success btn-lg"
                 style={{ width: '100%' }}
                 onClick={handleReservarClick}
-                disabled={submitting || selectedSeats.length === 0 || (hasMinorSelected && !minorDocsComplete)}
+                disabled={submitting || selectedSeats.length === 0}
               >
-                {submitting ? 'Reservando...' : (hasMinorSelected && !minorDocsComplete) ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <Upload size={16} />
-                    Suba los documentos del menor
-                  </span>
-                ) : (
+                {submitting ? 'Reservando...' : (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                     <Armchair size={16} />
                     {`Reservar ${selectedSeats.length} asiento${selectedSeats.length > 1 ? 's' : ''}`}
                   </span>
                 )}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Floating Warnings Overlay (doc islands) ── */}
+        {showWarnings && (
+          <div className="warnings-overlay" onClick={() => setShowWarnings(false)}>
+            <div className="warnings-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="warnings-modal-header">
+                <AlertTriangle size={20} />
+                <h3>Documentos y Advertencias</h3>
+                <button className="warnings-close" onClick={() => setShowWarnings(false)}>✕</button>
+              </div>
+              <div className="warnings-modal-body">
+                {selectedSeats.map((seat) => {
+                  const key = getSeatKey(seat);
+                  const opts = seatOptions[key] || {};
+                  const hasAny = opts.es_menor || opts.viaja_con_animal || opts.es_discapacitado || (!opts.es_menor && menorToggled[key]);
+                  if (!hasAny) return null;
+                  return (
+                    <div key={key} className="warnings-seat-section">
+                      <h4>Asiento #{seat.numero} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· Piso {seat.piso}</span></h4>
+
+                      {opts.es_menor && (
+                        <div className="seat-minor-warning" style={{ marginBottom: '0.5rem' }}>
+                          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                          <div>
+                            <strong>⚠️ IMPORTANTE</strong>
+                            <p style={{ fontSize: '0.75rem', lineHeight: '1.4', marginTop: '0.2rem' }}>
+                              El Usuario que vaya a utilizar el servicio acompañado de niños o adolescentes, debe presentar al momento de comprar el boleto de viaje; la autorización del padre, madre o representante legal, debidamente expedido por la autoridad administrativa competente.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {opts.es_menor && (() => {
+                        const files = seatFiles[key] || {};
+                        const uploaded = [files.partida, files.foto, files.cedula_rep].filter(Boolean).length;
+                        const total = 3;
+                        const isOpen = expandedDocs[key]?.minor !== false;
+                        return (
+                          <div className={`doc-island ${uploaded === total ? 'complete' : ''}`}>
+                            <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], minor: !isOpen } }))}>
+                              <div className="doc-island-left">
+                                <Baby size={15} />
+                                <div>
+                                  <strong>Documentos del menor</strong>
+                                  <span className="doc-island-counter">{uploaded}/{total} archivos</span>
+                                </div>
+                              </div>
+                              <div className="doc-island-right">
+                                {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
+                                {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                              </div>
+                            </div>
+                            {isOpen && (
+                              <div className="doc-island-body">
+                                <label className="file-upload-field">
+                                  <FileText size={15} />
+                                  <div className="file-upload-info">
+                                    <span className="file-upload-label">Partida de nacimiento</span>
+                                    <span className="file-upload-hint">{files.partida ? files.partida.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                  </div>
+                                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], partida: file } })); }} />
+                                  <span className={`file-upload-btn ${files.partida ? 'uploaded' : ''}`}>{files.partida ? '✓' : 'Subir'}</span>
+                                </label>
+                                <label className="file-upload-field">
+                                  <Camera size={15} />
+                                  <div className="file-upload-info">
+                                    <span className="file-upload-label">Foto del menor</span>
+                                    <span className="file-upload-hint">{files.foto ? files.foto.name : 'JPG, PNG o WEBP (máx. 5MB)'}</span>
+                                  </div>
+                                  <input type="file" accept=".jpg,.jpeg,.png,.webp" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], foto: file } })); }} />
+                                  <span className={`file-upload-btn ${files.foto ? 'uploaded' : ''}`}>{files.foto ? '✓' : 'Subir'}</span>
+                                </label>
+                                <label className="file-upload-field">
+                                  <CreditCard size={15} />
+                                  <div className="file-upload-info">
+                                    <span className="file-upload-label">Cédula del representante</span>
+                                    <span className="file-upload-hint">{files.cedula_rep ? files.cedula_rep.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                  </div>
+                                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], cedula_rep: file } })); }} />
+                                  <span className={`file-upload-btn ${files.cedula_rep ? 'uploaded' : ''}`}>{files.cedula_rep ? '✓' : 'Subir'}</span>
+                                </label>
+                                <div className="docs-physical-notice">
+                                  <AlertTriangle size={13} />
+                                  <span>Llevar documentos <strong>en físico</strong> al abordar.</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {!opts.es_menor && menorToggled[key] && (
+                        <div className="seat-minor-warning">
+                          <AlertTriangle size={16} />
+                          <div>
+                            <strong>⚠️ IMPORTANTE</strong>
+                            <p>Si el pasaje es para un menor y no fue comprado en taquilla, se aplicarán <strong>cargos adicionales</strong> y la reserva podría ser <strong>anulada</strong>.</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {opts.viaja_con_animal && (() => {
+                        const files = seatFiles[key] || {};
+                        const uploaded = [files.vacunacion].filter(Boolean).length + (opts.tipo_mascota ? 1 : 0);
+                        const total = 2;
+                        const isOpen = expandedDocs[key]?.animal !== false;
+                        return (
+                          <div className={`doc-island animal ${uploaded === total ? 'complete' : ''}`}>
+                            <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], animal: !isOpen } }))}>
+                              <div className="doc-island-left">
+                                <PawPrint size={15} />
+                                <div>
+                                  <strong>Datos de la mascota</strong>
+                                  <span className="doc-island-counter">{uploaded}/{total} completados</span>
+                                </div>
+                              </div>
+                              <div className="doc-island-right">
+                                {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
+                                {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                              </div>
+                            </div>
+                            {isOpen && (
+                              <div className="doc-island-body">
+                                <div className="pet-type-selector">
+                                  <label style={{ fontSize: '0.78rem', fontWeight: 600, marginBottom: '0.25rem', display: 'block' }}>Tipo de mascota</label>
+                                  <select className="form-control" value={opts.tipo_mascota || ''} onChange={(e) => updateSeatOption(key, 'tipo_mascota', e.target.value)} style={{ fontSize: '0.85rem' }}>
+                                    <option value="">Seleccione...</option>
+                                    <option value="perro">🐕 Perro</option>
+                                    <option value="gato">🐈 Gato</option>
+                                    <option value="ave">🐦 Ave</option>
+                                    <option value="conejo">🐰 Conejo</option>
+                                    <option value="hamster">🐹 Hámster</option>
+                                    <option value="otro">🐾 Otro</option>
+                                  </select>
+                                </div>
+                                <label className="file-upload-field" style={{ marginTop: '0.4rem' }}>
+                                  <FileText size={15} />
+                                  <div className="file-upload-info">
+                                    <span className="file-upload-label">Tarjeta de vacunación</span>
+                                    <span className="file-upload-hint">{files.vacunacion ? files.vacunacion.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                  </div>
+                                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], vacunacion: file } })); }} />
+                                  <span className={`file-upload-btn ${files.vacunacion ? 'uploaded' : ''}`}>{files.vacunacion ? '✓' : 'Subir'}</span>
+                                </label>
+                                {!opts.tipo_mascota && (
+                                  <p style={{ fontSize: '0.72rem', color: '#dc2626', margin: '0.3rem 0 0' }}>⚠ Seleccione el tipo de mascota</p>
+                                )}
+                                <div className="docs-physical-notice">
+                                  <AlertTriangle size={13} />
+                                  <span>Llevar tarjeta de vacunación <strong>en físico</strong> al abordar.</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {opts.es_discapacitado && (() => {
+                        const files = seatFiles[key] || {};
+                        const uploaded = files.discapacidad ? 1 : 0;
+                        const total = 1;
+                        const isOpen = expandedDocs[key]?.disability !== false;
+                        return (
+                          <div className={`doc-island disability ${uploaded === total ? 'complete' : ''}`}>
+                            <div className="doc-island-header" onClick={() => setExpandedDocs(prev => ({ ...prev, [key]: { ...prev[key], disability: !isOpen } }))}>
+                              <div className="doc-island-left">
+                                <Accessibility size={15} />
+                                <div>
+                                  <strong>Documento de discapacidad</strong>
+                                  <span className="doc-island-counter">{uploaded}/{total} archivo</span>
+                                </div>
+                              </div>
+                              <div className="doc-island-right">
+                                {uploaded === total && <CheckCircle size={14} className="doc-island-check" />}
+                                {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                              </div>
+                            </div>
+                            {isOpen && (
+                              <div className="doc-island-body">
+                                <label className="file-upload-field">
+                                  <FileText size={15} />
+                                  <div className="file-upload-info">
+                                    <span className="file-upload-label">Certificado médico / RCP</span>
+                                    <span className="file-upload-hint">{files.discapacidad ? files.discapacidad.name : 'PDF o imagen (máx. 5MB)'}</span>
+                                  </div>
+                                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], discapacidad: file } })); }} />
+                                  <span className={`file-upload-btn ${files.discapacidad ? 'uploaded' : ''}`}>{files.discapacidad ? '✓' : 'Subir'}</span>
+                                </label>
+                                <div className="docs-physical-notice">
+                                  <AlertTriangle size={13} />
+                                  <span>Llevar documento <strong>en físico</strong> al abordar.</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="warnings-modal-footer">
+                <button className="btn btn-outline" onClick={() => setShowWarnings(false)}>Cerrar y completar</button>
+                <button
+                  className="btn btn-success"
+                  disabled={hasPendingWarnings && (hasMinorSelected && !minorDocsComplete)}
+                  onClick={() => { setShowWarnings(false); setShowAtencion(true); }}
+                >
+                  Continuar con la reserva
+                </button>
+              </div>
             </div>
           </div>
         )}

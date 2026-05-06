@@ -1052,3 +1052,173 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ══════════════════════════════════════════════════
+   COMPACT STATUS BADGES (inline indicators)
+   ══════════════════════════════════════════════════ */
+.doc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 20px;
+  margin-top: 0.35rem;
+  margin-right: 0.35rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.doc-status-badge.minor {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.doc-status-badge.animal {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.doc-status-badge.disability {
+  background: #f5f3ff;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
+}
+
+.doc-status-badge.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.doc-status-badge .doc-island-check {
+  color: #16a34a !important;
+}
+
+/* ══════════════════════════════════════════════════
+   FLOATING WARNINGS OVERLAY
+   ══════════════════════════════════════════════════ */
+.warnings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.warnings-modal {
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: modalSlideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.warnings-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+}
+
+.warnings-modal-header svg {
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.warnings-modal-header h3 {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #92400e;
+  margin: 0;
+}
+
+.warnings-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #92400e;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+  line-height: 1;
+}
+
+.warnings-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.warnings-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+}
+
+.warnings-seat-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border-subtle, #e2e8f0);
+}
+
+.warnings-seat-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.warnings-seat-section h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin-bottom: 0.6rem;
+}
+
+.warnings-modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--border-subtle, #e2e8f0);
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.warnings-modal-footer .btn {
+  font-size: 0.85rem;
+  padding: 0.55rem 1.25rem;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border-strong, #cbd5e1);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline:hover {
+  background: var(--bg-tertiary, #f1f5f9);
+  border-color: var(--text-muted);
+}

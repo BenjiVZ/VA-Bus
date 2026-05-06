@@ -321,7 +321,23 @@ export default function ViajesPage() {
                 options={{
                   locale: Spanish,
                   dateFormat: "Y-m-d",
-                  disableMobile: false
+                  disableMobile: true,
+                  static: false,
+                  onOpen: () => {
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.top = `-${window.scrollY}px`;
+                    document.body.dataset.scrollY = window.scrollY;
+                  },
+                  onClose: () => {
+                    const scrollY = document.body.dataset.scrollY || '0';
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.body.style.top = '';
+                    window.scrollTo(0, parseInt(scrollY));
+                  },
                 }}
                 placeholder="Seleccionar fecha"
               />

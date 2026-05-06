@@ -175,5 +175,6 @@ h4 { font-size: 1rem; font-weight: 600; }
 
 .page.page-home {
   padding-top: 0;
+  overflow-x: hidden;
 }
 

@@ -82,9 +82,72 @@
   .admin-viaje-layout { grid-template-columns: 1fr; }
   .admin-seatmap-panel { max-width: 100%; position: static; }
   .admin-stats-bar { flex-direction: column; gap: 0.5rem; }
+
+  /* Flatpickr calendar – fixed center + backdrop on mobile/tablet */
+  .flatpickr-calendar.open, 
+  .flatpickr-calendar.hasWeeks {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 999999 !important;
+    width: 90vw !important;
+    max-width: 320px !important;
+    font-size: 0.9rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
+    border-radius: 12px !important;
+  }
+  .flatpickr-calendar.open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    touch-action: none;
+    pointer-events: auto;
+    -webkit-overflow-scrolling: none;
+    overscroll-behavior: contain;
+  }
 }
 
 @media (max-width: 480px) {
+  /* Prevent any horizontal overflow on mobile */
+  html, body { overflow-x: hidden; }
+
+  /* Flatpickr calendar – constrain to viewport with backdrop */
+  .flatpickr-calendar.open, 
+  .flatpickr-calendar.hasWeeks {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 999999 !important;
+    width: 90vw !important;
+    max-width: 320px !important;
+    font-size: 0.9rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
+    border-radius: 12px !important;
+  }
+  .flatpickr-calendar.open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    touch-action: none;
+    pointer-events: auto;
+    -webkit-overflow-scrolling: none;
+    overscroll-behavior: contain;
+  }
+
   /* Mobile Specific Settings */
   h1 { font-size: 1.75rem; }
   

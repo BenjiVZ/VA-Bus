@@ -197,7 +197,7 @@
   display: flex;
   justify-content: center;
   gap: 1.5rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   margin-bottom: 2.5rem;
   animation: fadeInDown 0.8s ease-out 0.45s both;
 }
@@ -294,6 +294,7 @@
 .stats-section {
   padding: 1.5rem 0;
   margin-top: 0;
+  overflow: hidden;
 }
 
 .stats-grid {
@@ -305,11 +306,14 @@
   padding: 2.5rem 2rem;
   box-shadow: 0 4px 24px rgba(14, 21, 37, 0.06);
   border: 1px solid var(--border-subtle);
+  overflow: hidden;
 }
 
 .stat-item {
   text-align: center;
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .stat-item:not(:last-child)::after {
@@ -338,6 +342,9 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* ═══ Section Headers (reusable) ═══ */
@@ -971,9 +978,19 @@
   }
 
   .stats-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1rem;
     padding: 1.5rem 1rem;
+  }
+
+  .stat-item {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  
+  .stat-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
   }
 
   .stat-item::after {
@@ -981,7 +998,12 @@
   }
 
   .stat-number {
-    font-size: 1.8rem;
+    font-size: 2rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
   }
 
   .cta-actions {

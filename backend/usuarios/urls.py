@@ -1,6 +1,9 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Usuario
 from .views import (
     RegistroView, PerfilView, CambiarPasswordView, GoogleLoginView,
     VerificarEmailView, ReenviarCodigoView,
@@ -10,9 +13,35 @@ from .views import (
 
 
 class LoginThrottledView(TokenObtainPairView):
-    """Login con rate-limiting: maximo 5 intentos por minuto."""
+    """Login con rate-limiting y verificación de email obligatoria."""
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
+
+    def post(self, request, *args, **kwargs):
+        from django.contrib.auth import authenticate
+
+        username = request.data.get('username', '')
+        password = request.data.get('password', '')
+
+        # Primero validar credenciales
+        user = authenticate(request, username=username, password=password)
+
+        if user is None:
+            # Intentar buscar por email como username
+            try:
+                user_by_email = Usuario.objects.get(email=username)
+                user = authenticate(request, username=user_by_email.username, password=password)
+            except Usuario.DoesNotExist:
+                pass
+
+        if user is None:
+            return Response(
+                {"detail": "Credenciales inválidas. Verifica tu usuario y contraseña."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Continuar con el flujo normal de JWT
+        return super().post(request, *args, **kwargs)
 
 
 urlpatterns = [

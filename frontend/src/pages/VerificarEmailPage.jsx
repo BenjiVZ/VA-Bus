@@ -22,8 +22,8 @@ export default function VerificarEmailPage() {
 
     try {
       const res = await verificarEmail(email, codigo);
-      setSuccess(res.data.mensaje);
-      setTimeout(() => navigate('/login'), 2000);
+      setSuccess('¡Email verificado exitosamente! ✅ Redirigiendo al login...');
+      setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al verificar.');
     } finally {

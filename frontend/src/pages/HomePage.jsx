@@ -23,13 +23,26 @@ const HERO_IMAGES = [
 ];
 
 /* ── Animated counter hook ── */
-function useCounter(target, duration = 2000, startOnView = true) {
+function useCounter(target, duration = 2000, enabled = true) {
   const [count, setCount] = useState(0);
   const ref = useRef(null);
   const started = useRef(false);
+  const prevTarget = useRef(target);
+
+  // Reset animation flag when target changes (e.g., API data arrived)
+  useEffect(() => {
+    if (prevTarget.current !== target) {
+      started.current = false;
+      prevTarget.current = target;
+    }
+  }, [target]);
 
   useEffect(() => {
-    if (!startOnView) return;
+    if (!enabled || target === 0) return;
+
+    const el = ref.current;
+    if (!el) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !started.current) {
@@ -47,9 +60,9 @@ function useCounter(target, duration = 2000, startOnView = true) {
       },
       { threshold: 0.3 }
     );
-    if (ref.current) observer.observe(ref.current);
+    observer.observe(el);
     return () => observer.disconnect();
-  }, [target, duration, startOnView]);
+  }, [target, duration, enabled]);
 
   return { count, ref };
 }
@@ -61,16 +74,31 @@ export default function HomePage() {
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
 
-  // Memoize Flatpickr options so the calendar doesn't close on hero re-renders
   const flatpickrOptions = useMemo(() => ({
     locale: Spanish,
     dateFormat: "Y-m-d",
     minDate: "today",
     disableMobile: true,
-    static: true,
+    static: false,
+    onOpen: () => {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${window.scrollY}px`;
+      document.body.dataset.scrollY = window.scrollY;
+    },
+    onClose: () => {
+      const scrollY = document.body.dataset.scrollY || '0';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      window.scrollTo(0, parseInt(scrollY));
+    },
   }), []);
   const [heroIdx, setHeroIdx] = useState(0);
   const [dbStats, setDbStats] = useState({ rutas: 0, buses: 0, pasajeros: 0 });
+  const [promoShown, setPromoShown] = useState(() => !!sessionStorage.getItem('promo_shown'));
 
   useEffect(() => {
     getRutas()
@@ -250,7 +278,7 @@ export default function HomePage() {
         <div className="container">
           <div className="stats-grid">
             {stats.map((stat, i) => {
-              const { count, ref } = useCounter(stat.target, 2000);
+              const { count, ref } = useCounter(stat.target, 2000, promoShown);
               return (
                 <div key={i} className="stat-item" ref={ref}>
                   <span className="stat-number">{count}{stat.suffix}</span>
@@ -349,7 +377,7 @@ export default function HomePage() {
       </section>
 
       <div className="container">
-        <PromoPopup />
+        <PromoPopup onClose={() => setPromoShown(true)} />
       </div>
 
       {/* ── CTA BANNER ── */}

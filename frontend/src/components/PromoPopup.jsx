@@ -47,7 +47,7 @@ const TIERS = [
  *  2. "banner" → after popup is closed, a horizontal banner stays on the page
  *  3. "modal"  → clicking the banner re-opens the full info as a floating window
  */
-export default function PromoPopup() {
+export default function PromoPopup({ onClose: onCloseParent }) {
   const [mode, setMode] = useState(() => {
     // Initialize from sessionStorage so re-renders don't reset mode
     return sessionStorage.getItem('promo_shown') ? 'banner' : 'hidden';
@@ -66,6 +66,7 @@ export default function PromoPopup() {
     setTimeout(() => {
       setMode('banner');
       setClosing(false);
+      onCloseParent?.();
     }, 300);
   };
 

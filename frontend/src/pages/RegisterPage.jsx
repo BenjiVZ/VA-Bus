@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registro, login, getPerfil } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { registro } from '../services/api';
 import GoogleLoginButton from '../components/GoogleLoginButton';
 import { Eye, EyeOff } from 'lucide-react';
 import Flatpickr from "react-flatpickr";
@@ -10,7 +9,6 @@ import { Spanish } from "flatpickr/dist/l10n/es.js";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { loginUser } = useAuth();
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -52,13 +50,7 @@ export default function RegisterPage() {
       delete submitData.cedula_tipo;
       delete submitData.password2;
       await registro(submitData);
-      // Auto login after registration
-      const loginRes = await login(form.username, form.password);
-      localStorage.setItem('access_token', loginRes.data.access);
-      localStorage.setItem('refresh_token', loginRes.data.refresh);
-      const perfilRes = await getPerfil();
-      loginUser(loginRes.data, perfilRes.data);
-      // Redirigir a verificación de email
+      // Redirigir a verificación de email (sin auto-login)
       navigate(`/verificar-email?email=${encodeURIComponent(form.email)}`);
     } catch (err) {
       const data = err.response?.data;
@@ -220,7 +212,11 @@ export default function RegisterPage() {
                 options={{
                   locale: Spanish,
                   dateFormat: "Y-m-d",
-                  disableMobile: false
+                  altInput: true,
+                  altFormat: "d/m/Y",
+                  disableMobile: false,
+                  onOpen: () => { document.body.style.overflow = 'hidden'; },
+                  onClose: () => { document.body.style.overflow = ''; },
                 }}
                 required
                 placeholder="Seleccionar fecha"
