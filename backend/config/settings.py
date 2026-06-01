@@ -19,6 +19,9 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
+    # 'daphne' debe ir PRIMERO para que runserver use el server ASGI
+    # y soporte WebSockets en desarrollo. No afecta producción si arrancás con daphne directo.
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -28,6 +31,7 @@ INSTALLED_APPS = [
     # Third party
     'rest_framework',
     'corsheaders',
+    'channels',
     # Local apps
     'usuarios',
     'viajes',
@@ -66,6 +70,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+# ── Channels (WebSockets) ──
+# Dev: InMemoryChannelLayer no requiere Redis pero NO sirve para multi-worker.
+# Prod: cambiar a channels_redis con 'BACKEND': 'channels_redis.core.RedisChannelLayer'.
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Database
 DATABASES = {

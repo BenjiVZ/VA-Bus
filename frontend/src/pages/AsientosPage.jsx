@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAsientos, crearReserva, subirDocumentosMenor, subirDocVacunacion, subirDocDiscapacidad, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useAsientosWebSocket } from '../hooks/useAsientosWebSocket';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
 import AtencionModal from '../components/AtencionModal';
@@ -141,7 +142,9 @@ export default function AsientosPage() {
       .then((res) => setTasa(res.data.tasa_bcv))
       .catch(() => null);
 
-    // Auto-refresh + renovación del bloqueo para asientos seleccionados
+    // Fallback de polling cada 30s (el WebSocket cubre el tiempo real).
+    // Renovamos los bloqueos que tenemos seleccionados — el backend los
+    // mantiene 2min, así que 30s sigue siendo cómodo y mucho más liviano.
     const interval = setInterval(() => {
       cargarAsientos();
       if (user && selectedSeatsRef.current.length > 0) {
@@ -159,10 +162,23 @@ export default function AsientosPage() {
           });
         });
       }
-    }, 5000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [id, user, cargarAsientos]);
+
+  // ── WebSocket: actualizar el mapa en tiempo real cuando otros usuarios
+  // bloquean/liberan/reservan asientos. Si el cambio fue mío (mismo user.id),
+  // lo ignoramos porque el estado local ya está al día.
+  useAsientosWebSocket({
+    viajeId: Number(id),
+    enabled: !!id,
+    onSeatChanged: useCallback((evt) => {
+      if (evt.usuario_id && user && evt.usuario_id === user.id) return;
+      // Refrescar el mapa — la fuente de verdad sigue siendo el GET.
+      cargarAsientos();
+    }, [user, cargarAsientos]),
+  });
 
   // Countdown timer — libera asientos al expirar
   useEffect(() => {

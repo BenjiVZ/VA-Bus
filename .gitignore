@@ -1,48 +1,130 @@
-# ========================
-# VA-Bus — .gitignore raíz
-# ========================
+# ════════════════════════════════════════════════════════════
+#  VA-Bus — .gitignore raíz
+#  Filosofía:
+#  - Se versiona el CÓDIGO FUENTE y la CONFIG (pubspec.yaml,
+#    package.json, requirements.txt, pubspec.lock, package-lock.json,
+#    manage.py, etc.).
+#  - NO se versionan dependencias (node_modules, .dart_tool, venv),
+#    artefactos de build (build/, dist/, *.pyc), bases de datos
+#    locales (db.sqlite3*) ni secretos (.env).
+#  - Otra PC clona el repo + corre `pip install`, `npm install`,
+#    `flutter pub get` y queda listo para correr.
+# ════════════════════════════════════════════════════════════
 
-# === Python / Django ===
+# ─── Python / Django (backend) ─────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-*.egg-info/
-dist/
-build/
 *.egg
-.env
-db.sqlite3
-media/
-staticfiles/
+*.egg-info/
 
-# === Node / React ===
+# Entornos virtuales locales
+venv/
+.venv/
+env/
+ENV/
+
+# Base de datos SQLite local — no se versiona, cada PC corre `python manage.py migrate`
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+db.sqlite3
+db.sqlite3-shm
+db.sqlite3-wal
+
+# Archivos subidos por usuarios (comprobantes, fotos de menores, etc.) — datos privados
+backend/media/
+
+# Static collectados
+backend/staticfiles/
+
+# Secretos
+.env
+.env.*
+!.env.example
+
+# ─── Node / React (frontend) ───────────────────────────────
 node_modules/
 dist/
 dist-ssr/
+.parcel-cache/
+.cache/
+.vite/
 *.local
+
+# Logs de package managers
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+logs
 
-# === IDEs ===
+# Carpeta generada por agentes (no es parte del código)
+.agent/
+
+# ─── Flutter / Dart (mobile) ───────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+coverage/
+**/doc/api/
+
+# iOS específicos
+**/ios/Flutter/.last_build_id
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Android específicos
+android/.gradle/
+android/local.properties
+android/.idea/
+android/captures/
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+android/key.properties
+*.keystore
+*.jks
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json
+
+# ─── IDEs y editores ───────────────────────────────────────
 .vscode/
 !.vscode/extensions.json
 .idea/
+*.iml
+*.ipr
+*.iws
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.history/
+
+# ─── OS ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
-
-# === OS ===
+desktop.ini
 *.tmp
 *.bak
-*.swp
 *~
 
-# === Outputs temporales ===
+# ─── Asistentes / scratch ──────────────────────────────────
+.claude/
 update_output.txt
+
+# ─── Reglas inclusivas (override) ──────────────────────────
+# Hay carpetas que tienen archivos importantes incluso si están
+# adentro de algo ignorado. Reagregamos lo crítico:
+!backend/media/.gitkeep

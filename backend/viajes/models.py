@@ -2,6 +2,61 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 
+class Oficina(models.Model):
+    """
+    Oficina / sucursal / terminal de Aerorutas.
+    Es un lugar físico de donde salen y a donde llegan los autobuses.
+    Sincronizable con el sistema externo de la empresa
+    (endpoint OFICINAS de aerorutasdevenezuela.com).
+    """
+    codofi = models.CharField(
+        max_length=10, unique=True, verbose_name="Código (codofi)",
+        help_text="Código numérico único de la oficina. Ej: '01', '04', '100'"
+    )
+    desofi = models.CharField(
+        max_length=100, verbose_name="Nombre (desofi)",
+        help_text="Nombre completo. Ej: 'CARACAS LA BANDERA'"
+    )
+    siglas = models.CharField(
+        max_length=10, blank=True, default='',
+        verbose_name="Siglas",
+        help_text="Siglas cortas. Ej: 'CCS', 'MBO', 'MRD'"
+    )
+    estado = models.CharField(
+        max_length=50, blank=True, default='',
+        verbose_name="Estado",
+        help_text="Estado venezolano. Ej: 'Distrito Capital', 'Zulia'"
+    )
+    ciudad = models.CharField(
+        max_length=100, blank=True, default='',
+        verbose_name="Ciudad",
+        help_text="Ciudad donde está ubicada (para el mapa). Si está vacío se infiere de desofi."
+    )
+    latitud = models.DecimalField(
+        max_digits=10, decimal_places=6,
+        null=True, blank=True,
+        verbose_name="Latitud"
+    )
+    longitud = models.DecimalField(
+        max_digits=10, decimal_places=6,
+        null=True, blank=True,
+        verbose_name="Longitud"
+    )
+    activa = models.BooleanField(default=True, verbose_name="Activa")
+    fecha_sincronizacion = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Última sincronización"
+    )
+
+    class Meta:
+        verbose_name = "Oficina"
+        verbose_name_plural = "Oficinas"
+        ordering = ['desofi']
+
+    def __str__(self):
+        return f"{self.desofi} ({self.siglas or self.codofi})"
+
+
 class Ruta(models.Model):
     origen = models.CharField(max_length=100, verbose_name="Origen")
     destino = models.CharField(max_length=100, verbose_name="Destino")

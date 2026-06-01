@@ -1,149 +1,333 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Bot, User, ExternalLink, ChevronRight, Sparkles, RotateCcw } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Bot, User, ExternalLink, ChevronRight, Sparkles, RotateCcw, ArrowLeft, Home } from 'lucide-react';
 import '../styles/ChatBot.css';
 
-/* ══════════════════════════════════════════════
-   Knowledge base – preguntas y respuestas
-   ══════════════════════════════════════════════ */
-const FAQ_DATA = [
-  {
-    question: '¿Cómo reservo un pasaje?',
-    keywords: ['reservo', 'reservar', 'comprar', 'pasaje', 'boleto', 'compro', 'sacar', 'ticket'],
-    answer: 'Es muy fácil: 1️⃣ Busca tu viaje por origen, destino y fecha. 2️⃣ Selecciona tu asiento en el mapa. 3️⃣ Confirma tu reserva y coordina el pago por WhatsApp. ¡Listo!',
-    followUp: '¿Te gustaría saber sobre los métodos de pago o los documentos necesarios?',
-  },
-  {
-    question: '¿Qué métodos de pago aceptan?',
-    keywords: ['pago', 'pagar', 'transferencia', 'movil', 'efectivo', 'zelle', 'binance', 'zinli', 'divisa', 'dolar', 'bolivar', 'banco', 'metodo'],
-    answer: 'Aceptamos varios métodos:\n\n💳 Transferencia bancaria\n📱 Pago móvil\n💵 Efectivo en divisas\n🔗 Zelle, Binance y Zinli\n\nUna vez que reserves, podrás seleccionar tu método preferido y subir el comprobante desde la página de pago.',
-  },
-  {
-    question: '¿Puedo cancelar mi reserva?',
-    keywords: ['cancelar', 'cancelacion', 'devolver', 'reembolso', 'anular', 'devolucion'],
-    answer: 'Sí, puedes cancelar tu reserva desde la sección "Mis Reservas" en tu perfil. Ten en cuenta que las cancelaciones están sujetas a las políticas de la empresa según la proximidad de la fecha de viaje.',
-  },
-  {
-    question: '¿Qué documentos necesito para viajar?',
-    keywords: ['documento', 'cedula', 'identidad', 'papeles', 'requisito', 'necesito', 'llevar', 'partida', 'nacimiento'],
-    answer: 'Los documentos dependen de tu situación:\n\n🪪 Adultos: Cédula de identidad vigente\n👶 Menores: Partida de nacimiento + cédula del representante + foto del menor\n🐾 Mascotas: Tarjeta de vacunación vigente\n♿ Discapacidad: Certificado o documento que lo acredite',
-  },
-  {
-    question: '¿Puedo viajar con mascotas?',
-    keywords: ['mascota', 'perro', 'gato', 'animal', 'mascota', 'vacunacion', 'veterinario'],
-    answer: '¡Sí! 🐾 Aceptamos mascotas a bordo. Solo necesitas:\n\n✅ Tarjeta de vacunación vigente\n✅ Seleccionar la opción "Viaja con animal" al reservar\n✅ Indicar el tipo de mascota\n\nAceptamos perros, gatos, aves, conejos, hámsters y otros.',
-  },
-  {
-    question: '¿Qué es el programa VIP?',
-    keywords: ['vip', 'frecuente', 'descuento', 'programa', 'lealtad', 'plata', 'oro', 'platino', 'beneficio'],
-    answer: 'Nuestro programa de Pasajero Frecuente tiene 3 niveles:\n\n🥈 Plata — Beneficios básicos\n🥇 Oro — Beneficios premium\n💎 Platino — Máximos beneficios\n\nMientras más viajes con nosotros, ¡mejores serán tus ventajas!',
-  },
-  {
-    question: '¿Cuáles son los horarios de salida?',
-    keywords: ['horario', 'hora', 'salida', 'cuando', 'sale', 'viaje', 'disponible', 'proximo'],
-    answer: 'Los horarios varían según la ruta. Puedes consultar todos los viajes disponibles en nuestra sección de "Viajes" 🚍\n\nAhí podrás filtrar por origen, destino y fecha para encontrar el horario que mejor te convenga.',
-  },
-  {
-    question: '¿Cuánto cuesta el pasaje?',
-    keywords: ['precio', 'cuesta', 'costo', 'cuanto', 'tarifa', 'vale'],
-    answer: 'Los precios varían según la ruta y se muestran en dólares (USD). Al buscar viajes verás el precio por asiento junto con su equivalente en bolívares según la tasa BCV del día.\n\n💡 Puedes ver los precios actualizados en la sección de Viajes.',
-  },
-  {
-    question: '¿Cómo verifico mi ticket?',
-    keywords: ['verificar', 'ticket', 'codigo', 'qr', 'boleto', 'validar', 'comprobar'],
-    answer: 'Tu ticket digital incluye un código QR y un código único de 8 caracteres. Puedes verificarlo de dos formas:\n\n📱 Escaneando el QR desde la app\n🔗 Ingresando el código en la sección de verificación\n\nAccede a tus tickets desde "Mis Reservas".',
-  },
-  {
-    question: '¿Cómo creo mi cuenta?',
-    keywords: ['registrar', 'cuenta', 'crear', 'registro', 'inscribir', 'google', 'login', 'iniciar', 'sesion'],
-    answer: 'Puedes crear tu cuenta de dos formas:\n\n1️⃣ Con email y contraseña — recibirás un código de verificación\n2️⃣ Con Google — inicio rápido con un solo clic\n\nUna vez registrado, completa tu perfil con tu cédula para poder reservar.',
-  },
-  {
-    question: '¿Puedo reservar para otra persona?',
-    keywords: ['otra persona', 'asignar', 'alguien', 'amigo', 'familiar', 'otro', 'tercero', 'nombre'],
-    answer: 'Sí, al seleccionar un asiento puedes activar la opción "Asignar a otra persona" ✅\n\nSolo necesitas ingresar el nombre y cédula de la persona que viajará. Tú seguirás siendo el comprador responsable del pago.',
-  },
-  {
-    question: '¿Qué rutas tienen disponibles?',
-    keywords: ['ruta', 'destino', 'origen', 'donde', 'ciudad', 'viajan', 'van', 'recorrido'],
-    answer: 'Puedes ver todas nuestras rutas disponibles en la sección de "Viajes". Ofrecemos viajes de ida y de ida y vuelta entre varias ciudades de Venezuela 🇻🇪\n\nFiltra por tu ciudad de origen y destino para ver las opciones.',
-  },
+/* ══════════════════════════════════════════════════════════════════════════
+   Árbol de decisión guiado — sin IA, solo botones.
+   Cada nodo tiene:
+     - text:    mensaje del bot
+     - options: array de botones { label, next?, whatsapp?, link? }
+   Nodos terminales (hojas) usan leafOptions() para volver al padre / inicio
+   o saltar a WhatsApp.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const WHATSAPP_NUMBER = '584121234567'; // ← cambiar si la empresa cambia
+const WHATSAPP_DEFAULT_MSG = 'Hola, tengo una consulta sobre Aerorutas:';
+
+const buildWhatsAppUrl = (text = WHATSAPP_DEFAULT_MSG) =>
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+
+/** Devuelve las opciones estándar al final de una respuesta hoja. */
+const leafOptions = (parent, { showAgent = true, agentMsg } = {}) => [
+  { label: 'Ver más opciones de este tema', next: parent, icon: 'back' },
+  { label: 'Volver al inicio', next: 'root', icon: 'home' },
+  ...(showAgent
+    ? [{ label: 'Hablar con un agente por WhatsApp', whatsapp: true, whatsappMsg: agentMsg, icon: 'wa' }]
+    : []),
 ];
 
-/* ── Respuestas para cuando no entiende ── */
-const FALLBACK_RESPONSES = [
-  'Hmm, no estoy seguro de entender tu pregunta. ¿Podrías reformularla? También puedes elegir una de las preguntas frecuentes que te muestro abajo. 👇',
-  'No encontré una respuesta exacta para eso. ¿Quizás te refieres a alguno de estos temas?',
-  'Esa pregunta me queda un poco difícil 😅 Prueba a preguntarme sobre reservas, pagos, documentos o rutas.',
-];
+const FLOW = {
+  /* ── RAÍZ ───────────────────────────────────────────────────────── */
+  root: {
+    text: '¡Hola! 👋 Soy el asistente de Aerorutas. ¿Sobre qué tema necesitas ayuda?',
+    options: [
+      { label: '🎟️  Reservas y compras', next: 'reservas' },
+      { label: '💳  Pagos y comprobantes', next: 'pagos' },
+      { label: '📄  Documentos para viajar', next: 'documentos' },
+      { label: '🚍  Viajes y rutas', next: 'viajes' },
+      { label: '🎫  Mi ticket y verificación', next: 'tickets' },
+      { label: '👤  Mi cuenta y perfil', next: 'cuenta' },
+      { label: '⭐  Programa VIP', next: 'vip' },
+      { label: '💬  Hablar con un agente', whatsapp: true, icon: 'wa' },
+    ],
+  },
 
-/* ── Respuestas conversacionales ── */
-const CONVERSATIONAL = {
-  greeting: {
-    patterns: ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'hey', 'que tal', 'saludos', 'hi', 'hello'],
-    responses: [
-      '¡Hola! 👋 ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre viajes, reservas, pagos y más.',
-      '¡Buenas! 😊 Soy el asistente de Aerorutas. ¿Qué necesitas saber?',
-      '¡Hola! Bienvenido/a. Estoy aquí para ayudarte con cualquier duda sobre nuestros viajes. 🚍',
+  /* ── RESERVAS ───────────────────────────────────────────────────── */
+  reservas: {
+    text: '🎟️ Reservas y compras — escoge una pregunta:',
+    options: [
+      { label: '¿Cómo reservo un pasaje?', next: 'reservas_como' },
+      { label: '¿Cuánto tiempo dura mi reserva?', next: 'reservas_tiempo' },
+      { label: '¿Puedo reservar para otra persona?', next: 'reservas_otro' },
+      { label: '¿Puedo viajar con mascota?', next: 'reservas_mascota' },
+      { label: '¿Cómo cancelo o cambio mi reserva?', next: 'reservas_cancelar' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
     ],
   },
-  thanks: {
-    patterns: ['gracias', 'gracia', 'thank', 'genial', 'excelente', 'perfecto', 'entendido', 'vale', 'ok', 'listo'],
-    responses: [
-      '¡De nada! 😊 Si tienes alguna otra pregunta, aquí estoy.',
-      '¡Con gusto! No dudes en preguntar si necesitas algo más. 🙌',
-      '¡Para eso estamos! ¿Hay algo más en lo que pueda ayudarte?',
+  reservas_como: {
+    text:
+      'Es muy fácil 👇\n\n1️⃣ Busca tu viaje por origen, destino y fecha\n2️⃣ Selecciona tu asiento en el mapa del autobús\n3️⃣ Confirma y elige tu método de pago\n4️⃣ Sube el comprobante de pago\n5️⃣ Espera la validación y recibe tu boleto por email 📧',
+    options: leafOptions('reservas'),
+  },
+  reservas_tiempo: {
+    text:
+      '⏱️ Tienes **15 minutos** para completar el pago desde que reservas el asiento.\n\nSi no subes el comprobante en ese tiempo, el asiento se libera automáticamente para que otra persona pueda comprarlo.',
+    options: leafOptions('reservas'),
+  },
+  reservas_otro: {
+    text:
+      '✅ Sí, puedes reservar para otra persona.\n\nAl seleccionar un asiento, activa la opción "Asignar a otra persona" e ingresa el nombre y cédula del pasajero real. Tú quedas como comprador responsable del pago.',
+    options: leafOptions('reservas'),
+  },
+  reservas_mascota: {
+    text:
+      '🐾 ¡Sí! Aceptamos mascotas a bordo.\n\nAl reservar, marca "Viaja con animal" e indica el tipo (perro, gato, ave, conejo, hámster u otro). Necesitarás subir la tarjeta de vacunación vigente del animal.',
+    options: leafOptions('reservas'),
+  },
+  reservas_cancelar: {
+    text:
+      '🔄 Para cancelar o cambiar tu reserva:\n\n1️⃣ Ve a "Mis Reservas" desde tu perfil\n2️⃣ Selecciona la reserva\n3️⃣ Las políticas de reembolso varían según la cercanía al viaje\n\nPara cambios o reembolsos contáctanos directamente — un agente te ayudará más rápido.',
+    options: leafOptions('reservas', {
+      agentMsg: 'Hola, necesito cancelar/cambiar una reserva.',
+    }),
+  },
+
+  /* ── PAGOS ──────────────────────────────────────────────────────── */
+  pagos: {
+    text: '💳 Pagos y comprobantes — escoge una pregunta:',
+    options: [
+      { label: '¿Qué métodos de pago aceptan?', next: 'pagos_metodos' },
+      { label: '¿En qué moneda pago?', next: 'pagos_moneda' },
+      { label: '¿Cómo subo el comprobante?', next: 'pagos_comprobante' },
+      { label: '¿Cuánto tarda en validarse?', next: 'pagos_tiempo' },
+      { label: 'No pude subir mi comprobante', next: 'pagos_problema' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
     ],
   },
-  goodbye: {
-    patterns: ['adios', 'chao', 'bye', 'hasta luego', 'nos vemos', 'me voy'],
-    responses: [
-      '¡Hasta luego! 👋 Que tengas un excelente viaje. ¡Nos vemos a bordo!',
-      '¡Chao! 🚍 Recuerda que siempre puedes volver a escribirme. ¡Buen viaje!',
+  pagos_metodos: {
+    text:
+      'Aceptamos estos métodos:\n\n💳 Transferencia bancaria (Bs)\n📱 Pago móvil (Bs)\n💵 Efectivo en divisas (USD)\n🌐 Zelle (USD)\n🔗 Binance (USDT)\n💸 Zinli (USD)\n\nLos datos exactos (banco, número, RIF) los verás al elegir el método en la página de pago.',
+    options: leafOptions('pagos'),
+  },
+  pagos_moneda: {
+    text:
+      '💵 Los precios se publican en **dólares (USD)**.\n\nSi pagas en bolívares, el monto se calcula con la tasa BCV del día (la verás indicada en la página de pago).',
+    options: leafOptions('pagos'),
+  },
+  pagos_comprobante: {
+    text:
+      'En la página de pago:\n\n1️⃣ Elige el método con el que pagaste\n2️⃣ Ingresa el número de referencia y el monto\n3️⃣ Sube la **captura del pago** (imagen)\n4️⃣ Si es divisas/efectivo, sube también la **foto del billete**\n5️⃣ Envía el comprobante 📤',
+    options: leafOptions('pagos'),
+  },
+  pagos_tiempo: {
+    text:
+      '⏳ El equipo administrativo valida los comprobantes manualmente. Normalmente toma entre **15 minutos y unas horas**, según la hora del día.\n\nMientras tanto tu asiento queda **apartado** (nadie más puede tomarlo). Cuando se apruebe, te llegará un email con tu boleto y QR.',
+    options: leafOptions('pagos'),
+  },
+  pagos_problema: {
+    text:
+      '⚠️ Si tuviste problemas para subir tu comprobante, escríbenos por WhatsApp y un agente lo procesará manualmente. Ten a mano:\n\n• Captura del pago\n• Número de referencia\n• Asiento y fecha del viaje',
+    options: leafOptions('pagos', {
+      agentMsg: 'Hola, tuve un problema subiendo mi comprobante de pago.',
+    }),
+  },
+
+  /* ── DOCUMENTOS ─────────────────────────────────────────────────── */
+  documentos: {
+    text: '📄 ¿Qué documentos necesitas? Escoge tu caso:',
+    options: [
+      { label: 'Adulto sin acompañantes', next: 'doc_adulto' },
+      { label: 'Viajo con un menor de edad', next: 'doc_menor' },
+      { label: 'Viajo con mi mascota', next: 'doc_mascota' },
+      { label: 'Persona con discapacidad', next: 'doc_discapacidad' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
     ],
   },
-  help: {
-    patterns: ['ayuda', 'ayudar', 'help', 'necesito', 'como funciona', 'que puedo hacer'],
-    responses: [
-      'Puedo ayudarte con:\n\n🎟️ Reservar pasajes\n💳 Métodos de pago\n📄 Documentos necesarios\n🐾 Viajar con mascotas\n⭐ Programa VIP\n🕐 Horarios y rutas\n\n¿Sobre cuál te gustaría saber?',
+  doc_adulto: {
+    text:
+      '🪪 **Adultos:**\n\n• Cédula de identidad vigente (obligatoria)\n• Boleto digital o impreso con el código QR\n\nEso es todo. Te recomendamos llegar 30 minutos antes de la salida.',
+    options: leafOptions('documentos'),
+  },
+  doc_menor: {
+    text:
+      '👶 **Menores de edad:**\n\n• Partida de nacimiento\n• Cédula del representante legal\n• Foto reciente del menor (tipo carnet o selfie)\n\nAl reservar marca "Es menor de edad" y sube los tres documentos en la sección correspondiente.',
+    options: leafOptions('documentos'),
+  },
+  doc_mascota: {
+    text:
+      '🐾 **Mascotas:**\n\n• Tarjeta de vacunación vigente del animal\n• Indicar el tipo de mascota al reservar\n\nAceptamos perros, gatos, aves, conejos, hámsters y otros pequeños animales.',
+    options: leafOptions('documentos'),
+  },
+  doc_discapacidad: {
+    text:
+      '♿ **Persona con discapacidad:**\n\n• Certificado médico o documento que acredite la discapacidad\n\nAl reservar marca "Persona con discapacidad" y sube el documento. Esto nos permite asignarte un asiento adecuado.',
+    options: leafOptions('documentos'),
+  },
+
+  /* ── VIAJES Y RUTAS ─────────────────────────────────────────────── */
+  viajes: {
+    text: '🚍 Viajes y rutas — escoge una pregunta:',
+    options: [
+      { label: '¿Qué rutas tienen disponibles?', next: 'viajes_rutas' },
+      { label: '¿Cuáles son los horarios?', next: 'viajes_horarios' },
+      { label: '¿Hacen viajes de ida y vuelta?', next: 'viajes_ida_vuelta' },
+      { label: '¿Cuánto cuesta un pasaje?', next: 'viajes_precio' },
+      { label: '¿Cuántos puestos tiene el bus?', next: 'viajes_capacidad' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
     ],
+  },
+  viajes_rutas: {
+    text:
+      '🗺️ Cubrimos varias rutas entre ciudades de Venezuela.\n\nLa forma más fácil de ver las rutas disponibles es ir a la sección **Viajes** del menú principal y filtrar por tu origen y destino.',
+    options: leafOptions('viajes'),
+  },
+  viajes_horarios: {
+    text:
+      '🕐 Los horarios dependen de cada ruta y fecha.\n\nEn la sección **Viajes** puedes seleccionar la fecha y verás todas las salidas disponibles ese día con su hora exacta.',
+    options: leafOptions('viajes'),
+  },
+  viajes_ida_vuelta: {
+    text:
+      '🔁 Sí, ofrecemos viajes de **ida** y de **ida y vuelta**.\n\nAl buscar viajes verás un sello "IDA Y VUELTA" en los que aplican. La fecha de regreso se muestra al seleccionarlo.',
+    options: leafOptions('viajes'),
+  },
+  viajes_precio: {
+    text:
+      '💰 Los precios varían según la ruta y se muestran en USD.\n\nEn la sección **Viajes** verás el precio de cada salida junto con su equivalente en bolívares al cambio del día.',
+    options: leafOptions('viajes'),
+  },
+  viajes_capacidad: {
+    text:
+      '🚍 Cada autobús tiene una capacidad distinta y puede tener uno o varios pisos.\n\nAl seleccionar un viaje, verás el mapa exacto de asientos del autobús asignado y los puestos disponibles en tiempo real.',
+    options: leafOptions('viajes'),
+  },
+
+  /* ── TICKETS ────────────────────────────────────────────────────── */
+  tickets: {
+    text: '🎫 Mi ticket — escoge una pregunta:',
+    options: [
+      { label: '¿Dónde está mi ticket?', next: 'ticket_donde' },
+      { label: '¿Cómo verifico mi QR?', next: 'ticket_qr' },
+      { label: '¿Puedo imprimir mi boleto?', next: 'ticket_imprimir' },
+      { label: 'No me llegó el email', next: 'ticket_email' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
+    ],
+  },
+  ticket_donde: {
+    text:
+      '🎫 Tu ticket aparece en **dos lugares**:\n\n1️⃣ Te llega por email cuando se valida el pago (PDF adjunto)\n2️⃣ También puedes verlo entrando a "Mis Reservas" → "Ver ticket"\n\nIncluye un código QR y un código único de 8 caracteres.',
+    options: leafOptions('tickets'),
+  },
+  ticket_qr: {
+    text:
+      '📲 El conductor escaneará tu QR al abordar. También puedes verificar el ticket tú mismo:\n\n• Escanea el QR con la cámara de tu teléfono\n• O ingresa el código de 8 caracteres en la página de verificación\n\nSi es válido, verás los datos del pasajero y el viaje.',
+    options: leafOptions('tickets'),
+  },
+  ticket_imprimir: {
+    text:
+      '🖨️ Sí, puedes imprimir el PDF que te llegó por email. También basta con mostrarlo desde tu teléfono al momento de abordar.',
+    options: leafOptions('tickets'),
+  },
+  ticket_email: {
+    text:
+      '📭 Si no te llegó el email:\n\n• Revisa la carpeta de **spam** o **promociones**\n• Confirma que el email en tu perfil sea correcto\n• El email se envía solo cuando se aprueba el comprobante, no antes\n\nSi ya pasó tiempo y nada, contáctanos.',
+    options: leafOptions('tickets', {
+      agentMsg: 'Hola, no me llegó el email con mi ticket.',
+    }),
+  },
+
+  /* ── CUENTA ─────────────────────────────────────────────────────── */
+  cuenta: {
+    text: '👤 Mi cuenta — escoge una pregunta:',
+    options: [
+      { label: '¿Cómo creo una cuenta?', next: 'cuenta_crear' },
+      { label: 'No me llegó el código de verificación', next: 'cuenta_verificar' },
+      { label: 'Olvidé mi contraseña', next: 'cuenta_password' },
+      { label: '¿Cómo edito mi perfil?', next: 'cuenta_editar' },
+      { label: 'Iniciar sesión con Google', next: 'cuenta_google' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
+    ],
+  },
+  cuenta_crear: {
+    text:
+      '🆕 Para crear tu cuenta:\n\n1️⃣ Ve a "Registrarse" en el menú\n2️⃣ Ingresa nombre, email, cédula y contraseña\n3️⃣ Te enviaremos un código de 6 dígitos a tu email\n4️⃣ Ingrésalo para activar la cuenta\n\nO usa el botón de **Google** para crear cuenta al instante.',
+    options: leafOptions('cuenta'),
+  },
+  cuenta_verificar: {
+    text:
+      '📧 Si no recibiste el código:\n\n• Revisa **spam** y **promociones**\n• Confirma que escribiste bien el email\n• En la pantalla de verificación toca "Reenviar código"\n• El código expira a los 15 minutos — si pasó más, pide uno nuevo',
+    options: leafOptions('cuenta'),
+  },
+  cuenta_password: {
+    text:
+      '🔑 Para recuperar tu contraseña:\n\n1️⃣ Toca "¿Olvidaste tu contraseña?" en la pantalla de login\n2️⃣ Ingresa tu email\n3️⃣ Te enviaremos un código de recuperación\n4️⃣ Úsalo para crear una nueva contraseña',
+    options: leafOptions('cuenta'),
+  },
+  cuenta_editar: {
+    text:
+      '✏️ Para editar tu perfil:\n\n1️⃣ Inicia sesión\n2️⃣ Ve a "Perfil" en el menú\n3️⃣ Actualiza nombre, cédula, teléfono o fecha de nacimiento\n\nEl email no se puede cambiar (es tu identificador de cuenta).',
+    options: leafOptions('cuenta'),
+  },
+  cuenta_google: {
+    text:
+      '🔵 Puedes iniciar sesión o crear cuenta con un solo clic usando Google.\n\nToca el botón "Continuar con Google" en la pantalla de Login o Registro.',
+    options: leafOptions('cuenta'),
+  },
+
+  /* ── VIP ────────────────────────────────────────────────────────── */
+  vip: {
+    text: '⭐ Programa Pasajero Frecuente — escoge una pregunta:',
+    options: [
+      { label: '¿Qué es el programa VIP?', next: 'vip_que_es' },
+      { label: '¿Cuáles son los niveles?', next: 'vip_niveles' },
+      { label: '¿Cómo subo de nivel?', next: 'vip_subir' },
+      { label: '¿Cómo verifico mi nivel?', next: 'vip_ver' },
+      { label: 'Volver al inicio', next: 'root', icon: 'home' },
+    ],
+  },
+  vip_que_es: {
+    text:
+      '⭐ Es nuestro programa de lealtad. Mientras más viajes con Aerorutas, más beneficios desbloqueas: prioridad en abordaje, asientos preferenciales, descuentos y atención preferente.',
+    options: leafOptions('vip'),
+  },
+  vip_niveles: {
+    text:
+      'Tenemos 3 niveles:\n\n🥈 **Plata** — Beneficios básicos\n🥇 **Oro** — Beneficios premium\n💎 **Platino** — Beneficios máximos\n\nLos beneficios específicos de cada nivel los anunciamos en redes y por email.',
+    options: leafOptions('vip'),
+  },
+  vip_subir: {
+    text:
+      '📈 Subes de nivel acumulando viajes confirmados. El equipo administrativo revisa periódicamente y actualiza tu nivel.\n\nSi crees que ya calificas para el siguiente nivel, contáctanos por WhatsApp.',
+    options: leafOptions('vip', {
+      agentMsg: 'Hola, quiero saber si califico para subir de nivel VIP.',
+    }),
+  },
+  vip_ver: {
+    text:
+      '👀 Tu nivel VIP aparece en tu perfil cuando inicias sesión, con un sello dorado debajo de tu nombre. Si no aparece, todavía no estás inscrito en el programa.',
+    options: leafOptions('vip'),
   },
 };
 
-const WELCOME_MESSAGE = {
-  type: 'bot',
-  text: '¡Hola! 👋 Soy el asistente virtual de Aerorutas. ¿En qué puedo ayudarte hoy?',
+/* ══════════════════════════════════════════════════════════════════ */
+
+const ICONS = {
+  back: <ArrowLeft size={14} />,
+  home: <Home size={14} />,
+  wa: <span className="chat-wa-dot" />,
+  default: <ChevronRight size={14} />,
 };
 
-/* ══════════════════════════════════════════════
-   Componente ChatBot
-   ══════════════════════════════════════════════ */
+const WELCOME = { type: 'bot', text: FLOW.root.text, node: 'root' };
+
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
-  const [inputValue, setInputValue] = useState('');
+  const [messages, setMessages] = useState([WELCOME]);
+  const [currentNode, setCurrentNode] = useState('root');
   const [isTyping, setIsTyping] = useState(false);
-  const [showFaqs, setShowFaqs] = useState(true);
-  const [fallbackCount, setFallbackCount] = useState(0);
+  const [showInput, setShowInput] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
   const chatWindowRef = useRef(null);
 
-  // Scroll to bottom on new messages
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Focus input when opening
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // ── Click outside to close ──
+  // Click outside to close
   useEffect(() => {
     if (!isOpen) return;
-
     const handleClickOutside = (e) => {
       if (
         chatWindowRef.current &&
@@ -153,138 +337,81 @@ export default function ChatBot() {
         setIsOpen(false);
       }
     };
-
-    // Small delay so the opening click doesn't immediately close
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 100);
-
     return () => {
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
 
-  const addBotMessage = (text, delay = 700) => {
+  const goToNode = (nodeId, userLabel) => {
+    const node = FLOW[nodeId];
+    if (!node) return;
+
+    // Mensaje del usuario (su selección)
+    if (userLabel) {
+      setMessages((prev) => [...prev, { type: 'user', text: userLabel }]);
+    }
+
+    // Typing indicator + respuesta del bot
     setIsTyping(true);
     setTimeout(() => {
-      setMessages((prev) => [...prev, { type: 'bot', text }]);
+      setMessages((prev) => [...prev, { type: 'bot', text: node.text, node: nodeId }]);
+      setCurrentNode(nodeId);
       setIsTyping(false);
-    }, delay);
+    }, 500);
   };
 
-  const addBotMessages = (texts, baseDelay = 700) => {
-    setIsTyping(true);
-    texts.forEach((text, i) => {
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { type: 'bot', text }]);
-        if (i === texts.length - 1) setIsTyping(false);
-      }, baseDelay + i * 900);
-    });
-  };
-
-  const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-  const handleFaqClick = (faq) => {
-    setShowFaqs(false);
-    setFallbackCount(0);
-    setMessages((prev) => [...prev, { type: 'user', text: faq.question }]);
-
-    const replies = [faq.answer];
-    if (faq.followUp) replies.push(faq.followUp);
-    addBotMessages(replies);
-  };
-
-  const findMatch = useCallback((text) => {
-    const lower = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    // Check conversational patterns first
-    for (const [, conv] of Object.entries(CONVERSATIONAL)) {
-      if (conv.patterns.some((p) => lower.includes(p))) {
-        return { type: 'conversational', response: pickRandom(conv.responses) };
-      }
+  const handleOptionClick = (option) => {
+    if (option.whatsapp) {
+      setMessages((prev) => [
+        ...prev,
+        { type: 'user', text: option.label },
+        {
+          type: 'bot',
+          text: 'Te conecto con un agente por WhatsApp 👇',
+          whatsappMsg: option.whatsappMsg || WHATSAPP_DEFAULT_MSG,
+        },
+      ]);
+      return;
     }
-
-    // Score-based FAQ matching
-    let bestMatch = null;
-    let bestScore = 0;
-
-    for (const faq of FAQ_DATA) {
-      let score = 0;
-      for (const kw of faq.keywords) {
-        if (lower.includes(kw.toLowerCase())) {
-          score += kw.length; // longer keyword matches = higher score
-        }
-      }
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = faq;
-      }
+    if (option.next) {
+      goToNode(option.next, option.label);
     }
-
-    if (bestMatch && bestScore >= 4) {
-      return { type: 'faq', faq: bestMatch };
-    }
-
-    return null;
-  }, []);
-
-  const handleSend = () => {
-    const text = inputValue.trim();
-    if (!text) return;
-
-    setMessages((prev) => [...prev, { type: 'user', text }]);
-    setInputValue('');
-    setShowFaqs(false);
-
-    const match = findMatch(text);
-
-    if (match?.type === 'conversational') {
-      addBotMessage(match.response);
-      setFallbackCount(0);
-    } else if (match?.type === 'faq') {
-      const replies = [match.faq.answer];
-      if (match.faq.followUp) replies.push(match.faq.followUp);
-      addBotMessages(replies);
-      setFallbackCount(0);
-    } else {
-      // Fallback — show helpful response
-      const newCount = fallbackCount + 1;
-      setFallbackCount(newCount);
-
-      if (newCount >= 3) {
-        // After 3 misses, suggest WhatsApp
-        addBotMessages([
-          'Parece que no estoy logrando ayudarte con esta consulta. 😔 Te recomiendo contactar a nuestro equipo directamente:',
-          '__WHATSAPP_CTA__',
-        ]);
-        setFallbackCount(0);
-      } else {
-        const fallbackMsg = FALLBACK_RESPONSES[newCount - 1] || FALLBACK_RESPONSES[0];
-        addBotMessage(fallbackMsg, 800);
-        // Re-show FAQ suggestions after a fallback
-        setTimeout(() => setShowFaqs(true), 1200);
-      }
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleWhatsApp = () => {
-    window.open('https://wa.me/584121234567?text=Hola,%20tengo%20una%20consulta%20sobre%20mis%20viajes', '_blank');
   };
 
   const handleReset = () => {
-    setMessages([WELCOME_MESSAGE]);
-    setShowFaqs(true);
+    setMessages([WELCOME]);
+    setCurrentNode('root');
+    setShowInput(false);
     setInputValue('');
-    setFallbackCount(0);
   };
+
+  const handleSendCustom = () => {
+    const text = inputValue.trim();
+    if (!text) return;
+    setMessages((prev) => [
+      ...prev,
+      { type: 'user', text },
+      {
+        type: 'bot',
+        text: 'Para responderte mejor te conectamos con un agente por WhatsApp 👇',
+        whatsappMsg: `Hola, tengo esta consulta: ${text}`,
+      },
+    ]);
+    setInputValue('');
+    setShowInput(false);
+  };
+
+  const openWhatsApp = (text) => {
+    window.open(buildWhatsAppUrl(text), '_blank');
+  };
+
+  // Opciones del nodo actual (último mensaje del bot)
+  const lastBotMsg = [...messages].reverse().find((m) => m.type === 'bot');
+  const currentOptions = lastBotMsg?.node ? FLOW[lastBotMsg.node]?.options ?? [] : [];
 
   return (
     <>
@@ -303,7 +430,6 @@ export default function ChatBot() {
         ref={chatWindowRef}
         className={`chat-window ${isOpen ? 'chat-window-open' : ''}`}
       >
-        {/* Header */}
         <div className="chat-header">
           <div className="chat-header-info">
             <div className="chat-avatar">
@@ -337,21 +463,24 @@ export default function ChatBot() {
                 </div>
               )}
               <div className="chat-msg-bubble">
-                {msg.text === '__WHATSAPP_CTA__' ? (
-                  <button className="chat-whatsapp-btn" onClick={handleWhatsApp}>
+                {msg.text.split('\n').map((line, li) => (
+                  <span key={li}>
+                    {renderMarkdown(line)}
+                    {li < msg.text.split('\n').length - 1 && <br />}
+                  </span>
+                ))}
+                {msg.whatsappMsg && (
+                  <button
+                    className="chat-whatsapp-btn"
+                    onClick={() => openWhatsApp(msg.whatsappMsg)}
+                    style={{ marginTop: '0.5rem' }}
+                  >
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                     </svg>
-                    Contactar por WhatsApp
+                    Abrir WhatsApp
                     <ExternalLink size={12} />
                   </button>
-                ) : (
-                  msg.text.split('\n').map((line, li) => (
-                    <span key={li}>
-                      {line}
-                      {li < msg.text.split('\n').length - 1 && <br />}
-                    </span>
-                  ))
                 )}
               </div>
               {msg.type === 'user' && (
@@ -374,14 +503,17 @@ export default function ChatBot() {
             </div>
           )}
 
-          {/* FAQ Suggestions */}
-          {showFaqs && (
+          {/* Botones de opciones del nodo actual */}
+          {!isTyping && currentOptions.length > 0 && (
             <div className="chat-faqs">
-              <p className="chat-faqs-label">Preguntas frecuentes:</p>
-              {FAQ_DATA.slice(0, 6).map((faq, i) => (
-                <button key={i} className="chat-faq-btn" onClick={() => handleFaqClick(faq)}>
-                  <ChevronRight size={14} />
-                  {faq.question}
+              {currentOptions.map((opt, i) => (
+                <button
+                  key={`${currentNode}-${i}`}
+                  className="chat-faq-btn"
+                  onClick={() => handleOptionClick(opt)}
+                >
+                  {ICONS[opt.icon] || ICONS.default}
+                  {opt.label}
                 </button>
               ))}
             </div>
@@ -390,26 +522,57 @@ export default function ChatBot() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
+        {/* Footer: o el input personalizado, o el botón para abrirlo */}
         <div className="chat-input-bar">
-          <input
-            ref={inputRef}
-            type="text"
-            className="chat-input"
-            placeholder="Escribe tu pregunta..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <button
-            className="chat-send-btn"
-            onClick={handleSend}
-            disabled={!inputValue.trim()}
-          >
-            <Send size={16} />
-          </button>
+          {showInput ? (
+            <>
+              <input
+                type="text"
+                className="chat-input"
+                placeholder="Escribe tu consulta…"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSendCustom();
+                  if (e.key === 'Escape') {
+                    setShowInput(false);
+                    setInputValue('');
+                  }
+                }}
+                autoFocus
+              />
+              <button
+                className="chat-send-btn"
+                onClick={handleSendCustom}
+                disabled={!inputValue.trim()}
+                title="Enviar a WhatsApp"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <button
+              className="chat-custom-question-btn"
+              onClick={() => setShowInput(true)}
+            >
+              ¿No encontraste tu pregunta? Escríbela aquí
+            </button>
+          )}
         </div>
       </div>
     </>
   );
+}
+
+/* ── Markdown mínimo: convierte **texto** en <strong>texto</strong> ── */
+function renderMarkdown(line) {
+  const parts = line.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
 }

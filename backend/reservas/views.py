@@ -9,6 +9,7 @@ import uuid as uuid_lib
 from .models import Reserva, BloqueoAsiento
 from .serializers import ReservaSerializer, CrearReservaSerializer, AdminReservaSerializer
 from viajes.models import Viaje, Autobus, ConfiguracionGeneral
+from viajes.ws_broadcast import broadcast_seat_change
 
 
 BLOQUEO_ASIENTO_MINUTOS = 2
@@ -132,6 +133,15 @@ class BloquearAsientoView(APIView):
                         status=status.HTTP_409_CONFLICT
                     )
 
+        # ── Broadcast WS: avisar al resto que este asiento quedó "locked" ──
+        broadcast_seat_change(
+            viaje_id=viaje.id,
+            numero=numero_asiento,
+            piso=piso_asiento,
+            estado='locked',
+            usuario_id=request.user.id,
+        )
+
         return Response({
             "ok": True,
             "mensaje": "Asiento bloqueado temporalmente.",
@@ -169,6 +179,15 @@ class LiberarAsientoView(APIView):
             numero_asiento=numero_asiento,
             piso_asiento=piso_asiento,
         ).delete()
+
+        if deleted_count > 0:
+            broadcast_seat_change(
+                viaje_id=int(viaje_id),
+                numero=numero_asiento,
+                piso=piso_asiento,
+                estado='unlocked',
+                usuario_id=request.user.id,
+            )
 
         return Response({
             "ok": True,
@@ -298,6 +317,23 @@ class CrearReservaView(APIView):
                     {"error": "No se pudo crear ninguna reserva.", "detalles": errores},
                     status=status.HTTP_409_CONFLICT
                 )
+
+        # ── Broadcast WS: asientos pasan a "reserved" para el resto ──
+        # Usamos on_commit para asegurar que sólo se emite si la transacción
+        # se guardó realmente (evita emitir y luego rollback).
+        usuario_id = request.user.id
+
+        def _emit():
+            for r in reservas_creadas:
+                broadcast_seat_change(
+                    viaje_id=viaje.id,
+                    numero=r.numero_asiento,
+                    piso=r.piso_asiento,
+                    estado='reserved',
+                    usuario_id=usuario_id,
+                )
+
+        transaction.on_commit(_emit)
 
         return Response({
             "mensaje": "Reserva(s) creada(s). Tienes 15 minutos para completar el pago.",
@@ -493,6 +529,25 @@ class AdminCambiarEstadoView(APIView):
         old_estado = reserva.estado
         reserva.estado = nuevo_estado
         reserva.save()
+
+        # ── Broadcast WS si el cambio de estado libera o ocupa el asiento ──
+        if nuevo_estado == 'cancelado' and old_estado != 'cancelado':
+            broadcast_seat_change(
+                viaje_id=reserva.viaje_id,
+                numero=reserva.numero_asiento,
+                piso=reserva.piso_asiento,
+                estado='released',
+            )
+        elif (
+            nuevo_estado in ('pendiente', 'confirmado')
+            and old_estado == 'cancelado'
+        ):
+            broadcast_seat_change(
+                viaje_id=reserva.viaje_id,
+                numero=reserva.numero_asiento,
+                piso=reserva.piso_asiento,
+                estado='reserved',
+            )
 
         # If confirming, send email with PDF ticket
         email_enviado = False

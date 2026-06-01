@@ -16,6 +16,8 @@ colorama==0.4.6
 cryptography==46.0.4
 distro==1.9.0
 Django==5.2.11
+channels==4.2.0
+daphne==4.1.2
 django-cors-headers==4.9.0
 django-filter==25.2
 djangorestframework==3.16.1

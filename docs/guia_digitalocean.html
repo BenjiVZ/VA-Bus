@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guía DigitalOcean — VA-Bus</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;padding:2rem}
+    .container{max-width:780px;margin:0 auto}
+    h1{text-align:center;font-size:1.6rem;color:#1a3a6b;margin-bottom:.3rem}
+    .subtitle{text-align:center;color:#64748b;font-size:.9rem;margin-bottom:2rem}
+    .price-banner{background:linear-gradient(135deg,#1a3a6b,#2d5a9e);color:#fff;border-radius:12px;padding:1.2rem;text-align:center;margin-bottom:2rem}
+    .price-banner .amount{font-size:2rem;font-weight:800;color:#f5c842}
+    .price-banner .detail{font-size:.85rem;opacity:.85;margin-top:.3rem}
+
+    .step{background:#fff;border-radius:12px;margin-bottom:1.5rem;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .step-header{display:flex;align-items:center;gap:.75rem;padding:1rem 1.25rem;border-bottom:1px solid #e2e8f0}
+    .step-num{width:36px;height:36px;border-radius:50%;background:#1a3a6b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0}
+    .step-title{font-weight:700;font-size:1.05rem;color:#1a3a6b}
+    .step-body{padding:1.25rem}
+
+    .option{border:2px solid #e2e8f0;border-radius:10px;padding:.85rem 1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.75rem;position:relative}
+    .option.select{border-color:#16a34a;background:#f0fdf4}
+    .option.current-wrong{border-color:#ef4444;background:#fef2f2}
+    .option.neutral{opacity:.45}
+
+    .mark{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;flex-shrink:0}
+    .mark.yes{background:#16a34a;color:#fff}
+    .mark.no{background:#ef4444;color:#fff}
+    .mark.skip{background:#e2e8f0;color:#94a3b8}
+
+    .option-text{flex:1}
+    .option-text strong{display:block;font-size:.95rem}
+    .option-text span{font-size:.8rem;color:#64748b}
+
+    .tag{display:inline-block;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:.5rem;vertical-align:middle}
+    .tag.green{background:#dcfce7;color:#166534}
+    .tag.red{background:#fee2e2;color:#991b1b}
+    .tag.blue{background:#dbeafe;color:#1e40af}
+
+    .note{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:.75rem 1rem;font-size:.85rem;margin-top:.75rem;color:#92400e}
+    .note strong{color:#78350f}
+
+    .checkbox-row{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border:2px solid #e2e8f0;border-radius:10px;margin-bottom:.6rem}
+    .checkbox-row.check-yes{border-color:#16a34a;background:#f0fdf4}
+    .checkbox-row.check-no{border-color:#e2e8f0;background:#fff}
+    .cb{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;flex-shrink:0}
+    .cb.on{background:#16a34a;color:#fff}
+    .cb.off{background:#f1f5f9;color:#94a3b8;border:2px solid #cbd5e1}
+
+    .input-mock{border:2px solid #16a34a;border-radius:8px;padding:.7rem 1rem;font-size:.95rem;font-weight:600;color:#1e293b;background:#f0fdf4;margin-top:.5rem}
+
+    .summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:1rem 1.25rem;margin-top:1.5rem}
+    .summary h3{font-size:1rem;color:#1a3a6b;margin-bottom:.75rem}
+    .summary .row{display:flex;justify-content:space-between;padding:.25rem 0;font-size:.9rem}
+    .summary .row.total{border-top:2px solid #1e293b;margin-top:.5rem;padding-top:.5rem;font-weight:700;font-size:1.05rem;color:#1a3a6b}
+
+    @media print {
+      @page { size: 210mm 1700mm; margin: 10mm 12mm; }
+      body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .container { max-width: 100%; }
+      .step, .option, .checkbox-row, .note, .price-banner { page-break-inside: avoid; break-inside: avoid; }
+      * { page-break-before: avoid; page-break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🖥️ Guía de Configuración — DigitalOcean</h1>
+  <p class="subtitle">Presupuesto Recomendado para Aerorutas de Venezuela</p>
+
+  <div class="price-banner">
+    <div class="amount">Presupuesto Recomendado</div>
+    <div class="detail">Sigue cada paso y selecciona las opciones marcadas con ✓</div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Choose an image (Sistema Operativo)</div>
+    </div>
+    <div class="step-body">
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>Ubuntu <span class="tag green">SELECCIONAR</span></strong>
+          <span>24.04 (LTS) x64 — Ya viene seleccionado, dejarlo así</span>
+        </div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>Debian</strong><span>No seleccionar</span></div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>Fedora</strong><span>No seleccionar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Choose a Droplet Plan</div>
+    </div>
+    <div class="step-body">
+      <p style="font-weight:600;margin-bottom:.75rem;color:#1a3a6b;">Tipo de Droplet:</p>
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>Basic <span class="tag green">SELECCIONAR</span></strong>
+          <span>Shared CPU — Ya viene seleccionado</span>
+        </div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>General Purpose / CPU-Optimized / Memory-Optimized</strong><span>No seleccionar ninguno de estos</span></div>
+      </div>
+
+      <p style="font-weight:600;margin:.75rem 0;color:#1a3a6b;">CPU Options:</p>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>Regular</strong><span>Disk Type: SSD</span></div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>Premium AMD</strong><span>Disk Type: NVMe SSD</span></div>
+      </div>
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>Premium Intel <span class="tag green">SELECCIONAR</span></strong>
+          <span>Disk Type: NVMe SSD — Ya viene seleccionado</span>
+        </div>
+      </div>
+
+      <p style="font-weight:600;margin:.75rem 0;color:#1a3a6b;">Select a Plan:</p>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>$8.00/mo</strong><span>1 Intel vCPU - 1 GB RAM - 35 GB NVMe</span></div>
+      </div>
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>$16.00/mo <span class="tag green">← SELECCIONAR ESTE</span></strong>
+          <span>1 Intel vCPU - 2 GB RAM - 70 GB NVMe SSD - 2 TB Transfer</span>
+        </div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>$24.00/mo</strong><span>2 Intel vCPU - 2 GB RAM - 90 GB NVMe</span></div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text">
+          <strong>$32.00/mo</strong>
+          <span>2 Intel vCPU - 4 GB RAM - 120 GB NVMe</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Volumes Block Storage</div>
+    </div>
+    <div class="step-body">
+      <div class="checkbox-row check-no">
+        <div class="cb off">—</div>
+        <div class="option-text">
+          <strong>Add additional storage</strong>
+          <span>No marcar — 70 GB NVMe es suficiente por ahora</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <div class="step-title">Backups</div>
+    </div>
+    <div class="step-body">
+      <div class="checkbox-row check-yes">
+        <div class="cb on">✓</div>
+        <div class="option-text">
+          <strong>Enable automated backups <span class="tag green">← MARCAR</span></strong>
+          <span>Activar backups automáticos del servidor</span>
+        </div>
+      </div>
+
+      <p style="font-weight:600;margin:.75rem 0 .5rem;color:#1a3a6b;">Al marcar, se despliega esto:</p>
+
+      <p style="font-weight:600;margin-bottom:.4rem;">Plans (dejar esa pestaña) → Backup Frequency:</p>
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>Weekly Backups <span class="tag green">← SELECCIONAR</span></strong>
+          <span>Each backup is kept for 28 days — 20% del costo del Droplet ($3.20/mes con plan de $16)</span>
+        </div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text">
+          <strong>Daily Backups</strong>
+          <span>30% del Droplet — El presupuesto recomendado incluye semanales, no diarios</span>
+        </div>
+      </div>
+
+      <p style="font-weight:600;margin:.75rem 0 .4rem;">Backup Window → Time of day:</p>
+      <div class="input-mock">12:00am - 4:00am (hora de Venezuela) <span class="tag green">DEJARLO ASÍ</span></div>
+      <p style="font-size:.8rem;color:#64748b;margin-top:.3rem">Es la mejor hora: madrugada cuando hay menos tráfico.</p>
+
+      <div class="note"><strong>📌 Nota:</strong> Los precios que ves ahora ($6.40/$9.60) son para el plan de $32. Cuando cambies al plan de <strong>$16/mo</strong>, los precios se actualizarán a <strong>$3.20 (Weekly)</strong> y $4.80 (Daily).</div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">5</div>
+      <div class="step-title">Authentication</div>
+    </div>
+    <div class="step-body">
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>Password <span class="tag green">MÁS FÁCIL</span></strong>
+          <span>Selecciona la pestaña "Password" y pon una contraseña segura para root</span>
+        </div>
+      </div>
+      <div class="option" style="border-color:#dbeafe;background:#eff6ff">
+        <div class="mark" style="background:#3b82f6;color:#fff">?</div>
+        <div class="option-text">
+          <strong>SSH Keys <span class="tag blue">MÁS SEGURO</span></strong>
+          <span>Si tienes experiencia con SSH, esta es la mejor opción. Sino, usa Password.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">6</div>
+      <div class="step-title">Networking</div>
+    </div>
+    <div class="step-body">
+      <div class="checkbox-row check-no">
+        <div class="cb off">—</div>
+        <div class="option-text"><strong>Enable IPv6 (Free)</strong><span>Opcional — no es necesario</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">7</div>
+      <div class="step-title">Monitoring</div>
+    </div>
+    <div class="step-body">
+      <div class="checkbox-row check-yes">
+        <div class="cb on">✓</div>
+        <div class="option-text">
+          <strong>Improved Metrics and monitoring (Free) <span class="tag green">← MARCAR</span></strong>
+          <span>Gratis. Métricas de CPU, RAM y disco. Incluido en el presupuesto.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">8</div>
+      <div class="step-title">Additional Options</div>
+    </div>
+    <div class="step-body">
+      <div class="checkbox-row check-no">
+        <div class="cb off">—</div>
+        <div class="option-text"><strong>Startup scripts (Free)</strong><span>No marcar por ahora</span></div>
+      </div>
+      <div class="checkbox-row check-yes">
+        <div class="cb on">✓</div>
+        <div class="option-text">
+          <strong>Add a worry-free Managed Database <span class="tag green">← MARCAR</span></strong>
+          <span>$15.00/month — Backups diarios, PITR, failover, SSL. Incluido en el presupuesto.</span>
+        </div>
+      </div>
+
+      <p style="font-weight:600;margin:.75rem 0 .5rem;color:#1a3a6b;">Al marcar, se despliega "Select Database Engine":</p>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>MongoDB</strong><span>No seleccionar</span></div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>MySQL</strong><span>No seleccionar</span></div>
+      </div>
+      <div class="option select">
+        <div class="mark yes">✓</div>
+        <div class="option-text">
+          <strong>PostgreSQL <span class="tag green">← SELECCIONAR</span></strong>
+          <span>El motor recomendado para Django. Compatible directo con el sistema VA-Bus.</span>
+        </div>
+      </div>
+      <div class="option neutral">
+        <div class="mark skip">—</div>
+        <div class="option-text"><strong>Redis</strong><span>No seleccionar — es para caché, no para BD principal</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 9 -->
+  <div class="step">
+    <div class="step-header">
+      <div class="step-num">9</div>
+      <div class="step-title">Finalize — Cantidad, Nombre y Proyecto</div>
+    </div>
+    <div class="step-body">
+      <p style="font-weight:600;margin-bottom:.5rem;">Quantity: dejar en 1</p>
+      <p style="font-weight:600;margin-bottom:.5rem;">Give your Droplet a name:</p>
+      <div class="input-mock">va-bus-produccion</div>
+      <p style="font-size:.8rem;color:#64748b;margin-top:.3rem;">Cambiar el nombre por defecto a algo descriptivo como "va-bus-produccion"</p>
+      <p style="font-weight:600;margin-top:1rem;">Select a project: dejar "first-project" o crear uno nuevo llamado "Aerorutas"</p>
+      <p style="font-weight:600;margin-top:.75rem;">Tags (opcional):</p>
+      <div class="input-mock" style="color:#64748b;font-weight:400">produccion, va-bus, aerorutas</div>
+    </div>
+  </div>
+
+  <p style="text-align:center;margin-top:1.5rem;font-size:.8rem;color:#94a3b8">
+    Guía para Aerorutas de Venezuela — Presupuesto Recomendado — Mayo 2026
+  </p>
+</div>
+</body>
+</html>

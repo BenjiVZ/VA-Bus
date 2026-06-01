@@ -1,0 +1,265 @@
+
+
+PROPOSITO
+---------
+Endpoint para poblar la base de datos con rutas, autobuses y
+layouts de asientos. Lo usa quien provea los datos desde un
+sistema externo o carga manual.
+
+
+ENDPOINT
+--------
+Metodo:        POST
+URL:           /api/bulk-import/
+Headers:
+    X-API-KEY: <clave proporcionada por el equipo VA-Bus>
+    Content-Type: application/json
+
+Limites:
+    - Maximo 200 autobuses por peticion
+    - Maximo 100 rutas por peticion
+    - Tamaño total del body: 5MB
+
+
+ESTRUCTURA GENERAL DEL BODY
+---------------------------
+El body es un objeto con dos arrays principales:
+
+    rutas       -> array de objetos ruta
+    autobuses   -> array de objetos autobus
+
+Cualquiera de los dos arrays puede venir vacio. Si solo se
+quieren cargar rutas, "autobuses" puede ser [].
+
+
+CAMPOS DE CADA RUTA
+-------------------
+origen
+    Tipo:     string, maximo 100 caracteres
+    Requerido: SI
+    Ejemplo:   "Caracas (La Bandera)"
+
+destino
+    Tipo:     string, maximo 100 caracteres
+    Requerido: SI
+    Ejemplo:   "Merida"
+
+duracion_estimada
+    Tipo:     string, maximo 50 caracteres
+    Requerido: NO
+    Ejemplo:   "12h", "8h 30m", "5 horas aproximadas"
+
+CONSTRAINT:
+    La combinacion (origen, destino) debe ser unica. Si ya
+    existe en la base, el endpoint la respeta y la reporta
+    como "existia".
+
+
+CAMPOS DE CADA AUTOBUS
+----------------------
+placa
+    Tipo:     string, maximo 20 caracteres
+    Requerido: SI
+    Notas:    Es el IDENTIFICADOR UNICO del autobus. Si la
+              placa ya existe, el autobus se actualiza con los
+              nuevos datos (incluyendo el layout).
+    Ejemplo:  "ADV-001"
+
+nombre
+    Tipo:     string, maximo 100 caracteres
+    Requerido: SI
+    Ejemplo:   "Volvo Azul 2007 #01"
+
+marca
+    Tipo:     string, maximo 50 caracteres
+    Requerido: NO
+    Ejemplo:   "Volvo", "Mercedes Benz", "Scania"
+
+color
+    Tipo:     string, maximo 50 caracteres
+    Requerido: NO
+    Ejemplo:   "Azul y blanco"
+
+anio
+    Tipo:     entero positivo
+    Requerido: NO
+    Ejemplo:   2007
+
+propietario
+    Tipo:     string, maximo 200 caracteres
+    Requerido: NO
+
+disponible
+    Tipo:     boolean
+    Requerido: NO (default true)
+    Notas:    Si false, el bus no se asigna a viajes nuevos.
+
+pisos
+    Tipo:     array de objetos piso
+    Requerido: SI
+    Notas:    Minimo 1 piso, maximo 2 pisos.
+
+
+CAMPOS DE CADA PISO (dentro de "pisos" del autobus)
+---------------------------------------------------
+numero_piso
+    Tipo:     entero, 1 o 2
+    Requerido: SI
+    Notas:    Debe ser unico dentro del mismo autobus.
+
+filas
+    Tipo:     entero positivo
+    Requerido: SI
+    Notas:    Numero de filas de la matriz del layout.
+
+columnas
+    Tipo:     entero positivo
+    Requerido: SI
+    Notas:    Numero de columnas de la matriz del layout.
+
+layout
+    Tipo:     array bidimensional de objetos celda
+    Requerido: SI
+    Notas:    Matriz de [filas][columnas] elementos. Cada
+              elemento es un objeto que describe una celda.
+
+
+CELDAS DEL LAYOUT
+-----------------
+Cada celda tiene un campo "type" y, segun el tipo, campos extras.
+
+Tipos validos:
+
+    seat       Asiento numerado donde se sienta un pasajero.
+               REQUIERE el campo extra "number" (entero positivo
+               unico a traves de todo el autobus).
+
+    aisle      Pasillo entre asientos.
+
+    door       Puerta (entrada o salida del autobus).
+
+    stairs     Escalera para subir al segundo piso.
+
+    driver     Asiento del chofer.
+
+    empty      Espacio vacio (no se dibuja nada).
+
+REGLAS DE NUMERACION DE ASIENTOS
+    - Cada celda tipo "seat" debe tener un "number" entero.
+    - Los numeros deben ser unicos en todo el autobus
+      (no se repiten entre piso 1 y piso 2).
+    - Convencion sugerida: piso 1 numera del 1 al N,
+      piso 2 sigue desde N+1 hasta M.
+    - Los numeros son los que ve el pasajero al reservar.
+
+
+VALIDACIONES QUE EJECUTA EL ENDPOINT
+------------------------------------
+1. La placa no puede repetirse dentro del mismo payload.
+2. La combinacion (origen, destino) no puede repetirse dentro
+   del payload.
+3. Cada matriz "layout" debe tener exactamente filas x columnas
+   celdas (ni mas ni menos).
+4. Cada autobus debe tener al menos un piso con al menos un
+   asiento valido.
+5. Si un autobus declara dos pisos, debe existir un piso con
+   numero_piso = 2 en su array "pisos".
+6. Los numeros de asiento dentro del mismo autobus no pueden
+   repetirse.
+7. Todos los campos requeridos deben estar presentes y con el
+   tipo correcto.
+
+
+COMPORTAMIENTO ANTE DATOS QUE YA EXISTEN
+----------------------------------------
+Ruta existente:
+    Se respeta sin cambios. Se reporta como "existia".
+
+Autobus existente (misma placa):
+    Se actualiza nombre, marca, color, anio, propietario,
+    disponible y se REEMPLAZA el layout completo. Se reporta
+    como "actualizado".
+
+Esto permite reenviar el mismo payload para correcciones sin
+generar duplicados.
+
+
+RESPUESTA DEL ENDPOINT
+----------------------
+La respuesta indica:
+    - Total de rutas creadas vs existentes
+    - Total de autobuses creados vs actualizados
+    - Lista de errores especificos por entidad (con placa o
+      ruta afectada y mensaje legible)
+    - Timestamp UTC del procesamiento
+
+Codigos HTTP:
+    201   Procesado exitosamente (puede incluir errores parciales).
+    400   Error de validacion del body.
+    401   X-API-KEY faltante o invalida.
+    413   Body excede 5MB.
+
+
+RECOMENDACIONES PARA QUIEN ENVIA LA DATA
+----------------------------------------
+1. Mandar el payload UNA SOLA VEZ para la carga inicial.
+   Despues solo enviar diferencias o actualizaciones puntuales.
+
+2. Para layouts grandes, usar herramientas como Excel/Sheets
+   para construir la matriz visualmente antes de convertirla a
+   JSON. Asegurarse que cada fila tenga exactamente "columnas"
+   elementos.
+
+3. Validar localmente antes de mandar:
+       - Suma de celdas "seat" = capacidad total esperada del bus
+       - Los numeros de asiento son consecutivos sin saltos
+       - Las puertas estan en la fila correcta (generalmente
+         primera o ultima)
+       - El chofer esta en la primera fila izquierda
+
+4. Si se actualiza el layout de un autobus que YA TIENE
+   reservas confirmadas, esas reservas mantienen su numero de
+   asiento original. Si se eliminan asientos que tenian
+   reservas, las reservas quedan "huerfanas" (cuidado).
+
+5. Coordinar con el equipo VA-Bus antes de bulk-importar mas
+   de 50 autobuses para evitar timeouts.
+
+
+CIUDADES SOPORTADAS PARA EL MAPA
+--------------------------------
+El frontend movil dibuja un mapa de la ruta. Para que el mapa
+muestre la ruta correctamente, los nombres de "origen" y
+"destino" en las RUTAS deben coincidir (no importan tildes ni
+mayusculas) con las siguientes ciudades de Venezuela:
+
+    Caracas, La Guaira, Los Teques, Guarenas, Guatire,
+    Valencia, Maracay, La Victoria, Turmero, Puerto Cabello,
+    Maracaibo, Merida, San Cristobal, Barinas, Trujillo,
+    Valera, El Vigia,
+    Barquisimeto, Acarigua, Araure, Guanare,
+    San Fernando de Apure, Calabozo,
+    Coro, Punto Fijo,
+    Barcelona, Puerto La Cruz, Lecheria, Cumana, Maturin,
+    Carupano,
+    Puerto Ordaz, Ciudad Guayana, Ciudad Bolivar, El Tigre,
+    Puerto Ayacucho, Tucupita
+
+Si se manda una ciudad que no esta en la lista, la ruta igual
+se crea, pero el mapa mostrara una ubicacion aproximada al
+centro de Venezuela.
+
+Si se necesita agregar una ciudad nueva, avisar al equipo
+VA-Bus para sumarla al catalogo de coordenadas.
+
+
+SOPORTE Y DUDAS
+---------------
+Contactar al equipo VA-Bus si:
+    - El sistema externo no puede generar JSON (se puede
+      negociar un formato CSV alternativo).
+    - Se necesita una ciudad fuera del catalogo de mapa.
+    - El bus tiene un layout no contemplado (mas de 2 pisos,
+      asientos en circulo, etc.).
+    - La carga es muy grande y se necesita procesamiento por
+      lotes.

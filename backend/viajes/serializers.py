@@ -1,5 +1,15 @@
 from rest_framework import serializers
-from .models import Ruta, Autobus, PisoAutobus, Viaje, ConfiguracionGeneral
+from .models import Ruta, Autobus, PisoAutobus, Viaje, ConfiguracionGeneral, Oficina
+
+
+class OficinaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Oficina
+        fields = (
+            'id', 'codofi', 'desofi', 'siglas',
+            'estado', 'ciudad', 'latitud', 'longitud',
+            'activa', 'fecha_sincronizacion',
+        )
 
 
 class RutaSerializer(serializers.ModelSerializer):

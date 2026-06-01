@@ -1,0 +1,81 @@
+name: va_bus_mobile
+description: "Aerorutas de Venezuela — App móvil"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  provider: ^6.1.2
+
+  # HTTP + auth
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+
+  # UI
+  google_fonts: ^6.2.1
+  qr_flutter: ^4.1.0
+  cached_network_image: ^3.4.1
+  flutter_svg: ^2.0.10+1
+  intl: ^0.20.1
+
+  # Form / pickers
+  image_picker: ^1.1.2
+  file_picker: ^8.1.4
+  url_launcher: ^6.3.1
+  share_plus: ^10.1.2
+
+  # Routing
+  go_router: ^14.6.2
+
+  # UI polish (referencias de docs en .interface-design/system.md)
+  pinput: ^5.0.1                  # Input de 6 dígitos para verificar email
+  flutter_animate: ^4.5.2          # Animaciones declarativas + shimmer skeletons
+
+  # Mapas
+  flutter_map: ^7.0.2              # Mapa con OpenStreetMap (sin API key)
+  latlong2: ^0.9.1                 # LatLng coordinates
+
+  # WebSockets (tiempo real para disponibilidad de asientos)
+  web_socket_channel: ^3.0.1
+
+  # Auth con Google (Android/iOS/Web)
+  google_sign_in: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.1
+
+# Configuración del ícono de la app — genera todos los tamaños desde un PNG.
+# Para regenerar: `dart run flutter_launcher_icons`
+flutter_launcher_icons:
+  image_path: "assets/logo/logo-redondo.png"
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/logo/logo-redondo.png"
+    background_color: "#0E2240"
+    theme_color: "#1A3A6B"
+  windows:
+    generate: true
+    image_path: "assets/logo/logo-redondo.png"
+    icon_size: 256
+  adaptive_icon_background: "#0E2240"
+  adaptive_icon_foreground: "assets/logo/logo-redondo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo/

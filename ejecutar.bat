@@ -17,9 +17,11 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5002 ^| findstr LISTENING 2^
 )
 timeout /t 2 /nobreak >nul
 
-:: Iniciar Backend (Django en puerto 5002)
-echo [1/3] Iniciando Backend (Django en puerto 5002)...
-start "VA-Bus Backend" cmd /k "cd /d %~dp0backend && python manage.py runserver 5002"
+:: Iniciar Backend (Django + Channels via Daphne en puerto 5002)
+:: Daphne es un servidor ASGI que soporta HTTP + WebSockets en el mismo puerto.
+:: Las URLs REST siguen funcionando exactamente igual, y se agregan rutas WS en /ws/...
+echo [1/3] Iniciando Backend (Daphne ASGI en puerto 5002)...
+start "VA-Bus Backend" cmd /k "cd /d %~dp0backend && daphne -b 0.0.0.0 -p 5002 config.asgi:application"
 
 :: Esperar a que Django arranque
 timeout /t 3 /nobreak >nul

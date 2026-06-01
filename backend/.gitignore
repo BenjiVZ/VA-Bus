@@ -1,6 +1,37 @@
-.env
-*.pyc
+# ─── Backend Django — local-only ───
+# La mayoría de patrones también están en el .gitignore raíz;
+# este archivo refuerza los que son específicos del backend
+# y permite trabajarlo como subproyecto autónomo.
+
+# Bytecode Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Base de datos SQLite local (incluyendo journals WAL)
 db.sqlite3
+db.sqlite3-shm
+db.sqlite3-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Archivos subidos por usuarios (privacidad)
 media/
+
+# Static collectados (se generan con collectstatic)
 staticfiles/
+
+# Logs
+*.log

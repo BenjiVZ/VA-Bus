@@ -5,10 +5,10 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Count, Subquery, OuterRef, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from .models import Ruta, Viaje, Autobus, ConfiguracionGeneral
+from .models import Ruta, Viaje, Autobus, ConfiguracionGeneral, Oficina
 from .serializers import (
     RutaSerializer, ViajeListSerializer, ViajeDetailSerializer,
-    ConfiguracionSerializer
+    ConfiguracionSerializer, OficinaSerializer,
 )
 from .services import actualizar_tasa_bcv
 
@@ -23,6 +23,14 @@ class RutaListView(generics.ListAPIView):
     queryset = Ruta.objects.all()
     serializer_class = RutaSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class OficinaListView(generics.ListAPIView):
+    """Lista pública de oficinas/sucursales activas."""
+    queryset = Oficina.objects.filter(activa=True).order_by('desofi')
+    serializer_class = OficinaSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
 class ViajeListView(generics.ListAPIView):

@@ -185,6 +185,17 @@ class AdminValidarComprobanteView(APIView):
         elif nuevo_estado == 'rechazado':
             reservas.update(estado='cancelado')
 
+        # ── Broadcast WS: si se rechazó, los asientos vuelven a estar libres ──
+        if nuevo_estado == 'rechazado':
+            from viajes.ws_broadcast import broadcast_seat_change
+            for r in reservas:
+                broadcast_seat_change(
+                    viaje_id=r.viaje_id,
+                    numero=r.numero_asiento,
+                    piso=r.piso_asiento,
+                    estado='released',
+                )
+
         # ── Send email notification ──
         self._enviar_email_notificacion(comprobante, reservas, nuevo_estado)
 

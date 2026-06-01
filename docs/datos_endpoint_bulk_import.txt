@@ -1,0 +1,203 @@
+================================================================
+DATOS NECESARIOS PARA EL ENDPOINT DE CARGA MASIVA
+================================================================
+
+
+OFICINAS (sucursales / terminales)
+==================================
+codofi              - Codigo numerico unico de la oficina (texto o numero). Ejemplo: 04
+desofi              - Nombre de la oficina (texto). Ejemplo: CARACAS LA BANDERA
+siglas              - Siglas cortas de 2-4 letras (texto). Ejemplo: CCS
+estado              - Estado de Venezuela al que pertenece (texto). Ejemplo: Distrito Capital
+ciudad_mapa         - Nombre normalizado de la ciudad para el mapa (texto, opcional).
+                      Si la oficina coincide con el catalogo de ciudades, no es necesario.
+                      Ejemplo: Caracas
+
+Notas:
+- "codofi" es el identificador unico. Si se reenvia con la misma codofi, se actualiza.
+- La empresa actual tiene 24 oficinas operativas + OFICINA PRINCIPAL.
+
+
+RUTAS
+=====
+origen              - Codofi o desofi de la oficina de salida (texto).
+                      Ejemplo codofi: "04"
+                      Ejemplo desofi: "CARACAS LA BANDERA"
+destino             - Codofi o desofi de la oficina de llegada (texto).
+                      Ejemplo: "MERIDA"
+duracion_estimada   - Tiempo del viaje (texto, opcional). Ejemplo: 12h
+
+Notas:
+- Si se manda codofi, debe existir previamente en la lista de oficinas.
+- Si se manda desofi (nombre), debe coincidir exactamente con el de la oficina.
+
+
+AUTOBUSES
+=========
+placa               - Codigo unico del bus (texto). Ejemplo: ADV-001
+nombre              - Nombre descriptivo (texto). Ejemplo: Volvo Azul #01
+marca               - Fabricante (texto, opcional). Ejemplo: Volvo
+color               - Colores del bus (texto, opcional). Ejemplo: Azul y blanco
+anio                - Año del bus (numero, opcional). Ejemplo: 2007
+propietario         - Dueño del bus (texto, opcional). Ejemplo: Aerorutas C.A.
+disponible          - Si esta operativo (si/no, opcional). Default: si
+oficina_base        - Codofi de la oficina donde se basa el bus (opcional).
+                      Ejemplo: "04"
+pisos               - Cuantos pisos tiene (1 o 2)
+
+
+LAYOUT DE ASIENTOS (por cada piso del bus)
+==========================================
+numero_piso         - 1 o 2
+filas               - Cantidad de filas del bus (numero). Ejemplo: 12
+columnas            - Cantidad de columnas (numero). Ejemplo: 5
+distribucion        - Como estan organizados los asientos, fila por fila
+
+Para describir la distribucion, se usa una letra por celda:
+
+    A   asiento (lleva numero del 1 en adelante)
+    |   pasillo
+    D   puerta
+    S   escalera al segundo piso
+    C   chofer
+    .   espacio vacio
+
+Cada fila se escribe con las letras separadas por espacios.
+La cantidad de simbolos en cada fila debe coincidir con "columnas".
+
+
+EJEMPLO DE UN BUS COMPLETO
+==========================
+
+placa:       ADV-001
+nombre:      Volvo Azul #01
+marca:       Volvo
+color:       Azul y blanco
+anio:        2007
+pisos:       2
+
+PISO 1 (filas: 12, columnas: 5)
+
+    Fila  1:   C . . . D       (chofer + puerta)
+    Fila  2:   A A | A A       (asientos 1, 2, 3, 4)
+    Fila  3:   A A | A A       (asientos 5, 6, 7, 8)
+    Fila  4:   A A | A A       (asientos 9, 10, 11, 12)
+    Fila  5:   A A | A A       (asientos 13, 14, 15, 16)
+    Fila  6:   . . S . .       (escalera al piso 2)
+    Fila  7:   A A | A A       (asientos 17, 18, 19, 20)
+    Fila  8:   A A | A A       (asientos 21, 22, 23, 24)
+    Fila  9:   A A | A A       (asientos 25, 26, 27, 28)
+    Fila 10:   A A | A A       (asientos 29, 30, 31, 32)
+    Fila 11:   . . . . D       (puerta trasera)
+    Fila 12:   . . . . .
+
+PISO 2 (filas: 12, columnas: 5)
+
+    Fila  1:   . . . . .
+    Fila  2:   A A | A A       (asientos 33, 34, 35, 36)
+    Fila  3:   A A | A A       (asientos 37, 38, 39, 40)
+    Fila  4:   A A | A A       (asientos 41, 42, 43, 44)
+    Fila  5:   A A | A A       (asientos 45, 46, 47, 48)
+    Fila  6:   . . S . .       (escalera, no asiento aqui)
+    Fila  7:   A A | A A       (asientos 49, 50, 51, 52)
+    Fila  8:   A A | A A       (asientos 53, 54, 55, 56)
+    Fila  9:   A A | A A       (asientos 57, 58, 59, 60)
+    Fila 10:   . . . . .
+    Fila 11:   . . . . .
+    Fila 12:   . . . . .
+
+Capacidad total del bus: 60 asientos
+
+
+REGLAS IMPORTANTES
+==================
+
+1. La placa es unica. Si la mandas dos veces se actualiza la
+   informacion del bus en la segunda llamada.
+
+2. La combinacion origen-destino tambien es unica.
+
+3. Los numeros de los asientos se cuentan de izquierda a
+   derecha, de arriba hacia abajo. El primer asiento es el 1.
+   El bus completo numera del 1 al N (no se reinicia en el
+   piso 2).
+
+4. Cada fila del layout debe tener exactamente la cantidad de
+   simbolos que indica "columnas".
+
+5. Cada autobus tiene minimo 1 piso y maximo 2 pisos.
+
+6. Si el bus tiene 2 pisos, debe haber una celda "S" (escalera)
+   en el piso 1.
+
+7. Los nombres de ciudades (origen / destino) idealmente deben
+   ser ciudades de Venezuela reconocidas para que el mapa de la
+   app las pueda ubicar. Si no, se muestra ubicacion aproximada.
+
+
+OFICINAS / SUCURSALES (catalogo oficial Aerorutas)
+==================================================
+Estas son las oficinas conocidas, tomadas del sistema actual de
+la empresa (endpoint OFICINAS). Cada una tiene su codofi, siglas
+y estado venezolano.
+
+codofi  desofi                  siglas  estado
+01      VALERA                  VLR     Trujillo
+02      SAN CRISTOBAL           SNP     Tachira
+03      MARACAIBO               MBO     Zulia
+04      CARACAS LA BANDERA      CCS     Distrito Capital
+05      TRUJILLO                TRJ     Trujillo
+06      MARACAY                 MCY     Aragua
+07      LOS TEQUES              LTQ     Miranda
+08      MERIDA                  MRD     Merida
+09      EL VIGIA                EVG     Merida
+10      CAÑO SANCUDO            CÑZ     Zulia
+11      SOCOPO                  SCP     Barinas
+12      SANTA BARBARA           STB     Zulia
+13      VALENCIA                VLC     Carabobo
+14      ARAPUEY                 APY     Merida
+15      TUCANI                  TCN     Merida
+16      EL PINAL                PIN     Tachira
+17      BARINAS                 BAR     Barinas
+18      MONAY                   MNY     Trujillo
+19      PUERTO LA CRUZ          PLC     Anzoategui
+20      PUERTO PIRITU           PTP     Anzoategui
+21      CAJA SECA               CSC     Zulia
+22      SAN ANTONIO             SNA     Tachira
+33      EL CRUZE                ECZ     (por confirmar)
+34      BARQUISIMETO            BQTO    Lara
+100     OFICINA PRINCIPAL       PRI     (sede administrativa)
+
+
+CIUDADES ADICIONALES RECONOCIDAS POR EL MAPA
+============================================
+Ademas de las oficinas listadas arriba, el mapa de la app movil
+puede ubicar estas ciudades por si se usan en rutas ocasionales:
+
+Centro:       La Guaira, Guarenas, Guatire, La Victoria,
+              Turmero, Puerto Cabello
+Occidente:    Coro, Punto Fijo
+Llanos:       Acarigua, Araure, Guanare, San Fernando de Apure,
+              Calabozo
+Oriente:      Barcelona, Lecheria, Cumana, Maturin, Carupano
+Sur:          Puerto Ordaz, Ciudad Guayana, Ciudad Bolivar,
+              El Tigre, Puerto Ayacucho, Tucupita
+
+
+HEADERS DEL ENDPOINT
+====================
+
+URL:             POST /api/bulk-import/
+Autorizacion:    X-API-KEY: <clave que te entregamos>
+Tipo:            application/json
+Tamaño maximo:   5 MB por peticion
+
+
+RESPUESTAS POSIBLES
+===================
+
+201   OK. Procesado. Devuelve cuantas rutas y buses se crearon
+      o actualizaron, y si hubo errores especificos.
+400   El body tiene errores de formato o validacion.
+401   Falta o esta mala la clave X-API-KEY.
+413   El body pesa mas de 5 MB.

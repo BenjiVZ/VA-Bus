@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 from django.utils import timezone
-from .models import Ruta, Autobus, PisoAutobus, Viaje, ConfiguracionGeneral
+from .models import Ruta, Autobus, PisoAutobus, Viaje, ConfiguracionGeneral, Oficina
 from .services import actualizar_tasa_bcv
 
 
@@ -27,6 +27,27 @@ class PisoAutobusInline(admin.StackedInline):
     class Media:
         css = {'all': ('admin/css/seat_editor.css',)}
         js = ('admin/js/seat_editor.js',)
+
+
+@admin.register(Oficina)
+class OficinaAdmin(admin.ModelAdmin):
+    list_display = ('codofi', 'desofi', 'siglas', 'estado', 'ciudad', 'activa', 'fecha_sincronizacion')
+    list_filter = ('activa', 'estado')
+    search_fields = ('codofi', 'desofi', 'siglas')
+    list_editable = ('activa',)
+    fieldsets = (
+        ('Identificación', {
+            'fields': ('codofi', 'desofi', 'siglas')
+        }),
+        ('Ubicación', {
+            'fields': ('estado', 'ciudad', 'latitud', 'longitud'),
+            'description': 'Si latitud/longitud están vacíos, se intentan inferir de la ciudad al guardar.'
+        }),
+        ('Estado', {
+            'fields': ('activa', 'fecha_sincronizacion')
+        }),
+    )
+    readonly_fields = ('fecha_sincronizacion',)
 
 
 @admin.register(Ruta)

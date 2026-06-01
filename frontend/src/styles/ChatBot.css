@@ -387,6 +387,43 @@
   cursor: not-allowed;
 }
 
+/* ── Botón "¿No encontraste tu pregunta?" (input bar) ── */
+.chat-custom-question-btn {
+  flex: 1;
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  color: #475569;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chat-custom-question-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #1e3a5f;
+}
+
+/* ── Dot verde de WhatsApp para botones del menú ── */
+.chat-wa-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #25D366;
+  box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.2);
+  flex-shrink: 0;
+}
+
+/* ── Strong dentro de mensajes ── */
+.chat-msg-bubble strong {
+  color: #1e3a5f;
+  font-weight: 700;
+}
+
 /* ── Responsive ── */
 @media (max-width: 480px) {
   .chat-window {
