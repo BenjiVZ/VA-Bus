@@ -28,6 +28,7 @@ import './styles/PerfilPage.css';
 import ChatBot from './components/ChatBot';
 import ScrollToTop from './components/ScrollToTop';
 import TickerBar from './components/TickerBar';
+import BackendStatusBanner from './components/BackendStatusBanner';
 
 const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
@@ -35,6 +36,7 @@ function App() {
   const appContent = (
     <AuthProvider>
       <BrowserRouter>
+        <BackendStatusBanner />
         <ScrollToTop />
         <div className="sticky-header">
           <Navbar />

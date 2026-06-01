@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: 5001,
     strictPort: true,
-    allowedHosts: ['ardvf.aplicacionesdamasco.com'],
+    // Un host que empieza con '.' permite el dominio y todos sus subdominios.
+    allowedHosts: ['ardvf.aplicacionesdamasco.com', '.masterslogic.com'],
   },
 })

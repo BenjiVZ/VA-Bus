@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { API_URL } from '../services/api';
 
 /**
  * Hook que escucha eventos en tiempo real de cambios de asientos para un viaje.
@@ -30,9 +31,10 @@ export function useAsientosWebSocket({ viajeId, enabled = true, onSeatChanged })
   useEffect(() => {
     if (!enabled || !viajeId) return undefined;
 
-    const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8001/api');
-    // Reemplazar http(s):// por ws(s)://, quitar /api del final.
-    const wsBase = apiUrl
+    // Reusa la URL del backend ya resuelta en services/api.js (puerto 5002 /
+    // dominio masterslogic según corresponda). Reemplaza http(s):// por ws(s)://
+    // y quita /api del final.
+    const wsBase = API_URL
       .replace(/\/api\/?$/, '')
       .replace(/^http(s?):\/\//, (_m, s) => `ws${s}://`);
     const wsUrl = `${wsBase}/ws/viajes/${viajeId}/asientos/`;

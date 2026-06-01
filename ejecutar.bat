@@ -21,14 +21,14 @@ timeout /t 2 /nobreak >nul
 :: Daphne es un servidor ASGI que soporta HTTP + WebSockets en el mismo puerto.
 :: Las URLs REST siguen funcionando exactamente igual, y se agregan rutas WS en /ws/...
 echo [1/3] Iniciando Backend (Daphne ASGI en puerto 5002)...
-start "VA-Bus Backend" cmd /k "cd /d %~dp0backend && daphne -b 0.0.0.0 -p 5002 config.asgi:application"
+start "VA-Bus Backend" cmd /k "cd /d %~dp0backend && venv\Scripts\daphne.exe -b 0.0.0.0 -p 5002 config.asgi:application"
 
 :: Esperar a que Django arranque
 timeout /t 3 /nobreak >nul
 
 :: Iniciar Frontend (React/Vite en puerto 5001)
 echo [2/3] Iniciando Frontend (Vite en puerto 5001)...
-start "VA-Bus Frontend" cmd /k "cd /d %~dp0frontend && npm run dev -- --host"
+start "VA-Bus Frontend" cmd /k "cd /d %~dp0frontend && pnpm run dev -- --host"
 
 :: Esperar a que Vite arranque
 timeout /t 4 /nobreak >nul

@@ -1,6 +1,26 @@
 import axios from 'axios';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8001/api').replace(/\/+$/, '');
+// Resuelve la URL del backend según dónde se sirva el frontend.
+// Prioridad:
+//   1. VITE_API_URL (override explícito en .env)
+//   2. Dominio masterslogic: 5001.masterslogic.com  ->  https://5002.masterslogic.com/api
+//   3. Local / IP de red:    localhost:5001          ->  http://<host>:5002/api
+// El backend (Django/daphne) corre en el puerto 5002 (ver ejecutar.bat).
+function resolveBackendUrl() {
+  const fromEnv = import.meta.env.VITE_API_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname } = window.location;
+    if (hostname.endsWith('.masterslogic.com')) {
+      return `${protocol}//5002.masterslogic.com/api`;
+    }
+    return `http://${hostname}:5002/api`;
+  }
+  return 'http://localhost:5002/api';
+}
+
+export const API_URL = resolveBackendUrl();
 const API_ORIGIN = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL;
 
 export const resolveApiFileUrl = (path = '') => {
@@ -26,11 +46,31 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Avisar al resto de la app si el backend está accesible o no.
+const emitBackendStatus = (online) => {
+  window.dispatchEvent(new CustomEvent('backend-status', { detail: { online } }));
+};
+
 // Handle token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Hubo respuesta del servidor => está en línea.
+    emitBackendStatus(true);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+
+    // Sin `error.response` = no se pudo contactar al backend
+    // (servidor caído, sin red, CORS, DNS...). No aplica a peticiones canceladas.
+    const peticionCancelada = error.code === 'ERR_CANCELED' || error.name === 'CanceledError';
+    if (!error.response && !peticionCancelada) {
+      emitBackendStatus(false);
+    } else if (error.response) {
+      // El servidor respondió (aunque sea un 4xx/5xx): sigue en línea.
+      emitBackendStatus(true);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem('refresh_token');
