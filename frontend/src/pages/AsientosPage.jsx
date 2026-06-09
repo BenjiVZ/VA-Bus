@@ -12,6 +12,9 @@ export default function AsientosPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Viaje de Aerorutas: id compuesto (ej "001_02_11_2026-06-03"). No soporta
+  // bloqueo/WS en el servidor: la selección es solo local.
+  const esAerorutas = String(id).includes('_');
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -147,7 +150,7 @@ export default function AsientosPage() {
     // mantiene 2min, así que 30s sigue siendo cómodo y mucho más liviano.
     const interval = setInterval(() => {
       cargarAsientos();
-      if (user && selectedSeatsRef.current.length > 0) {
+      if (!esAerorutas && user && selectedSeatsRef.current.length > 0) {
         selectedSeatsRef.current.forEach((s) => {
           bloquearAsiento(Number(id), s.numero, s.piso).catch((err) => {
             if (err.response?.data?.sesion_expirada) {
@@ -172,7 +175,7 @@ export default function AsientosPage() {
   // lo ignoramos porque el estado local ya está al día.
   useAsientosWebSocket({
     viajeId: Number(id),
-    enabled: !!id,
+    enabled: !!id && !esAerorutas,
     onSeatChanged: useCallback((evt) => {
       if (evt.usuario_id && user && evt.usuario_id === user.id) return;
       // Refrescar el mapa — la fuente de verdad sigue siendo el GET.
@@ -190,7 +193,7 @@ export default function AsientosPage() {
       const remaining = total - elapsed;
 
       if (remaining <= 0) {
-        selectedSeatsRef.current.forEach(s => {
+        if (!esAerorutas) selectedSeatsRef.current.forEach(s => {
           liberarAsiento(Number(id), s.numero, s.piso).catch(() => null);
         });
         setSelectedSeats([]);
@@ -212,16 +215,28 @@ export default function AsientosPage() {
   }, [selectionStart, id, cargarAsientos]);
 
   useEffect(() => () => {
-    if (!user) return;
+    if (!user || esAerorutas) return;
     const seats = selectedSeatsRef.current;
     seats.forEach((s) => {
       liberarAsiento(Number(id), s.numero, s.piso).catch(() => null);
     });
-  }, [id, user]);
+  }, [id, user, esAerorutas]);
 
   const getSeatKey = (seat) => `${seat.piso}-${seat.numero}`;
 
+  // Viaje expirado: ya pasó su fecha + hora de salida.
+  const expirado = (() => {
+    const v = data?.viaje;
+    if (!v?.fecha_salida) return false;
+    const salida = new Date(`${v.fecha_salida}T${v.hora_salida || '00:00:00'}`);
+    return salida.getTime() < Date.now();
+  })();
+
   const handleToggleSeat = async (seat) => {
+    if (expirado) {
+      setError('⏰ Este viaje ya salió. No se pueden seleccionar puestos.');
+      return;
+    }
     if (!user) {
       navigate('/login');
       return;
@@ -237,16 +252,19 @@ export default function AsientosPage() {
         delete copy[key];
         return copy;
       });
-      liberarAsiento(Number(id), seat.numero, seat.piso).catch(() => null);
+      if (!esAerorutas) liberarAsiento(Number(id), seat.numero, seat.piso).catch(() => null);
       return;
     }
 
-    try {
-      await bloquearAsiento(Number(id), seat.numero, seat.piso);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Este asiento ya fue tomado por otro usuario.');
-      cargarAsientos();
-      return;
+    // Aerorutas: selección solo local (sin bloqueo en servidor).
+    if (!esAerorutas) {
+      try {
+        await bloquearAsiento(Number(id), seat.numero, seat.piso);
+      } catch (err) {
+        setError(err.response?.data?.error || 'Este asiento ya fue tomado por otro usuario.');
+        cargarAsientos();
+        return;
+      }
     }
 
     setError('');
@@ -333,6 +351,13 @@ export default function AsientosPage() {
 
   // Step 1: Validate and show warnings overlay or Atencion modal
   const handleReservarClick = () => {
+    // Viajes de Aerorutas (id compuesto, ej "001_02_04_2026-06-03"): la reserva/pago
+    // está en integración. Evita romper el flujo hasta definir reserva/pago.
+    if (String(id).includes('_')) {
+      setError('🚧 La reserva de viajes de Aerorutas estará disponible muy pronto. Por ahora solo puedes ver la disponibilidad.');
+      return;
+    }
+
     if (!user) {
       navigate('/login');
       return;
@@ -505,6 +530,12 @@ export default function AsientosPage() {
             {viaje.ruta.origen} → {viaje.ruta.destino} · {new Date(viaje.fecha_salida + 'T00:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })} · {viaje.hora_salida?.slice(0, 5)}
           </p>
         </div>
+
+        {expirado && (
+          <div className="alert alert-error" style={{ fontWeight: 700 }}>
+            ⏰ Este viaje ya salió ({viaje.hora_salida?.slice(0, 5)}). Expiró — no se pueden seleccionar puestos.
+          </div>
+        )}
 
         {error && <div className="alert alert-error">{error}</div>}
 

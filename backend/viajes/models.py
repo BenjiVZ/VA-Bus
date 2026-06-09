@@ -182,6 +182,30 @@ class Viaje(models.Model):
         return f"{self.ruta.origen} {tipo} {self.ruta.destino} - {self.fecha_salida} {self.hora_salida}"
 
 
+class RutaAerorutasSnapshot(models.Model):
+    """
+    Catálogo de viajes de Aerorutas precargado por fecha.
+    Lo llena el comando `precargar_rutas` (barre todos los pares de oficinas) y
+    lo sirve el endpoint /aerorutas/viajes/ al instante (sin barrer en vivo).
+    """
+    fecha = models.DateField(unique=True, db_index=True, verbose_name="Fecha")
+    data = models.JSONField(
+        default=list, blank=True,
+        verbose_name="Viajes (JSON)",
+        help_text="Lista de viajes ya transformados al formato de la app."
+    )
+    actualizado = models.DateTimeField(auto_now=True, verbose_name="Última precarga")
+
+    class Meta:
+        verbose_name = "Catálogo Aerorutas (por fecha)"
+        verbose_name_plural = "Catálogo Aerorutas (por fecha)"
+        ordering = ['fecha']
+
+    def __str__(self):
+        n = len(self.data) if isinstance(self.data, list) else 0
+        return f"{self.fecha} — {n} viajes"
+
+
 class ConfiguracionGeneral(models.Model):
     """Modelo singleton para configuración general del sistema."""
     whatsapp_vendedor = models.CharField(

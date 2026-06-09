@@ -7,6 +7,7 @@ import '../screens/auth/recuperar_password_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/verificar_email_screen.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/pago/cobro_inmediato_screen.dart';
 import '../screens/pago/confirmacion_screen.dart';
 import '../screens/pago/pago_screen.dart';
 import '../screens/perfil/perfil_screen.dart';
@@ -57,6 +58,14 @@ GoRouter buildRouter(BuildContext context) {
         ),
       ),
       GoRoute(
+        path: '/pago/cobro-inmediato',
+        parentNavigatorKey: _rootKey,
+        builder: (_, s) => CobroInmediatoScreen(
+          grupoPago: s.uri.queryParameters['grupo']!,
+          viajeId: int.parse(s.uri.queryParameters['viaje'] ?? '0'),
+        ),
+      ),
+      GoRoute(
         path: '/reserva/confirmacion',
         parentNavigatorKey: _rootKey,
         builder: (_, s) => ConfirmacionScreen(grupoPago: s.uri.queryParameters['grupo']!),
@@ -85,7 +94,7 @@ GoRouter buildRouter(BuildContext context) {
                 path: ':id/asientos',
                 parentNavigatorKey: _rootKey,
                 builder: (_, s) => AsientosScreen(
-                  viajeId: int.parse(s.pathParameters['id']!),
+                  viajeId: s.pathParameters['id']!,
                 ),
               ),
             ],

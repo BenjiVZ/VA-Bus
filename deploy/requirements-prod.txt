@@ -1,0 +1,27 @@
+# Dependencias REALES del backend VA-Bus para producción.
+# (El requirements.txt grande trae basura del venv que el proyecto NO importa:
+#  chromadb, onnxruntime, google-cloud-*, pandas, fastapi, flask, etc.)
+# pip resuelve solo las dependencias transitivas (twisted, autobahn, rsa, etc.).
+
+# Núcleo Django + API
+Django==5.2.11
+asgiref==3.11.0
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+PyJWT==2.11.0
+django-cors-headers==4.9.0
+
+# WebSockets (Channels + servidor ASGI)
+channels==4.2.0
+daphne==4.1.2
+
+# Base de datos PostgreSQL
+psycopg2-binary==2.9.10
+
+# Utilidades usadas por el código
+python-dotenv==1.0.0
+requests==2.32.5
+Pillow==12.1.0          # ImageField (comprobantes, documentos)
+qrcode==8.2             # QR de tickets
+reportlab==4.4.10       # PDF de tickets
+google-auth>=2.35,<3    # verificación del login con Google

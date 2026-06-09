@@ -146,9 +146,9 @@ class _SeatMapState extends State<SeatMap> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: cols,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: 0.95,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.88,
             ),
             itemCount: config.layout.fold<int>(0, (sum, row) => sum + row.length),
             itemBuilder: (_, idx) {
@@ -228,39 +228,27 @@ class _SeatIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = _palette(state);
-    return Material(
-      color: palette.fill,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: palette.border, width: 1.5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 26,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: palette.headrest,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$number',
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: CustomPaint(
+        painter: _SeatPainter(palette),
+        child: Align(
+          // Número centrado sobre el respaldo (igual que el SVG web, y≈28/52).
+          alignment: const Alignment(0, 0.08),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Text(
+                number > 0 ? '$number' : '',
                 style: TextStyle(
                   color: palette.text,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -305,6 +293,63 @@ class _SeatPalette {
     required this.text,
     required this.headrest,
   });
+}
+
+/// Dibuja un asiento con forma de butaca replicando el SVG del frontend web
+/// (SeatMap.jsx): reposacabezas, respaldo, cojín y reposabrazos.
+/// Usa el mismo sistema de coordenadas del SVG (viewBox 48x52) escalado.
+class _SeatPainter extends CustomPainter {
+  final _SeatPalette p;
+  _SeatPainter(this.p);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 48.0;
+    final sy = size.height / 52.0;
+
+    RRect rr(double x, double y, double w, double h, double radius) =>
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x * sx, y * sy, w * sx, h * sy),
+          Radius.circular(radius * sx),
+        );
+
+    final fill = Paint()
+      ..style = PaintingStyle.fill
+      ..color = p.fill;
+    final headrest = Paint()
+      ..style = PaintingStyle.fill
+      ..color = p.headrest;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..color = p.border
+      ..strokeWidth = 1.5 * sx;
+
+    // Orden de pintado igual al SVG: reposacabezas, respaldo, cojín, reposabrazos.
+    final head = rr(8, 0, 32, 10, 5); // reposacabezas
+    canvas.drawRRect(head, headrest);
+    canvas.drawRRect(head, stroke);
+
+    final back = rr(4, 8, 40, 30, 4); // respaldo
+    canvas.drawRRect(back, fill);
+    canvas.drawRRect(back, stroke);
+
+    final cushion = rr(2, 36, 44, 14, 4); // cojín
+    canvas.drawRRect(cushion, fill);
+    canvas.drawRRect(cushion, stroke);
+
+    final armL = rr(0, 28, 5, 16, 2.5); // reposabrazos izquierdo
+    final armR = rr(43, 28, 5, 16, 2.5); // reposabrazos derecho
+    for (final arm in [armL, armR]) {
+      canvas.drawRRect(arm, headrest);
+      canvas.drawRRect(arm, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SeatPainter old) =>
+      old.p.fill != p.fill ||
+      old.p.border != p.border ||
+      old.p.headrest != p.headrest;
 }
 
 class _LayoutIcon extends StatelessWidget {

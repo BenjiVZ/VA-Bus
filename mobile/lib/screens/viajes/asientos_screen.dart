@@ -44,7 +44,7 @@ class _SeatFiles {
 /// Pantalla de selección de asientos + datos del comprador + opciones/documentos por asiento.
 /// Bloquea cada asiento al seleccionarlo (2 min server-side) y libera al deseleccionar.
 class AsientosScreen extends StatefulWidget {
-  final int viajeId;
+  final String viajeId;
   const AsientosScreen({super.key, required this.viajeId});
 
   @override
@@ -99,7 +99,12 @@ class _AsientosScreenState extends State<AsientosScreen> {
     if (mounted) setState(() {});
   }
 
+  // Viaje de Aerorutas: id compuesto (ej "001_02_04_2026-06-03"). No soporta
+  // bloqueo en tiempo real ni reserva local (eso usa el flujo R4/Aerorutas).
+  bool get _esAerorutas => widget.viajeId.contains('_');
+
   void _conectarWs() {
+    if (_esAerorutas) return; // sin WS de bloqueo para viajes de Aerorutas
     final myId = context.read<AuthProvider>().usuario?.id;
     final ws = AsientosWs(viajeId: widget.viajeId);
     _ws = ws;
@@ -150,10 +155,45 @@ class _AsientosScreenState extends State<AsientosScreen> {
     }
   }
 
+  // Viaje expirado: ya pasó su fecha + hora de salida.
+  bool get _expirado {
+    final v = _viaje;
+    if (v == null) return false;
+    try {
+      final dt = DateTime.parse('${v.fechaSalida} ${v.horaSalida}');
+      return dt.isBefore(DateTime.now());
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _onToggle(SelectedSeat seat) async {
+    if (_expirado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Este viaje ya salió. No se pueden seleccionar puestos.'),
+        ),
+      );
+      return;
+    }
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
       _pedirLogin();
+      return;
+    }
+    // Aerorutas: solo selección local (sin bloqueo en servidor).
+    if (_esAerorutas) {
+      setState(() {
+        if (_selected.contains(seat)) {
+          _selected.remove(seat);
+          _seatOpts.remove(seat);
+          _seatFiles.remove(seat);
+        } else {
+          _selected.add(seat);
+          _seatOpts[seat] = _SeatOpts();
+          _seatFiles[seat] = _SeatFiles();
+        }
+      });
       return;
     }
     final svc = context.read<ReservasService>();
@@ -290,6 +330,12 @@ class _AsientosScreenState extends State<AsientosScreen> {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
       _pedirLogin();
+      return;
+    }
+
+    if (_esAerorutas) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('La reserva de viajes de Aerorutas estará disponible muy pronto.')));
       return;
     }
 
@@ -584,6 +630,35 @@ class _AsientosScreenState extends State<AsientosScreen> {
                             height: 220,
                           ),
                           const SizedBox(height: 20),
+                          if (_expirado) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.red50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.red500),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.timer_off_outlined,
+                                      size: 20, color: AppColors.red500),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Este viaje ya salió (${(viaje.horaSalida ?? '').length >= 5 ? viaje.horaSalida!.substring(0, 5) : viaje.horaSalida ?? ''}). Expiró — no se pueden seleccionar puestos.',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.red500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                           _sectionHeader('Selecciona tu asiento'),
                           const SizedBox(height: 12),
                           SeatMap(

@@ -131,17 +131,32 @@ export const resetPassword = (email, codigo, new_password, new_password2) =>
 export const getRutas = () =>
   api.get('/rutas/');
 
+export const getOficinas = () =>
+  api.get('/oficinas/');
+
+// ── Aerorutas (consulta en vivo del sistema de control) ──
+export const getAerorutasOficinas = () =>
+  api.get('/aerorutas/oficinas/');
+
+export const getAerorutasRutas = (inicio, fin, fecha) =>
+  api.get('/aerorutas/rutas/', { params: { inicio, fin, fecha } });
+
+export const getAerorutasPuestos = (codofi, codrut, fecha) =>
+  api.get('/aerorutas/puestos/', { params: { codofi, codrut, fecha } });
+
 export const getStats = () =>
   api.get('/stats/');
 
+// Búsqueda y asientos ahora salen del adaptador de Aerorutas (data en vivo,
+// transformada por el backend al mismo formato que /viajes/).
 export const buscarViajes = (params) =>
-  api.get('/viajes/', { params });
+  api.get('/aerorutas/viajes/', { params });
 
 export const getViaje = (id) =>
   api.get(`/viajes/${id}/`);
 
 export const getAsientos = (viajeId) =>
-  api.get(`/viajes/${viajeId}/asientos/`);
+  api.get(`/aerorutas/viajes/${viajeId}/asientos/`);
 
 // Reservas
 export const crearReserva = (data) =>
@@ -212,6 +227,25 @@ export const crearComprobante = (formData) =>
 
 export const getEstadoComprobante = (grupoPago) =>
   api.get(`/comprobantes/${grupoPago}/`);
+
+// ── R4 Conecta — Cobro Inmediato (Débito con OTP) ──
+// Lista centralizada de bancos (fuente única backend).
+export const getBancos = () =>
+  api.get('/r4/bancos/');
+
+// Paso 1: el banco envía un OTP al teléfono del cliente.
+export const r4GenerarOtp = (data) =>
+  api.post('/r4/debito/generar-otp/', data);
+
+// Paso 2: confirmar con el OTP (+ comprobante opcional vía FormData).
+export const r4ConfirmarDebito = (formData) =>
+  api.post('/r4/debito/confirmar/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+// Estado de la operación (para polling mientras queda "en espera").
+export const r4EstadoOperacion = (operacionId) =>
+  api.get(`/r4/debito/${operacionId}/`);
 
 export const adminGetComprobantes = (estado) =>
   api.get('/admin/comprobantes/', { params: estado ? { estado } : {} });

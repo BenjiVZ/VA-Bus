@@ -37,10 +37,14 @@ class _ViajesListScreenState extends State<ViajesListScreen> {
       _error = null;
     });
     try {
+      // Por defecto y mínimo: HOY (no se consultan días pasados).
+      final hoy = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      var fecha = widget.fecha;
+      if (fecha == null || fecha.compareTo(hoy) < 0) fecha = hoy;
       final viajes = await context.read<ViajesService>().buscarViajes(
             origen: widget.origen,
             destino: widget.destino,
-            fecha: widget.fecha,
+            fecha: fecha,
           );
       if (!mounted) return;
       setState(() {

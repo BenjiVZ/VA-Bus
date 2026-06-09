@@ -10,7 +10,7 @@ class ReservasService {
   ReservasService(this.client);
 
   Future<Map<String, dynamic>> bloquearAsiento({
-    required int viajeId,
+    required String viajeId,
     required int numeroAsiento,
     int pisoAsiento = 1,
   }) async {
@@ -26,7 +26,7 @@ class ReservasService {
   }
 
   Future<void> liberarAsiento({
-    required int viajeId,
+    required String viajeId,
     required int numeroAsiento,
     int pisoAsiento = 1,
   }) async {
@@ -39,7 +39,7 @@ class ReservasService {
 
   /// Crea una orden con varios asientos. Devuelve el grupo_pago + lista de reservas creadas.
   Future<Map<String, dynamic>> crearReserva({
-    required int viajeId,
+    required String viajeId,
     required List<Map<String, dynamic>> asientos,
     String nombrePasajero = '',
     String cedulaPasajero = '',

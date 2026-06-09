@@ -20,10 +20,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _origen = TextEditingController();
-  final _destino = TextEditingController();
   DateTime? _fecha;
-  List<Ruta> _rutas = [];
+  List<Map<String, dynamic>> _oficinas = [];
+  String? _origenCod;
+  String? _destinoCod;
+  List<Viaje> _viajesHoy = [];
   List<Viaje> _proximas = [];
   bool _loadingRutas = true;
   String? _errorMsg;
@@ -36,8 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _origen.dispose();
-    _destino.dispose();
     super.dispose();
   }
 
@@ -45,11 +44,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final svc = context.read<ViajesService>();
     setState(() => _errorMsg = null);
     try {
-      final results = await Future.wait([svc.getRutas(), svc.buscarViajes()]);
+      final hoy = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final results = await Future.wait([
+        svc.getOficinas(),
+        svc.buscarViajes(fecha: hoy),
+      ]);
       if (!mounted) return;
+      final viajesHoy = results[1] as List<Viaje>;
       setState(() {
-        _rutas = results[0] as List<Ruta>;
-        _proximas = (results[1] as List<Viaje>).take(4).toList();
+        _oficinas = results[0] as List<Map<String, dynamic>>;
+        _viajesHoy = viajesHoy;
+        _proximas = viajesHoy.take(4).toList();
         _loadingRutas = false;
       });
     } catch (e) {
@@ -69,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       initialDate: _fecha ?? DateTime.now(),
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 15)),
       builder: (c, child) => Theme(
         data: Theme.of(c).copyWith(
           colorScheme: const ColorScheme.light(
@@ -88,19 +93,26 @@ class _HomeScreenState extends State<HomeScreen> {
   void _setFechaRapida(DateTime f) => setState(() => _fecha = f);
 
   void _swapOriginDestino() {
-    final tmp = _origen.text;
-    _origen.text = _destino.text;
-    _destino.text = tmp;
+    setState(() {
+      final tmp = _origenCod;
+      _origenCod = _destinoCod;
+      _destinoCod = tmp;
+    });
     HapticFeedback.selectionClick();
   }
 
   void _buscar() {
-    final params = <String, String>{};
-    if (_origen.text.trim().isNotEmpty) params['origen'] = _origen.text.trim();
-    if (_destino.text.trim().isNotEmpty) params['destino'] = _destino.text.trim();
-    if (_fecha != null) params['fecha'] = DateFormat('yyyy-MM-dd').format(_fecha!);
-    final qs = Uri(queryParameters: params).query;
-    context.push('/viajes${qs.isNotEmpty ? '?$qs' : ''}');
+    if (_fecha == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Elige una fecha.')));
+      return;
+    }
+    final params = {'fecha': DateFormat('yyyy-MM-dd').format(_fecha!)};
+    if (_origenCod != null && _destinoCod != null) {
+      params['origen'] = _origenCod!;
+      params['destino'] = _destinoCod!;
+    }
+    context.push('/viajes?${Uri(queryParameters: params).query}');
   }
 
   @override
@@ -128,8 +140,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _SearchCard(
-                        origen: _origen,
-                        destino: _destino,
+                        oficinas: _oficinas,
+                        origenCod: _origenCod,
+                        destinoCod: _destinoCod,
+                        onOrigen: (v) => setState(() => _origenCod = v),
+                        onDestino: (v) => setState(() => _destinoCod = v),
                         fecha: _fecha,
                         onPickFecha: _pickFecha,
                         onSwap: _swapOriginDestino,
@@ -153,10 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Destinos populares',
+                      'Viajes de hoy',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
-                    if (_rutas.length > 4)
+                    if (_viajesHoy.length > 4)
                       TextButton(
                         onPressed: () => context.push('/viajes'),
                         child: const Text('Ver todos'),
@@ -174,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               )
-            else if (_rutas.isEmpty)
+            else if (_viajesHoy.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
@@ -209,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               _errorMsg != null
                                   ? 'No se pudo conectar al servidor'
-                                  : 'No hay rutas disponibles',
+                                  : 'No hay viajes para hoy',
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: _errorMsg != null
@@ -247,17 +262,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (ctx, i) => _DestinoCard(
-                      ruta: _rutas[i],
-                      onTap: () {
-                        _origen.text = _rutas[i].origen;
-                        _destino.text = _rutas[i].destino;
-                        _buscar();
-                      },
+                      ruta: _viajesHoy[i].ruta ??
+                          Ruta(id: 0, origen: '', destino: '', duracionEstimada: ''),
+                      onTap: () => context.push('/viajes/${_viajesHoy[i].id}/asientos'),
                     )
                         .animate()
                         .fadeIn(duration: 280.ms, delay: (i * 50).ms)
                         .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic),
-                    childCount: _rutas.length > 8 ? 8 : _rutas.length,
+                    childCount: _viajesHoy.length > 8 ? 8 : _viajesHoy.length,
                   ),
                 ),
               ),
@@ -452,8 +464,11 @@ class _HeroSection extends StatelessWidget {
 
 /* ── Search card ── */
 class _SearchCard extends StatelessWidget {
-  final TextEditingController origen;
-  final TextEditingController destino;
+  final List<Map<String, dynamic>> oficinas;
+  final String? origenCod;
+  final String? destinoCod;
+  final ValueChanged<String?> onOrigen;
+  final ValueChanged<String?> onDestino;
   final DateTime? fecha;
   final VoidCallback onPickFecha;
   final VoidCallback onSwap;
@@ -463,8 +478,11 @@ class _SearchCard extends StatelessWidget {
   final DateTime manana;
 
   const _SearchCard({
-    required this.origen,
-    required this.destino,
+    required this.oficinas,
+    required this.origenCod,
+    required this.destinoCod,
+    required this.onOrigen,
+    required this.onDestino,
     required this.fecha,
     required this.onPickFecha,
     required this.onSwap,
@@ -486,67 +504,29 @@ class _SearchCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Column(
-                children: [
-                  _LocationField(
-                    controller: origen,
-                    icon: Icons.radio_button_checked_rounded,
-                    iconColor: AppColors.green500,
-                    hint: 'Origen',
-                  ),
-                  const SizedBox(height: 12),
-                  _LocationField(
-                    controller: destino,
-                    icon: Icons.location_on_rounded,
-                    iconColor: AppColors.red500,
-                    hint: 'Destino',
-                  ),
-                ],
-              ),
-              Positioned(
-                right: 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                      BoxShadow(
-                        color: AppColors.blue500.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: onSwap,
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-                        ),
-                        child: const Icon(
-                          Icons.swap_vert_rounded,
-                          color: AppColors.blue500,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          _OficinaDropdown(
+            oficinas: oficinas,
+            value: origenCod,
+            onChanged: onOrigen,
+            icon: Icons.radio_button_checked_rounded,
+            iconColor: AppColors.green500,
+            hint: 'Origen',
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              onPressed: onSwap,
+              tooltip: 'Intercambiar',
+              icon: const Icon(Icons.swap_vert_rounded, color: AppColors.blue500),
+            ),
+          ),
+          _OficinaDropdown(
+            oficinas: oficinas,
+            value: destinoCod,
+            onChanged: onDestino,
+            icon: Icons.location_on_rounded,
+            iconColor: AppColors.red500,
+            hint: 'Destino',
           ),
           const SizedBox(height: 16),
           // Chips fecha rápida
@@ -647,6 +627,65 @@ class _SearchCard extends StatelessWidget {
 
   bool _isSameDay(DateTime? a, DateTime b) =>
       a != null && a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+/* ── Desplegable de oficina (origen/destino) ── */
+class _OficinaDropdown extends StatelessWidget {
+  final List<Map<String, dynamic>> oficinas;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  final IconData icon;
+  final Color iconColor;
+  final String hint;
+
+  const _OficinaDropdown({
+    required this.oficinas,
+    required this.value,
+    required this.onChanged,
+    required this.icon,
+    required this.iconColor,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          hint: Row(children: [
+            Icon(icon, color: iconColor, size: 18),
+            const SizedBox(width: 10),
+            Text(hint, style: const TextStyle(
+                color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+          ]),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          items: oficinas.map((o) {
+            return DropdownMenuItem<String>(
+              value: (o['codofi'] ?? '') as String,
+              child: Row(children: [
+                Icon(icon, color: iconColor, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text(
+                  (o['desofi'] ?? '') as String,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                )),
+              ]),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
 }
 
 class _LocationField extends StatefulWidget {

@@ -13,9 +13,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-va-bus-dev-key-change-in-production-2024')
 
-DEBUG = True
+# En local DEBUG=True por defecto; en el server se pone DEBUG=False en el .env.
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# Local: '*'. En producción se restringe vía .env (ALLOWED_HOSTS=dominio,localhost).
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -38,6 +40,7 @@ INSTALLED_APPS = [
     'reservas',
     'pagos',
     'api_externa',
+    'r4conecta',
 ]
 
 MIDDLEWARE = [
@@ -82,15 +85,31 @@ CHANNEL_LAYERS = {
 }
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 20,  # Espera hasta 20s si la DB está bloqueada
-        },
+# PostgreSQL si hay DB_HOST en el entorno (producción, p.ej. DigitalOcean
+# managed); si no, SQLite (desarrollo local). Solo cambia por variables de .env.
+if os.getenv('DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'defaultdb'),
+            'USER': os.getenv('DB_USER', 'doadmin'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT', '25060'),
+            'OPTIONS': {'sslmode': os.getenv('DB_SSLMODE', 'require')},
+            'CONN_MAX_AGE': 60,  # reusa conexiones (la DB administrada limita el total)
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 20,  # Espera hasta 20s si la DB está bloqueada
+            },
+        }
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'usuarios.Usuario'
@@ -138,6 +157,7 @@ REST_FRAMEWORK = {
         'login': '5/minute',       # Login: maximo 5 intentos/min
         'registro': '3/minute',    # Registro: maximo 3 cuentas/min
         'externo': '30/minute',    # API externa: 30 req/min
+        'r4_otp': '10/minute',     # Generacion de OTP de pago: 10 req/min
     },
 }
 
@@ -152,11 +172,18 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True  # Development only
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF
+# CSRF — orígenes confiables para formularios POST (admin, etc.)
 CSRF_TRUSTED_ORIGINS = [
     'https://ardvf.aplicacionesdamasco.com',
     'https://ardvb.aplicacionesdamasco.com',
+    'https://*.masterslogic.com',
+    'https://aerorutasdevenezuela.net',
+    'https://*.aerorutasdevenezuela.net',
 ]
+
+# Detrás del proxy de Cloudflare/nginx: confiar en el header que indica HTTPS,
+# para que Django genere URLs https y las cookies seguras funcionen.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Email Configuration (Gmail SMTP)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -176,6 +203,16 @@ GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 
 # ── API Externa (Sistema de Control) ──
 EXTERNAL_API_KEY = os.getenv('EXTERNAL_API_KEY', '')
+
+# ── R4 Conecta (Pasarela de pagos Mibanco) ──
+R4_BASE_URL = os.getenv('R4_BASE_URL', 'https://r4conecta.mibanco.com.ve')
+R4_COMMERCE_TOKEN = os.getenv('R4_COMMERCE_TOKEN', '')  # Token del comercio (Commerce)
+R4_TIMEOUT = int(os.getenv('R4_TIMEOUT', '20'))
+
+# ── Aerorutas (Sistema de control externo: oficinas/rutas/puestos) ──
+AERORUTAS_API_URL = os.getenv('AERORUTAS_API_URL', 'https://aerorutasdevenezuela.com/server/request.php')
+AERORUTAS_API_TOKEN = os.getenv('AERORUTAS_API_TOKEN', '')
+AERORUTAS_TIMEOUT = int(os.getenv('AERORUTAS_TIMEOUT', '20'))
 
 # ── SQLite WAL mode para mejor concurrencia ──
 from django.db.backends.signals import connection_created

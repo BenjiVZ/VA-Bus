@@ -5,7 +5,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Count, Subquery, OuterRef, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from .models import Ruta, Viaje, Autobus, ConfiguracionGeneral, Oficina
+from .models import Ruta, Viaje, Autobus, ConfiguracionGeneral, Oficina, RutaAerorutasSnapshot
 from .serializers import (
     RutaSerializer, ViajeListSerializer, ViajeDetailSerializer,
     ConfiguracionSerializer, OficinaSerializer,
@@ -472,3 +472,158 @@ class StatsPublicView(APIView):
             'buses': total_buses,
             'pasajeros': total_pasajeros,
         })
+
+
+# ────────────────────────────────────────────────
+#  Integración Aerorutas (sistema de control externo)
+#  Consulta en vivo de oficinas / rutas / puestos.
+# ────────────────────────────────────────────────
+from . import aerorutas
+
+
+class AerorutasOficinasView(APIView):
+    """Oficinas en vivo desde Aerorutas (las sincronizadas están en /oficinas/)."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        # Cacheado (1h): las oficinas son estables; evita llamar al banco en cada apertura.
+        return Response(aerorutas.consultar_oficinas_cacheado())
+
+
+class AerorutasRutasView(APIView):
+    """Rutas disponibles entre dos oficinas en una fecha. Params: inicio, fin, fecha."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+        fecha = request.query_params.get('fecha')
+        if not (inicio and fin and fecha):
+            return Response({'error': 'Parámetros requeridos: inicio, fin, fecha.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            return Response(aerorutas.consultar_rutas(inicio, fin, fecha))
+        except aerorutas.AerorutasError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+class AerorutasPuestosView(APIView):
+    """Puestos disponibles de una ruta. Params: codofi, codrut, fecha."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        codofi = request.query_params.get('codofi')
+        codrut = request.query_params.get('codrut')
+        fecha = request.query_params.get('fecha')
+        if not (codofi and codrut and fecha):
+            return Response({'error': 'Parámetros requeridos: codofi, codrut, fecha.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            return Response(aerorutas.consultar_puestos(codofi, codrut, fecha))
+        except aerorutas.AerorutasError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+
+class AerorutasViajesView(APIView):
+    """
+    Búsqueda de viajes de Aerorutas devuelta con el MISMO formato que /viajes/
+    (paginación DRF + ViajeListSerializer), para reusar la UI actual.
+    Params: inicio, fin (codofi), fecha. (acepta origen/destino como alias)
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        q = request.query_params
+        inicio = q.get('inicio') or q.get('origen')
+        fin = q.get('fin') or q.get('destino')
+        fecha = q.get('fecha')
+        if not fecha:
+            return Response({'count': 0, 'next': None, 'previous': None, 'results': []})
+
+        try:
+            if inicio and fin:
+                # Par específico
+                rutas = aerorutas.consultar_rutas(inicio, fin, fecha)
+                results = []
+                for r in rutas:
+                    try:
+                        disp = len(aerorutas.consultar_puestos(inicio, r.get('codrut', ''), fecha))
+                    except aerorutas.AerorutasError:
+                        disp = None
+                    results.append(aerorutas.viaje_shape(r, inicio, fin, fecha, disp))
+            else:
+                # Sin origen/destino: servir el catálogo PRECARGADO (instantáneo).
+                snap = RutaAerorutasSnapshot.objects.filter(fecha=fecha).first()
+                results = snap.data if snap else []
+        except aerorutas.AerorutasError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        # Ocultar viajes sin precio (precio 0 o vacío).
+        def _precio(v):
+            try:
+                return float(v.get('precio_usd') or 0)
+            except (TypeError, ValueError):
+                return 0
+        results = [v for v in results if _precio(v) > 0]
+
+        return Response({'count': len(results), 'next': None, 'previous': None,
+                         'results': results})
+
+
+class AerorutasViajeAsientosView(APIView):
+    """Asientos de un viaje de Aerorutas con el MISMO formato que /viajes/<id>/asientos/."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, trip_id):
+        try:
+            codrut, inicio, fin, fecha = aerorutas.parse_viaje_id(trip_id)
+        except ValueError:
+            return Response({'error': 'ID de viaje inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Cabecera (origen/destino/precio/hora) desde el catálogo precargado:
+        # es instantáneo y evita una llamada externa. Solo los asientos van en vivo.
+        viaje = None
+        snap = RutaAerorutasSnapshot.objects.filter(fecha=fecha).first()
+        if snap and snap.data:
+            viaje = next((v for v in snap.data if v.get('id') == trip_id), None)
+
+        try:
+            puestos = aerorutas.consultar_puestos(inicio, codrut, fecha)
+        except aerorutas.AerorutasError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        if viaje is None:
+            # Fallback: no está precargado (link directo / snapshot ausente) → en vivo.
+            try:
+                rutas = aerorutas.consultar_rutas(inicio, fin, fecha)
+            except aerorutas.AerorutasError as e:
+                return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+            ruta = next((r for r in rutas if str(r.get('codrut')) == str(codrut)), {})
+            viaje = aerorutas.viaje_shape(ruta, inicio, fin, fecha, len(puestos))
+        else:
+            # Refrescar el conteo de disponibles con el dato en vivo.
+            viaje = {**viaje, 'asientos_disponibles': len(puestos)}
+
+        return Response({
+            'viaje': viaje,
+            'pisos_config': aerorutas.pisos_shape(puestos),
+        })
+
+
+class AerorutasApartarView(APIView):
+    """Aparta un puesto temporalmente (TMPPUESTO). MUTA estado en Aerorutas."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        d = request.data
+        requeridos = ['fecha', 'codrut', 'nroasi', 'ofisal', 'ofides']
+        faltan = [k for k in requeridos if not d.get(k)]
+        if faltan:
+            return Response({'error': f'Faltan parámetros: {", ".join(faltan)}'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            items, raw = aerorutas.apartar_puesto(
+                d['fecha'], d['codrut'], d['nroasi'], d['ofisal'], d['ofides'])
+        except aerorutas.AerorutasError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({'items': items, 'raw': raw})

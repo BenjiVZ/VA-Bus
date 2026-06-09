@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ViajesPage from './pages/ViajesPage';
+import BuscarAerorutasPage from './pages/BuscarAerorutasPage';
 import AsientosPage from './pages/AsientosPage';
 import ConfirmacionPage from './pages/ConfirmacionPage';
 import MisReservasPage from './pages/MisReservasPage';
@@ -50,6 +51,7 @@ function App() {
           <Route path="/verificar-email" element={<VerificarEmailPage />} />
           <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
           <Route path="/viajes" element={<ViajesPage />} />
+          <Route path="/aerorutas" element={<BuscarAerorutasPage />} />
           <Route path="/nosotros" element={<NosotrosPage />} />
           <Route path="/viajes/:id/asientos" element={<AsientosPage />} />
           <Route path="/pago" element={<PagoPage />} />

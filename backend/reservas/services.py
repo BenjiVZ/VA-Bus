@@ -294,3 +294,52 @@ Adjuntamos tu boleto en PDF. Puedes imprimirlo o mostrarlo desde tu teléfono al
     except Exception as e:
         print(f"Error enviando email: {e}")
         return False
+
+
+def confirmar_grupo_pago(grupo_pago, base_url=''):
+    """
+    Confirma todas las reservas de un grupo de pago tras un pago aprobado.
+
+    - Marca las reservas como 'confirmado' (cada save() genera el codigo_ticket).
+    - Emite el WebSocket de asientos (UI en tiempo real).
+    - Envía el email con el ticket en PDF.
+
+    Reutilizable por cualquier flujo de pago automático (R4 OTP, etc.).
+    Retorna el QuerySet de reservas del grupo (vacío si no había).
+    """
+    from .models import Reserva
+    from viajes.models import ConfiguracionGeneral
+    from viajes.ws_broadcast import broadcast_seat_change
+
+    reservas = Reserva.objects.filter(grupo_pago=grupo_pago)
+    if not reservas.exists():
+        return reservas
+
+    # Marcar confirmadas: el save() por cada una genera el codigo_ticket.
+    for r in reservas:
+        if r.estado != 'confirmado':
+            r.estado = 'confirmado'
+            r.save()
+
+    # Broadcast de asientos (no debe romper la confirmación si falla).
+    for r in reservas:
+        try:
+            broadcast_seat_change(
+                viaje_id=r.viaje_id,
+                numero=r.numero_asiento,
+                piso=r.piso_asiento,
+                estado='reserved',
+            )
+        except Exception as e:
+            print(f"[WS] No se pudo emitir cambio de asiento: {e}")
+
+    # Email con ticket PDF (un grupo_pago corresponde a un viaje).
+    primera = reservas.select_related('viaje__ruta', 'viaje__autobus').first()
+    if primera and primera.usuario and primera.usuario.email:
+        try:
+            config = ConfiguracionGeneral.load()
+            enviar_email_ticket(reservas, primera.viaje, config, primera.usuario, base_url)
+        except Exception as e:
+            print(f"[EMAIL] No se pudo enviar ticket del grupo {grupo_pago}: {e}")
+
+    return reservas

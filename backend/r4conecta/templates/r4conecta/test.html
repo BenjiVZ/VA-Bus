@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba R4 Conecta — Débito Inmediato (OTP)</title>
+<style>
+  :root { --azul:#1a3a6b; --ok:#15803d; --err:#b91c1c; --bg:#f1f5f9; --bd:#cbd5e1; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); margin:0; padding:24px; color:#0f172a; }
+  .wrap { max-width:560px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; color:var(--azul); }
+  .sub { color:#64748b; font-size:13px; margin:0 0 20px; }
+  .card { background:#fff; border:1px solid var(--bd); border-radius:12px; padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  .card h2 { font-size:15px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+  .step { background:var(--azul); color:#fff; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; }
+  label { display:block; font-size:12px; font-weight:600; color:#475569; margin:10px 0 4px; }
+  input { width:100%; padding:9px 11px; border:1px solid var(--bd); border-radius:8px; font-size:14px; }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; }
+  button { width:100%; margin-top:16px; padding:11px; border:0; border-radius:8px; background:var(--azul); color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .warn { background:#fef3c7; border:1px solid #fde68a; color:#92400e; font-size:12px; padding:10px 12px; border-radius:8px; margin-bottom:16px; }
+  .result { margin-top:14px; padding:12px; border-radius:8px; font-size:13px; display:none; }
+  .result.ok { background:#dcfce7; border:1px solid #86efac; color:var(--ok); display:block; }
+  .result.err { background:#fee2e2; border:1px solid #fca5a5; color:var(--err); display:block; }
+  pre { background:#0f172a; color:#e2e8f0; padding:10px; border-radius:8px; font-size:11px; overflow:auto; margin:8px 0 0; }
+  .muted { color:#94a3b8; font-size:11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Prueba R4 Conecta — Débito Inmediato (OTP)</h1>
+  <p class="sub">Genera un OTP, confírmalo y verifica el resultado del banco.</p>
+  <div class="warn">⚠️ Esto llama al banco REAL y debita fondos reales. Úsalo solo para pruebas controladas.</div>
+
+  <!-- Paso 1 -->
+  <div class="card">
+    <h2><span class="step">1</span> Datos del pago + Generar OTP</h2>
+    <div class="row">
+      <div><label>Banco (4 díg.)</label><input id="banco" placeholder="0191" maxlength="4"></div>
+      <div><label>Monto (Bs)</label><input id="monto" placeholder="50.00"></div>
+    </div>
+    <div class="row">
+      <div><label>Cédula</label><input id="cedula" placeholder="V12345678"></div>
+      <div><label>Teléfono (11 díg.)</label><input id="telefono" placeholder="04145555555" maxlength="11"></div>
+    </div>
+    <label>Nombre</label><input id="nombre" placeholder="Maria Perez">
+    <label>Concepto</label><input id="concepto" placeholder="Pago pasaje" maxlength="30">
+    <button id="btnOtp" onclick="generarOtp()">Generar OTP</button>
+    <div id="resOtp" class="result"></div>
+  </div>
+
+  <!-- Paso 2 -->
+  <div class="card">
+    <h2><span class="step">2</span> Confirmar con OTP</h2>
+    <label>OTP recibido (hasta 8 díg.)</label><input id="otp" placeholder="19807849" maxlength="8">
+    <button id="btnDebito" onclick="confirmar()" disabled>Confirmar débito</button>
+    <div id="resDebito" class="result"></div>
+  </div>
+
+  <!-- Paso 3 (solo si AC00) -->
+  <div class="card" id="cardConsulta" style="display:none;">
+    <h2><span class="step">3</span> Consultar operación (estaba en espera AC00)</h2>
+    <p class="muted">Id: <span id="opId"></span></p>
+    <button onclick="consultar()">Consultar estado</button>
+    <div id="resConsulta" class="result"></div>
+  </div>
+</div>
+
+<script>
+const API = '/api/r4/test';
+let bankId = '';
+
+function val(id){ return document.getElementById(id).value.trim(); }
+
+async function post(path, body){
+  const r = await fetch(API + path, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(()=>({}));
+  return { status:r.status, data };
+}
+
+function show(elId, ok, titulo, payload){
+  const el = document.getElementById(elId);
+  el.className = 'result ' + (ok ? 'ok' : 'err');
+  el.innerHTML = '<strong>' + titulo + '</strong><pre>' + JSON.stringify(payload, null, 2) + '</pre>';
+}
+
+async function generarOtp(){
+  const btn = document.getElementById('btnOtp');
+  btn.disabled = true; btn.textContent = 'Generando…';
+  const { status, data } = await post('/generar-otp/', {
+    banco: val('banco'), monto: val('monto'),
+    telefono: val('telefono'), cedula: val('cedula'),
+  });
+  btn.disabled = false; btn.textContent = 'Generar OTP';
+  if (data.ok){
+    const code = String(data.response.code || '');
+    const enviado = code === '202' || data.response.success === true;
+    show('resOtp', enviado, enviado ? '✅ OTP enviado al cliente' : '⚠️ Respuesta del banco', data.response);
+    document.getElementById('btnDebito').disabled = !enviado;
+  } else {
+    show('resOtp', false, '❌ Error', data.error || data);
+  }
+}
+
+async function confirmar(){
+  const btn = document.getElementById('btnDebito');
+  btn.disabled = true; btn.textContent = 'Confirmando…';
+  const { status, data } = await post('/debito/', {
+    banco: val('banco'), monto: val('monto'), telefono: val('telefono'),
+    cedula: val('cedula'), nombre: val('nombre'), otp: val('otp'), concepto: val('concepto'),
+  });
+  btn.disabled = false; btn.textContent = 'Confirmar débito';
+  if (!data.ok){ show('resDebito', false, '❌ Error', data.error || data); return; }
+  const resp = data.response;
+  const code = String(resp.code || '');
+  if (code === 'ACCP' || resp.success === true){
+    show('resDebito', true, '✅ Pago APROBADO (ACCP) — Ref: ' + (resp.reference || '—'), resp);
+  } else if (code === 'AC00'){
+    bankId = resp.Id || resp.id || '';
+    document.getElementById('opId').textContent = bankId;
+    document.getElementById('cardConsulta').style.display = 'block';
+    show('resDebito', false, '⏳ En espera del receptor (AC00) — usa el paso 3', resp);
+  } else {
+    show('resDebito', false, '❌ Rechazado (' + code + ')', resp);
+  }
+}
+
+async function consultar(){
+  const { data } = await post('/consultar/', { id: bankId });
+  if (!data.ok){ show('resConsulta', false, '❌ Error', data.error || data); return; }
+  const resp = data.response;
+  const ok = String(resp.code||'') === 'ACCP' || resp.success === true;
+  show('resConsulta', ok, ok ? '✅ Aprobado (ACCP)' : '❌ No aprobado ('+(resp.code||'')+')', resp);
+}
+</script>
+</body>
+</html>

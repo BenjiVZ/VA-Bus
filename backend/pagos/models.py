@@ -17,6 +17,7 @@ class MetodoPago(models.Model):
         ('zinli', 'Zinli'),
         ('zelle', 'Zelle'),
         ('binance', 'Binance'),
+        ('cobro_inmediato', 'Cobro Inmediato (Débito OTP)'),
         ('otro', 'Otro'),
     ]
 

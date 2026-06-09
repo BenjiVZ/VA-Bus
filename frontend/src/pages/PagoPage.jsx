@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronRight, ChevronLeft, AlertTriangle, Clock, Copy, CheckCircle,
   Upload, CreditCard, Shield, Image as ImageIcon,
-  Wallet, Landmark, Smartphone, DollarSign
+  Wallet, Landmark, Smartphone, DollarSign, Zap
 } from 'lucide-react';
 
 const getPaymentIcon = (nombre) => {
@@ -14,7 +14,11 @@ const getPaymentIcon = (nombre) => {
   if (nameLower.includes('binance') || nameLower.includes('crypto') || nameLower.includes('usdt')) return <Wallet size={24} />;
   return <CreditCard size={24} />;
 };
-import { getMetodosPago, crearComprobante, getEstadoComprobante, getTasaCambio } from '../services/api';
+import {
+  getMetodosPago, crearComprobante, getEstadoComprobante, getTasaCambio,
+  getBancos, r4GenerarOtp, r4ConfirmarDebito, r4EstadoOperacion,
+} from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const STORAGE_KEY = 'aerorutas_pago_progreso';
 
@@ -34,6 +38,7 @@ function clearProgress() {
 export default function PagoPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Try to load from navigation state or localStorage
   const navState = location.state;
@@ -59,6 +64,22 @@ export default function PagoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [comprobanteEnviado, setComprobanteEnviado] = useState(false);
+
+  // ── Cobro Inmediato (Débito con OTP) ──
+  const [ciCedula, setCiCedula] = useState('');
+  const [ciTelefono, setCiTelefono] = useState('');
+  const [ciNombre, setCiNombre] = useState('');
+  const [ciBanco, setCiBanco] = useState('');
+  const [bancos, setBancos] = useState([]);
+  const [bancoFiltro, setBancoFiltro] = useState('');
+  const [ciConcepto, setCiConcepto] = useState('');
+  const [ciOperacionId, setCiOperacionId] = useState(null);
+  const [ciOtp, setCiOtp] = useState('');
+  const [ciComprobante, setCiComprobante] = useState(null);
+  const [ciComprobantePreview, setCiComprobantePreview] = useState(null);
+  const [ciEstado, setCiEstado] = useState('idle'); // idle|otp_enviado|en_espera|rechazada
+  const [ciLoading, setCiLoading] = useState(false);
+  const [ciError, setCiError] = useState('');
 
   // Initialize data
   useEffect(() => {
@@ -90,9 +111,10 @@ export default function PagoPage() {
       return;
     }
 
-    // Fetch payment methods and exchange rate
+    // Fetch payment methods, exchange rate and bank list
     getMetodosPago().then(res => setMetodos(res.data)).catch(() => {});
     getTasaCambio().then(res => setTasa(res.data.tasa_bcv)).catch(() => {});
+    getBancos().then(res => setBancos(res.data)).catch(() => {});
   }, []);
 
   // Check if comprobante already exists
@@ -229,6 +251,107 @@ export default function PagoPage() {
     if (paso > 1) setPaso(paso - 1);
   };
 
+  // ════════ Cobro Inmediato (Débito con OTP) ════════
+  const seleccionarCobroInmediato = (metodo) => {
+    setMetodoSeleccionado(metodo);
+    setCiCedula(user?.cedula || '');
+    setCiTelefono(user?.telefono || '');
+    setCiNombre([user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() || user?.username || '');
+    setCiBanco(''); setBancoFiltro(''); setCiConcepto('');
+    setCiOtp(''); setCiComprobante(null); setCiComprobantePreview(null);
+    setCiEstado('idle'); setCiError('');
+    setPaso(3);
+  };
+
+  const handleGenerarOtp = async () => {
+    if (!/^\d{4}$/.test(ciBanco)) { setCiError('Selecciona tu banco.'); return; }
+    if (!ciCedula.trim()) { setCiError('Ingresa tu cédula.'); return; }
+    if (!/^\d{11}$/.test(ciTelefono)) { setCiError('El teléfono debe tener 11 dígitos (ej: 04141234567).'); return; }
+    setCiLoading(true); setCiError('');
+    try {
+      const { data } = await r4GenerarOtp({
+        grupo_pago: grupoPago,
+        banco: ciBanco,
+        cedula: ciCedula.trim().toUpperCase(),
+        telefono: ciTelefono.trim(),
+        nombre: ciNombre.trim(),
+        concepto: ciConcepto.trim(),
+      });
+      if (data.otp_enviado) {
+        setCiOperacionId(data.operacion_id);
+        setCiEstado('otp_enviado');
+        setPaso(4);
+      } else {
+        setCiError(data.message || 'El banco no envió el OTP. Verifica los datos.');
+      }
+    } catch (err) {
+      setCiError(err.response?.data?.error || 'No se pudo generar el OTP. Intenta de nuevo.');
+    } finally {
+      setCiLoading(false);
+    }
+  };
+
+  const handleCiComprobanteChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCiComprobante(file);
+      setCiComprobantePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const aplicarEstadoCi = (estado) => {
+    if (estado === 'aceptada') {
+      setComprobanteEnviado(true);
+      setPaso(5);
+      clearProgress();
+    } else if (estado === 'en_espera') {
+      setCiEstado('en_espera');
+    } else {
+      setCiEstado('rechazada');
+      setCiError('El pago fue rechazado por el banco. Verifica tu saldo/datos e inténtalo de nuevo.');
+    }
+  };
+
+  const handleConfirmarDebito = async () => {
+    if (!/^\d{1,8}$/.test(ciOtp)) { setCiError('Ingresa el OTP recibido (numérico).'); return; }
+    setCiLoading(true); setCiError('');
+    try {
+      const fd = new FormData();
+      fd.append('operacion_id', ciOperacionId);
+      fd.append('otp', ciOtp.trim());
+      if (ciComprobante) fd.append('comprobante', ciComprobante);
+      const { data } = await r4ConfirmarDebito(fd);
+      aplicarEstadoCi(data.estado);
+    } catch (err) {
+      setCiError(err.response?.data?.error || 'No se pudo procesar el débito.');
+    } finally {
+      setCiLoading(false);
+    }
+  };
+
+  // Polling mientras la operación queda "en espera" (el banco confirma luego;
+  // el backend la valida cada 30s y aquí solo leemos el estado).
+  useEffect(() => {
+    if (ciEstado !== 'en_espera' || !ciOperacionId) return;
+    const iv = setInterval(async () => {
+      try {
+        const { data } = await r4EstadoOperacion(ciOperacionId);
+        if (data.estado === 'aceptada') {
+          clearInterval(iv);
+          setComprobanteEnviado(true); setPaso(5); clearProgress();
+        } else if (data.estado === 'rechazada') {
+          clearInterval(iv);
+          setCiEstado('rechazada');
+          setCiError('El pago fue rechazado por el banco.');
+        }
+      } catch { /* reintentar en el siguiente ciclo */ }
+    }, 8000);
+    return () => clearInterval(iv);
+  }, [ciEstado, ciOperacionId]);
+
+  const bancosFiltrados = bancos.filter(b =>
+    `${b.codigo} ${b.nombre}`.toLowerCase().includes(bancoFiltro.toLowerCase()));
+
   // ── Expired state ──
   if (timeLeft !== null && timeLeft <= 0 && !comprobanteEnviado) {
     return (
@@ -271,23 +394,27 @@ export default function PagoPage() {
             </p>
 
             <div className="pago-methods-grid">
-              {metodos.map(m => (
-                <button
-                  key={m.id}
-                  className="pago-method-card"
-                  onClick={() => { setMetodoSeleccionado(m); setPaso(2); }}
-                >
-                  <div className="pago-method-icon">
-                    {getPaymentIcon(m.nombre)}
-                  </div>
-                  <div className="pago-method-info">
-                    <div className="pago-method-name">{m.nombre}</div>
-                    {m.descripcion && (
-                      <span className="pago-method-badge">{m.descripcion}</span>
-                    )}
-                  </div>
-                </button>
-              ))}
+              {metodos.map(m => {
+                const esCI = m.tipo === 'cobro_inmediato';
+                return (
+                  <button
+                    key={m.id}
+                    className="pago-method-card"
+                    onClick={() => esCI ? seleccionarCobroInmediato(m) : (setMetodoSeleccionado(m), setPaso(2))}
+                    style={esCI ? { borderColor: 'var(--blue-500)' } : undefined}
+                  >
+                    <div className="pago-method-icon">
+                      {esCI ? <Zap size={24} /> : getPaymentIcon(m.nombre)}
+                    </div>
+                    <div className="pago-method-info">
+                      <div className="pago-method-name">{m.nombre}</div>
+                      {m.descripcion && (
+                        <span className="pago-method-badge">{m.descripcion}</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             {metodos.length === 0 && (
@@ -352,8 +479,139 @@ export default function PagoPage() {
           </div>
         )}
 
+        {/* ═══ COBRO INMEDIATO · Paso A: Confirmar datos + banco ═══ */}
+        {paso === 3 && metodoSeleccionado?.tipo === 'cobro_inmediato' && (
+          <div className="pago-step">
+            <button className="pago-back-btn" onClick={() => setPaso(1)}>
+              <ChevronLeft size={18} /> Volver
+            </button>
+
+            <h2>Confirma tus datos</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              Recibirás un código (OTP) en tu teléfono para autorizar el débito. Verifica que tus datos sean correctos.
+            </p>
+
+            {ciError && <div className="alert alert-error">{ciError}</div>}
+
+            <div className="pago-upload-form">
+              <div className="form-group">
+                <label>Cédula</label>
+                <input className="form-control" value={ciCedula}
+                  onChange={(e) => setCiCedula(e.target.value)} placeholder="V12345678" />
+              </div>
+              <div className="form-group">
+                <label>Teléfono (11 dígitos)</label>
+                <input className="form-control" value={ciTelefono} maxLength={11}
+                  onChange={(e) => setCiTelefono(e.target.value.replace(/\D/g, ''))} placeholder="04141234567" />
+              </div>
+              <div className="form-group">
+                <label>Nombre</label>
+                <input className="form-control" value={ciNombre}
+                  onChange={(e) => setCiNombre(e.target.value)} placeholder="Nombre y apellido" />
+              </div>
+              <div className="form-group">
+                <label>Banco</label>
+                <input className="form-control" value={bancoFiltro} style={{ marginBottom: 8 }}
+                  onChange={(e) => setBancoFiltro(e.target.value)} placeholder="Buscar por nombre o código…" />
+                <select className="form-control" value={ciBanco} onChange={(e) => setCiBanco(e.target.value)}>
+                  <option value="">Selecciona tu banco…</option>
+                  {bancosFiltrados.map(b => (
+                    <option key={b.codigo} value={b.codigo}>{b.codigo} — {b.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Concepto (opcional)</label>
+                <input className="form-control" value={ciConcepto} maxLength={30}
+                  onChange={(e) => setCiConcepto(e.target.value)} placeholder="Pago de pasaje" />
+              </div>
+
+              <div className="pago-info-card" style={{ marginTop: '0.5rem' }}>
+                <Zap size={24} style={{ color: 'var(--blue-500)' }} />
+                <div className="pago-info-method">Monto a debitar</div>
+                <div className="pago-info-amount">
+                  <span className="pago-info-label">Total</span>
+                  <span className="pago-info-value">
+                    {totalBs ? `Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : 'Calculando…'}
+                  </span>
+                </div>
+              </div>
+
+              <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: '1rem' }}
+                onClick={handleGenerarOtp} disabled={ciLoading}>
+                {ciLoading ? 'Enviando OTP…' : 'Generar OTP'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ COBRO INMEDIATO · Paso B: OTP + comprobante opcional + espera ═══ */}
+        {paso === 4 && metodoSeleccionado?.tipo === 'cobro_inmediato' && (
+          <div className="pago-step">
+            {ciEstado !== 'en_espera' && (
+              <button className="pago-back-btn" onClick={() => setPaso(3)}>
+                <ChevronLeft size={18} /> Volver
+              </button>
+            )}
+
+            {ciEstado === 'en_espera' ? (
+              <div className="pago-card pago-card-center">
+                <Clock size={48} style={{ color: 'var(--blue-500)' }} className="spin" />
+                <h2 style={{ marginTop: '1rem' }}>Validando tu pago…</h2>
+                <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
+                  El banco está procesando la operación. Esto puede tardar unos segundos.
+                  Tu silla queda reservada y se confirmará en cuanto el banco apruebe.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h2>Ingresa el código OTP</h2>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                  Enviamos un código a tu teléfono <strong>{ciTelefono}</strong>. Ingrésalo para autorizar el débito.
+                </p>
+
+                {ciError && <div className="alert alert-error">{ciError}</div>}
+
+                <div className="pago-upload-form">
+                  <div className="form-group">
+                    <label>Código OTP</label>
+                    <input className="form-control" value={ciOtp} maxLength={8}
+                      onChange={(e) => setCiOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Ej: 19807849" inputMode="numeric" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Comprobante (opcional)</label>
+                    <div
+                      className={`pago-upload-area ${ciComprobantePreview ? 'pago-upload-area-has-file' : ''}`}
+                      onClick={() => document.getElementById('ci-comprobante-input').click()}
+                    >
+                      {ciComprobantePreview ? (
+                        <img src={ciComprobantePreview} alt="Comprobante" className="pago-upload-preview" />
+                      ) : (
+                        <>
+                          <ImageIcon size={32} style={{ color: 'var(--text-muted)' }} />
+                          <span>Adjuntar captura (opcional)</span>
+                          <small>JPG, PNG o WebP</small>
+                        </>
+                      )}
+                      <input id="ci-comprobante-input" type="file" accept="image/*"
+                        onChange={handleCiComprobanteChange} style={{ display: 'none' }} />
+                    </div>
+                  </div>
+
+                  <button className="btn btn-primary btn-lg" style={{ width: '100%' }}
+                    onClick={handleConfirmarDebito} disabled={ciLoading}>
+                    {ciLoading ? 'Procesando…' : 'Confirmar pago'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* ═══ STEP 3: Copyable Data ═══ */}
-        {paso === 3 && metodoSeleccionado && (
+        {paso === 3 && metodoSeleccionado && metodoSeleccionado.tipo !== 'cobro_inmediato' && (
           <div className="pago-step">
             <button className="pago-back-btn" onClick={goBack}>
               <ChevronLeft size={18} /> Volver
@@ -415,7 +673,7 @@ export default function PagoPage() {
         )}
 
         {/* ═══ STEP 4: Upload Proof ═══ */}
-        {paso === 4 && (
+        {paso === 4 && metodoSeleccionado?.tipo !== 'cobro_inmediato' && (
           <div className="pago-step">
             <button className="pago-back-btn" onClick={goBack}>
               <ChevronLeft size={18} /> Volver
@@ -521,11 +779,23 @@ export default function PagoPage() {
           <div className="pago-step">
             <div className="pago-card pago-card-center">
               <CheckCircle size={48} style={{ color: 'var(--green-500)' }} />
-              <h2 style={{ marginTop: '1rem' }}>¡Comprobante enviado!</h2>
-              <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
-                Tu puesto está <strong>apartado</strong>. Un administrador revisará tu pago.
-                Te notificaremos cuando sea aprobado.
-              </p>
+              {metodoSeleccionado?.tipo === 'cobro_inmediato' ? (
+                <>
+                  <h2 style={{ marginTop: '1rem' }}>¡Pago aprobado!</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
+                    Tu pago fue confirmado por el banco y tu puesto quedó <strong>confirmado</strong>.
+                    Te enviamos tu boleto por correo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ marginTop: '1rem' }}>¡Comprobante enviado!</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
+                    Tu puesto está <strong>apartado</strong>. Un administrador revisará tu pago.
+                    Te notificaremos cuando sea aprobado.
+                  </p>
+                </>
+              )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <button className="btn btn-primary" onClick={() => navigate('/mis-reservas')}>
                   Ver mis reservas

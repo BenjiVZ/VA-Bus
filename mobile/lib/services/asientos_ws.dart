@@ -40,7 +40,7 @@ class SeatChangedEvent {
 ///   ...
 ///   ws.dispose();
 class AsientosWs {
-  final int viajeId;
+  final String viajeId;
   final _controller = StreamController<SeatChangedEvent>.broadcast();
 
   WebSocketChannel? _channel;

@@ -19,7 +19,7 @@ class Ruta {
   });
 
   factory Ruta.fromJson(Map<String, dynamic> json) => Ruta(
-        id: json['id'] as int,
+        id: (json['id'] ?? 0) as int,
         origen: (json['origen'] ?? '') as String,
         destino: (json['destino'] ?? '') as String,
         duracionEstimada: (json['duracion_estimada'] ?? '') as String,
@@ -60,7 +60,7 @@ class Autobus {
 }
 
 class Viaje {
-  final int id;
+  final String id;
   final Ruta? ruta;
   final Autobus? autobus;
   final String tipoViaje; // 'ida' | 'ida_vuelta'
@@ -92,7 +92,7 @@ class Viaje {
     final rutaJson = json['ruta'];
     final busJson = json['autobus'];
     return Viaje(
-      id: json['id'] as int,
+      id: (json['id'] ?? '').toString(),
       ruta: rutaJson is Map<String, dynamic> ? Ruta.fromJson(rutaJson) : null,
       autobus: busJson is Map<String, dynamic> ? Autobus.fromJson(busJson) : null,
       tipoViaje: (json['tipo_viaje'] ?? 'ida') as String,

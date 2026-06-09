@@ -2,7 +2,9 @@ from django.urls import path
 from .views import (
     RutaListView, OficinaListView, ViajeListView, ViajeDetailView,
     ViajeAsientosView, TasaCambioView, ConfiguracionPublicaView,
-    StatsPublicView
+    StatsPublicView,
+    AerorutasOficinasView, AerorutasRutasView, AerorutasPuestosView,
+    AerorutasApartarView, AerorutasViajesView, AerorutasViajeAsientosView,
 )
 
 urlpatterns = [
@@ -14,5 +16,14 @@ urlpatterns = [
     path('tasa-cambio/', TasaCambioView.as_view(), name='tasa-cambio'),
     path('configuracion/', ConfiguracionPublicaView.as_view(), name='configuracion'),
     path('stats/', StatsPublicView.as_view(), name='stats-public'),
+
+    # ── Integración Aerorutas (consulta en vivo) ──
+    path('aerorutas/oficinas/', AerorutasOficinasView.as_view(), name='aerorutas-oficinas'),
+    path('aerorutas/rutas/', AerorutasRutasView.as_view(), name='aerorutas-rutas'),
+    path('aerorutas/puestos/', AerorutasPuestosView.as_view(), name='aerorutas-puestos'),
+    path('aerorutas/apartar/', AerorutasApartarView.as_view(), name='aerorutas-apartar'),
+    # Mismo formato que /viajes/ y /viajes/<id>/asientos/ (para reusar la UI)
+    path('aerorutas/viajes/', AerorutasViajesView.as_view(), name='aerorutas-viajes'),
+    path('aerorutas/viajes/<str:trip_id>/asientos/', AerorutasViajeAsientosView.as_view(), name='aerorutas-viaje-asientos'),
 ]
 

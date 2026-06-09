@@ -282,6 +282,12 @@ class _PagoScreenState extends State<PagoScreen> {
               metodo: m,
               selected: _selected?.id == m.id,
               onTap: () {
+                // Cobro Inmediato (débito con OTP): flujo propio en otra pantalla.
+                if (m.tipo == 'cobro_inmediato') {
+                  context.push(
+                      '/pago/cobro-inmediato?grupo=${widget.grupoPago}&viaje=${widget.viajeId}');
+                  return;
+                }
                 setState(() => _selected = m);
                 // Auto-llenar el campo monto con el total calculado
                 final calc = _montoParaMetodo(m);
