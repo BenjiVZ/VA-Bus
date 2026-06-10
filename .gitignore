@@ -11,6 +11,10 @@
 #    `flutter pub get` y queda listo para correr.
 # ════════════════════════════════════════════════════════════
 
+# ─── Documentos confidenciales (no versionar) ──────────────
+*.pdf
+R4 CONECTA V3.0 (006).pdf
+
 # ─── Python / Django (backend) ─────────────────────────────
 __pycache__/
 *.py[cod]
