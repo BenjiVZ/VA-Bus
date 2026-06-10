@@ -11,7 +11,7 @@ import '../styles/ChatBot.css';
    o saltar a WhatsApp.
    ══════════════════════════════════════════════════════════════════════════ */
 
-const WHATSAPP_NUMBER = '584121234567'; // ← cambiar si la empresa cambia
+const WHATSAPP_NUMBER = '584227779152'; // 0422-7779152 (Venezuela +58)
 const WHATSAPP_DEFAULT_MSG = 'Hola, tengo una consulta sobre Aerorutas:';
 
 const buildWhatsAppUrl = (text = WHATSAPP_DEFAULT_MSG) =>
