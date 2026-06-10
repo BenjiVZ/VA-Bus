@@ -460,9 +460,27 @@ class StatsPublicView(APIView):
 
     def get(self, request):
         from reservas.models import Reserva
+        from datetime import date
 
-        total_rutas = Ruta.objects.count()
-        total_buses = Autobus.objects.filter(disponible=True).count()
+        # Datos reales del catálogo de Aerorutas precargado para hoy.
+        snap = RutaAerorutasSnapshot.objects.filter(fecha=date.today()).first()
+        viajes = snap.data if (snap and snap.data) else []
+        # Rutas nacionales = corredores distintos (origen → destino) de hoy.
+        total_rutas = len({
+            (v.get('ruta', {}).get('origen'), v.get('ruta', {}).get('destino'))
+            for v in viajes
+        })
+        # Autobuses operativos = líneas/buses distintos en circulación hoy.
+        total_buses = len({
+            v.get('autobus', {}).get('nombre')
+            for v in viajes if v.get('autobus', {}).get('nombre')
+        })
+        # Si aún no hay catálogo cargado, caer a las tablas locales.
+        if not total_rutas:
+            total_rutas = Ruta.objects.count()
+        if not total_buses:
+            total_buses = Autobus.objects.filter(disponible=True).count()
+
         total_pasajeros = Reserva.objects.filter(
             estado__in=['confirmado', 'completado']
         ).count()
