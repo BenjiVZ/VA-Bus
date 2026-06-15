@@ -196,7 +196,9 @@ del home) salen vacíos/0. **Si se recrea el droplet, repetir este ajuste.**
 - Código en `backend/r4conecta/`. Credenciales (`R4_COMMERCE_TOKEN`) en el `.env`.
 - **Requisito del banco:** Mibanco debe agregar la IP **`164.90.148.65`** a su lista blanca
   para que las llamadas salientes (server → banco) no sean bloqueadas por su WAF.
-- Endpoints de prueba (`/api/r4/test/`) quedan **deshabilitados** en producción (`DEBUG=False`).
+- **Página de prueba:** `https://aerorutasdevenezuela.net/api/r4/test/` — accesible **solo para
+  superusuarios logueados** (primero entrar a `/admin/`). Permite generar OTP, confirmar débito y
+  consultar, golpeando al banco directamente. ⚠️ Mueve fondos reales.
 
 ---
 
