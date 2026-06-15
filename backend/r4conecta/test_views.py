@@ -1,48 +1,60 @@
 """
 Vistas de PRUEBA para validar la conexión con R4 Conecta (Débito Inmediato OTP).
 
-⚠️ Solo disponibles con settings.DEBUG=True. Llaman directamente al banco con el
-monto que se escriba (NO usan reservas ni autenticación). Débito Inmediato mueve
-fondos reales: usar con cuidado.
+Acceso:
+- En DESARROLLO (DEBUG=True): abierto, sin login (herramienta de dev).
+- En PRODUCCIÓN (DEBUG=False): SOLO superusuarios logueados (sesión del admin).
+  Así se puede probar en prod sin activar DEBUG ni exponer la herramienta al público.
+
+⚠️ Débito Inmediato mueve fondos reales: usar con cuidado.
 """
 from django.conf import settings
 from django.shortcuts import render
-from django.http import HttpResponseForbidden
+from django.contrib.auth.views import redirect_to_login
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
+from rest_framework.authentication import SessionAuthentication
 
 from . import services
 
 
-def _debug_on():
-    return bool(getattr(settings, 'DEBUG', False))
+def _acceso_ok(request) -> bool:
+    """True si DEBUG está activo o el usuario es superusuario autenticado."""
+    if getattr(settings, 'DEBUG', False):
+        return True
+    user = getattr(request, 'user', None)
+    return bool(user and user.is_authenticated and user.is_superuser)
 
 
+class IsSuperuserOrDebug(permissions.BasePermission):
+    """Permite acceso en DEBUG o a superusuarios autenticados."""
+    message = 'Solo superusuarios pueden usar la herramienta de prueba.'
+
+    def has_permission(self, request, view):
+        return _acceso_ok(request)
+
+
+@ensure_csrf_cookie
 def test_page(request):
-    """Página HTML de prueba."""
-    if not _debug_on():
-        return HttpResponseForbidden('Disponible solo en modo DEBUG.')
+    """Página HTML de prueba (deja la cookie csrftoken para los POST)."""
+    if not _acceso_ok(request):
+        # Mandar al login del admin y volver acá tras autenticarse.
+        return redirect_to_login(request.get_full_path(), '/admin/login/')
     return render(request, 'r4conecta/test.html')
 
 
 class _TestBase(APIView):
-    authentication_classes = []          # sin JWT/sesión/CSRF (herramienta de dev)
-    permission_classes = [permissions.AllowAny]
+    # Sesión del admin (cookie) — el front envía el token CSRF en los POST.
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsSuperuserOrDebug]
     throttle_classes = []
-
-    def _guard(self):
-        return None if _debug_on() else Response(
-            {'ok': False, 'error': 'Solo disponible en modo DEBUG.'},
-            status=status.HTTP_403_FORBIDDEN)
 
 
 class TestGenerarOtp(_TestBase):
     def post(self, request):
-        g = self._guard()
-        if g:
-            return g
         d = request.data
         try:
             resp = services.generar_otp(
@@ -55,9 +67,6 @@ class TestGenerarOtp(_TestBase):
 
 class TestDebito(_TestBase):
     def post(self, request):
-        g = self._guard()
-        if g:
-            return g
         d = request.data
         try:
             resp = services.debito_inmediato(
@@ -71,9 +80,6 @@ class TestDebito(_TestBase):
 
 class TestConsultar(_TestBase):
     def post(self, request):
-        g = self._guard()
-        if g:
-            return g
         operacion_id = request.data.get('id', '')
         if not operacion_id:
             return Response({'ok': False, 'error': 'Falta el id.'}, status=status.HTTP_400_BAD_REQUEST)
