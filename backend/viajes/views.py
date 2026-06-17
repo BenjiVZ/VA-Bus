@@ -2,6 +2,10 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.authentication import SessionAuthentication
+from django.shortcuts import render
+from django.contrib.auth.views import redirect_to_login
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.models import Q, Count, Subquery, OuterRef, IntegerField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -645,3 +649,48 @@ class AerorutasApartarView(APIView):
         except aerorutas.AerorutasError as e:
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({'items': items, 'raw': raw})
+
+
+class _IsSuperuser(permissions.BasePermission):
+    """Solo superusuarios autenticados."""
+    message = 'Solo superusuarios.'
+
+    def has_permission(self, request, view):
+        u = getattr(request, 'user', None)
+        return bool(u and u.is_authenticated and u.is_superuser)
+
+
+class AerorutasAsignarView(APIView):
+    """
+    Marca un puesto como VENDIDO POR WEB en Aerorutas (ASIGPASA).
+
+    Se invoca al aprobarse el pago de una reserva de Aerorutas para sincronizar la
+    venta con el sistema de control externo. Por ahora restringido a superusuarios
+    (sesión del admin) para poder hacer QA del endpoint; el flujo de compra de
+    viajes Aerorutas lo llamará automáticamente cuando esté armado.
+    """
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [_IsSuperuser]
+
+    def post(self, request):
+        d = request.data
+        requeridos = ['fecha', 'codrut', 'nroasi', 'ofisal', 'ofides']
+        faltan = [k for k in requeridos if not d.get(k)]
+        if faltan:
+            return Response({'ok': False, 'error': f'Faltan parámetros: {", ".join(faltan)}'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            items, raw = aerorutas.asignar_pasaje(
+                d['fecha'], d['codrut'], d['nroasi'], d['ofisal'], d['ofides'])
+        except aerorutas.AerorutasError as e:
+            return Response({'ok': False, 'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response({'ok': True, 'items': items, 'raw': raw})
+
+
+@ensure_csrf_cookie
+def aerorutas_asignar_test_page(request):
+    """Página de QA (solo superusuario) para probar ASIGPASA contra Aerorutas."""
+    u = request.user
+    if not (u.is_authenticated and u.is_superuser):
+        return redirect_to_login(request.get_full_path(), '/admin/login/')
+    return render(request, 'viajes/asignar_test.html')

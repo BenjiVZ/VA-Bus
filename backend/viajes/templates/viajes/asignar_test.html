@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba — Marcar puesto vendido (ASIGPASA)</title>
+<style>
+  :root { --azul:#1a3a6b; --ok:#15803d; --err:#b91c1c; --bg:#f1f5f9; --bd:#cbd5e1; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); margin:0; padding:24px; color:#0f172a; }
+  .wrap { max-width:520px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; color:var(--azul); }
+  .sub { color:#64748b; font-size:13px; margin:0 0 20px; }
+  .card { background:#fff; border:1px solid var(--bd); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  label { display:block; font-size:12px; font-weight:600; color:#475569; margin:10px 0 4px; }
+  input { width:100%; padding:9px 11px; border:1px solid var(--bd); border-radius:8px; font-size:14px; }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; }
+  button { width:100%; margin-top:16px; padding:11px; border:0; border-radius:8px; background:var(--azul); color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .warn { background:#fef3c7; border:1px solid #fde68a; color:#92400e; font-size:12px; padding:10px 12px; border-radius:8px; margin-bottom:16px; }
+  .result { margin-top:14px; padding:12px; border-radius:8px; font-size:13px; display:none; }
+  .result.ok { background:#dcfce7; border:1px solid #86efac; color:var(--ok); display:block; }
+  .result.err { background:#fee2e2; border:1px solid #fca5a5; color:var(--err); display:block; }
+  pre { background:#0f172a; color:#e2e8f0; padding:10px; border-radius:8px; font-size:11px; overflow:auto; margin:8px 0 0; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Marcar puesto vendido por web (ASIGPASA)</h1>
+  <p class="sub">Envía a Aerorutas que un asiento se vendió por la web. QA de la integración.</p>
+  <div class="warn">⚠️ Marca el puesto como vendido en el sistema REAL de Aerorutas.</div>
+
+  <div class="card">
+    <div class="row">
+      <div><label>Código de ruta (codrut)</label><input id="codrut" placeholder="001"></div>
+      <div><label>Fecha (YYYY-MM-DD)</label><input id="fecha" placeholder="2026-06-16"></div>
+    </div>
+    <label>Número de asiento (nroasi)</label><input id="nroasi" placeholder="10">
+    <div class="row">
+      <div><label>Oficina salida (ofisal)</label><input id="ofisal" placeholder="02"></div>
+      <div><label>Oficina llegada (ofides)</label><input id="ofides" placeholder="19"></div>
+    </div>
+    <button id="btn" onclick="asignar()">Marcar como vendido</button>
+    <div id="res" class="result"></div>
+  </div>
+</div>
+
+<script>
+const API = '/api/aerorutas/asignar/';
+
+function val(id){ return document.getElementById(id).value.trim(); }
+function getCookie(name){
+  const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return m ? m.pop() : '';
+}
+function show(ok, titulo, payload){
+  const el = document.getElementById('res');
+  el.className = 'result ' + (ok ? 'ok' : 'err');
+  el.innerHTML = '<strong>' + titulo + '</strong><pre>' + JSON.stringify(payload, null, 2) + '</pre>';
+}
+
+async function asignar(){
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const r = await fetch(API, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      credentials:'same-origin',
+      body: JSON.stringify({
+        codrut: val('codrut'), fecha: val('fecha'), nroasi: val('nroasi'),
+        ofisal: val('ofisal'), ofides: val('ofides'),
+      }),
+    });
+    const data = await r.json().catch(()=>({}));
+    if (data.ok){
+      show(true, '✅ Enviado a Aerorutas', { items: data.items, raw: data.raw });
+    } else {
+      show(false, '❌ Error', data.error || data);
+    }
+  } catch (e) {
+    show(false, '❌ Error de red', String(e));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Marcar como vendido';
+  }
+}
+</script>
+</body>
+</html>

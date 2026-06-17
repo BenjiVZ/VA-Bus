@@ -5,6 +5,7 @@ from .views import (
     StatsPublicView,
     AerorutasOficinasView, AerorutasRutasView, AerorutasPuestosView,
     AerorutasApartarView, AerorutasViajesView, AerorutasViajeAsientosView,
+    AerorutasAsignarView, aerorutas_asignar_test_page,
 )
 
 urlpatterns = [
@@ -22,6 +23,9 @@ urlpatterns = [
     path('aerorutas/rutas/', AerorutasRutasView.as_view(), name='aerorutas-rutas'),
     path('aerorutas/puestos/', AerorutasPuestosView.as_view(), name='aerorutas-puestos'),
     path('aerorutas/apartar/', AerorutasApartarView.as_view(), name='aerorutas-apartar'),
+    # Marcar puesto como vendido por web (ASIGPASA) + página de QA (superusuario)
+    path('aerorutas/asignar/', AerorutasAsignarView.as_view(), name='aerorutas-asignar'),
+    path('aerorutas/asignar/test/', aerorutas_asignar_test_page, name='aerorutas-asignar-test'),
     # Mismo formato que /viajes/ y /viajes/<id>/asientos/ (para reusar la UI)
     path('aerorutas/viajes/', AerorutasViajesView.as_view(), name='aerorutas-viajes'),
     path('aerorutas/viajes/<str:trip_id>/asientos/', AerorutasViajeAsientosView.as_view(), name='aerorutas-viaje-asientos'),

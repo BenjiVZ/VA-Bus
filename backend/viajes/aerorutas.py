@@ -322,3 +322,24 @@ def apartar_puesto(fecha: str, codrut: str, nroasi: str, ofisal: str, ofides: st
     raw = _get_raw('TMPPUESTO', fecha=fecha, codrut=codrut,
                    nroasi=nroasi, ofisal=ofisal, ofides=ofides)
     return parse_items(raw), raw
+
+
+def asignar_pasaje(fecha: str, codrut: str, nroasi: str, ofisal: str, ofides: str):
+    """
+    Marca un puesto como VENDIDO POR WEB en Aerorutas (ASIGPASA).
+
+    Se llama cuando el pago se aprueba en nuestro sistema, para que el sistema de
+    control de Aerorutas registre que ese asiento ya fue vendido (evita doble venta).
+
+    Parámetros:
+        fecha  : fecha del viaje 'YYYY-MM-DD'
+        codrut : código de la ruta seleccionada
+        nroasi : número de asiento
+        ofisal : oficina de salida (codofi)
+        ofides : oficina de llegada (codofi)
+
+    Devuelve (items_parseados, texto_crudo) para poder inspeccionar la respuesta.
+    """
+    raw = _get_raw('ASIGPASA', codrut=codrut, fecha=fecha,
+                   nroasi=nroasi, ofisal=ofisal, ofides=ofides)
+    return parse_items(raw), raw
