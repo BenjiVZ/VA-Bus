@@ -17,6 +17,17 @@ from .models import OperacionDebitoOTP
 from .serializers import GenerarOtpSerializer, ConfirmarDebitoSerializer
 
 
+def _grupo_ya_pagado(grupo_pago) -> bool:
+    """True si el grupo ya tiene un pago aprobado (R4 aceptada o reserva confirmada).
+
+    Protege contra pagos duplicados: una vez pagado, ningún otro cobro debe pasar,
+    venga de otra operación R4 o de un comprobante manual ya validado.
+    """
+    if OperacionDebitoOTP.objects.filter(grupo_pago=grupo_pago, estado='aceptada').exists():
+        return True
+    return Reserva.objects.filter(grupo_pago=grupo_pago, estado='confirmado').exists()
+
+
 class BancosListView(APIView):
     """Lista pública de códigos de banco (fuente única para web y móvil)."""
     permission_classes = [permissions.AllowAny]
@@ -40,6 +51,11 @@ class GenerarOtpView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         d = ser.validated_data
         grupo_pago = d['grupo_pago']
+
+        # Si el grupo ya fue pagado, no iniciar otro cobro (evita duplicados).
+        if _grupo_ya_pagado(grupo_pago):
+            return Response({'error': 'Este pago ya fue aprobado.'},
+                            status=status.HTTP_409_CONFLICT)
 
         reservas = Reserva.objects.filter(
             grupo_pago=grupo_pago, usuario=request.user,
@@ -111,6 +127,11 @@ class ConfirmarDebitoView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
         if op.estado == 'aceptada':
             return Response({'error': 'Esta operación ya fue aprobada.'},
+                            status=status.HTTP_409_CONFLICT)
+        # Que no se cobre dos veces el mismo grupo (otra operación ya aprobada,
+        # o reservas ya confirmadas por otro método de pago).
+        if _grupo_ya_pagado(op.grupo_pago):
+            return Response({'error': 'Este pago ya fue aprobado.'},
                             status=status.HTTP_409_CONFLICT)
 
         # Comprobante opcional adjunto por el cliente.

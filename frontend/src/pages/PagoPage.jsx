@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronRight, ChevronLeft, AlertTriangle, Clock, Copy, CheckCircle,
@@ -81,6 +81,9 @@ export default function PagoPage() {
   const [ciLoading, setCiLoading] = useState(false);
   const [ciError, setCiError] = useState('');
 
+  // Candado anti doble-envío (evita pagos duplicados por doble click / doble tap).
+  const submitLockRef = useRef(false);
+
   // Initialize data
   useEffect(() => {
     if (navState?.grupo_pago) {
@@ -106,6 +109,10 @@ export default function PagoPage() {
       if (savedProgress.metodo_seleccionado) {
         setMetodoSeleccionado(savedProgress.metodo_seleccionado);
       }
+      // Restaurar un débito (R4) en curso para no reiniciarlo (evita duplicados).
+      if (savedProgress.ci_operacion_id) setCiOperacionId(savedProgress.ci_operacion_id);
+      if (savedProgress.ci_estado) setCiEstado(savedProgress.ci_estado);
+      if (savedProgress.ci_telefono) setCiTelefono(savedProgress.ci_telefono);
     } else {
       navigate('/');
       return;
@@ -147,7 +154,7 @@ export default function PagoPage() {
     return () => clearInterval(interval);
   }, [fechaExpiracion, comprobanteEnviado]);
 
-  // Save progress on step changes
+  // Save progress on step changes (incluye el estado del débito R4 en curso)
   useEffect(() => {
     if (grupoPago) {
       saveProgress({
@@ -157,9 +164,40 @@ export default function PagoPage() {
         fecha_expiracion: fechaExpiracion,
         paso_actual: paso,
         metodo_seleccionado: metodoSeleccionado,
+        ci_operacion_id: ciOperacionId,
+        ci_estado: ciEstado,
+        ci_telefono: ciTelefono,
       });
     }
-  }, [paso, metodoSeleccionado]);
+  }, [paso, metodoSeleccionado, ciOperacionId, ciEstado]);
+
+  // ── Evitar perder el pago / volver atrás mientras hay una operación en curso ──
+  const pagoEnCurso = !comprobanteEnviado && (
+    submitting || ciLoading ||
+    (metodoSeleccionado?.tipo === 'cobro_inmediato' &&
+      (ciEstado === 'otp_enviado' || ciEstado === 'en_espera'))
+  );
+
+  useEffect(() => {
+    if (!pagoEnCurso) return;
+
+    // 1) Avisar antes de cerrar/recargar la pestaña.
+    const onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    // 2) Bloquear el botón "atrás" del navegador: re-empuja el estado y avisa.
+    window.history.pushState(null, '', window.location.href);
+    const onPop = () => {
+      window.history.pushState(null, '', window.location.href);
+      setCiError('Tienes un pago en curso. No salgas de esta pantalla hasta que termine.');
+    };
+    window.addEventListener('popstate', onPop);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('popstate', onPop);
+    };
+  }, [pagoEnCurso]);
 
   const formatTime = (secs) => {
     if (secs === null) return '--:--';
@@ -214,6 +252,8 @@ export default function PagoPage() {
       setError('Debes subir la captura del pago.');
       return;
     }
+    if (submitLockRef.current) return;   // ya hay un envío en curso
+    submitLockRef.current = true;
     setSubmitting(true);
     setError('');
 
@@ -244,6 +284,7 @@ export default function PagoPage() {
       setError(msg);
     } finally {
       setSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -267,6 +308,8 @@ export default function PagoPage() {
     if (!/^\d{4}$/.test(ciBanco)) { setCiError('Selecciona tu banco.'); return; }
     if (!ciCedula.trim()) { setCiError('Ingresa tu cédula.'); return; }
     if (!/^\d{11}$/.test(ciTelefono)) { setCiError('El teléfono debe tener 11 dígitos (ej: 04141234567).'); return; }
+    if (submitLockRef.current) return;   // evita generar dos OTP / operaciones
+    submitLockRef.current = true;
     setCiLoading(true); setCiError('');
     try {
       const { data } = await r4GenerarOtp({
@@ -288,6 +331,7 @@ export default function PagoPage() {
       setCiError(err.response?.data?.error || 'No se pudo generar el OTP. Intenta de nuevo.');
     } finally {
       setCiLoading(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -314,6 +358,8 @@ export default function PagoPage() {
 
   const handleConfirmarDebito = async () => {
     if (!/^\d{1,8}$/.test(ciOtp)) { setCiError('Ingresa el OTP recibido (numérico).'); return; }
+    if (submitLockRef.current) return;   // evita confirmar el débito dos veces
+    submitLockRef.current = true;
     setCiLoading(true); setCiError('');
     try {
       const fd = new FormData();
@@ -326,6 +372,7 @@ export default function PagoPage() {
       setCiError(err.response?.data?.error || 'No se pudo procesar el débito.');
     } finally {
       setCiLoading(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -548,11 +595,8 @@ export default function PagoPage() {
         {/* ═══ COBRO INMEDIATO · Paso B: OTP + comprobante opcional + espera ═══ */}
         {paso === 4 && metodoSeleccionado?.tipo === 'cobro_inmediato' && (
           <div className="pago-step">
-            {ciEstado !== 'en_espera' && (
-              <button className="pago-back-btn" onClick={() => setPaso(3)}>
-                <ChevronLeft size={18} /> Volver
-              </button>
-            )}
+            {/* Sin botón "Volver": ya se generó el OTP/operación. Volver crearía un
+                pago duplicado. El usuario completa el OTP o la orden expira (15 min). */}
 
             {ciEstado === 'en_espera' ? (
               <div className="pago-card pago-card-center">
