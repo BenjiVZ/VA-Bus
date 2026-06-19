@@ -17,7 +17,7 @@ como concatenación DIRECTA (sin separadores) y con el `Monto` ya formateado a
 import hmac
 import hashlib
 import logging
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 import requests
 from django.conf import settings
@@ -54,8 +54,18 @@ def _timeout() -> int:
 # ── Helpers de firma / formato ──
 
 def _fmt_monto(value) -> str:
-    """Normaliza el monto a string con 2 decimales y punto: '50.00'."""
-    return str(Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    """Normaliza el monto a string con 2 decimales y punto: '50.00'.
+
+    Acepta coma decimal ('50,00') y espacios. Si no es un número válido o no es
+    positivo, lanza R4Error (en vez de reventar con InvalidOperation -> 500).
+    """
+    try:
+        d = Decimal(str(value).strip().replace(',', '.'))
+    except (InvalidOperation, ValueError):
+        raise R4Error(f'Monto inválido: {value!r}. Escribe un número como 50.00')
+    if d <= 0:
+        raise R4Error('El monto debe ser mayor que 0.')
+    return str(d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 
 def firmar(mensaje: str) -> str:
