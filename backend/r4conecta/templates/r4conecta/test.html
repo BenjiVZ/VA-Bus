@@ -86,7 +86,14 @@ async function post(path, body){
     credentials:'same-origin',
     body: JSON.stringify(body),
   });
-  const data = await r.json().catch(()=>({}));
+  const text = await r.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (e) { /* respuesta no-JSON */ }
+  // Si no vino el formato esperado, exponer status + cuerpo crudo (no un {} mudo).
+  if (data.ok === undefined && data.error === undefined) {
+    data = { ok:false, error: data.detail
+      || ('HTTP ' + r.status + ' — ' + ((text || 'sin cuerpo').slice(0,400))) };
+  }
   return { status:r.status, data };
 }
 

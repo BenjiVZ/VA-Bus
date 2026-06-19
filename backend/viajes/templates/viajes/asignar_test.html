@@ -73,11 +73,15 @@ async function asignar(){
         ofisal: val('ofisal'), ofides: val('ofides'),
       }),
     });
-    const data = await r.json().catch(()=>({}));
+    const text = await r.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch (e) { /* respuesta no-JSON */ }
     if (data.ok){
       show(true, '✅ Enviado a Aerorutas', { items: data.items, raw: data.raw });
     } else {
-      show(false, '❌ Error', data.error || data);
+      const err = data.error || data.detail
+        || ('HTTP ' + r.status + ' — ' + ((text || 'sin cuerpo').slice(0,400)));
+      show(false, '❌ Error', err);
     }
   } catch (e) {
     show(false, '❌ Error de red', String(e));
