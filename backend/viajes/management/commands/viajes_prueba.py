@@ -20,10 +20,26 @@ from decimal import Decimal, ROUND_DOWN
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from viajes.models import Ruta, Autobus, Viaje, ConfiguracionGeneral
+from viajes.models import Ruta, Autobus, Viaje, PisoAutobus, ConfiguracionGeneral
 
-# Marcador con el que se identifican los viajes de prueba (crear y borrar).
+# Marcadores con los que se identifican los datos de prueba (crear y borrar).
 RUTA_PRUEBA = ('PRUEBA — Pago', 'PRUEBA — Pago')
+PLACA_PRUEBA = 'PRUEBA-PAGO'  # autobús de prueba autogenerado
+
+
+def _layout(filas=5, columnas=5):
+    """Grilla 2D con pasillo en la columna del medio; el resto, asientos numerados."""
+    aisle = columnas // 2
+    grid, n = [], 1
+    for _ in range(filas):
+        fila = []
+        for c in range(columnas):
+            if c == aisle:
+                fila.append({'type': 'aisle'})
+            else:
+                fila.append({'type': 'seat', 'number': n}); n += 1
+        grid.append(fila)
+    return grid
 
 
 class Command(BaseCommand):
@@ -50,8 +66,11 @@ class Command(BaseCommand):
             return
         n = Viaje.objects.filter(ruta=ruta).count()
         ruta.delete()  # cascada: viajes y sus reservas
+        # Borra también el autobús de prueba autogenerado (si existe).
+        bus_borrado = Autobus.objects.filter(placa=PLACA_PRUEBA).delete()[0]
+        extra = ' y el autobús de prueba' if bus_borrado else ''
         self.stdout.write(self.style.SUCCESS(
-            f'Eliminados {n} viaje(s) de prueba y la ruta "PRUEBA - Pago".'))
+            f'Eliminados {n} viaje(s) de prueba, la ruta "PRUEBA - Pago"{extra}.'))
 
     # ── crear ─────────────────────────────────────────────────────────────
     def handle(self, *args, **opts):
@@ -70,7 +89,19 @@ class Command(BaseCommand):
         else:
             bus = next((b for b in Autobus.objects.all() if b.capacidad_total > 0), None)
             if not bus:
-                raise CommandError('No hay ningún autobús con asientos configurados.')
+                # No hay buses locales con asientos (típico en producción, que usa
+                # el catálogo Aerorutas): creamos uno de prueba con un mapa simple.
+                bus, _ = Autobus.objects.get_or_create(
+                    placa=PLACA_PRUEBA,
+                    defaults={'nombre': 'BUS PRUEBA - Pago', 'marca': 'PRUEBA', 'pisos': 1},
+                )
+                PisoAutobus.objects.get_or_create(
+                    autobus=bus, numero_piso=1,
+                    defaults={'filas': 5, 'columnas': 5, 'layout': _layout(5, 5)},
+                )
+                self.stdout.write(self.style.WARNING(
+                    f'No habia buses con asientos: cree el bus de prueba '
+                    f'#{bus.id} ({bus.capacidad_total} asientos).'))
 
         max_bs = Decimal(str(opts['max_bs']))
         try:
