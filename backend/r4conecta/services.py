@@ -139,24 +139,3 @@ def consultar_operacion(operacion_id: str) -> dict:
     """Consulta el estado final de una operación (cuando débito devolvió AC00)."""
     auth = firmar(operacion_id)
     return _post('/ConsultarOperaciones', {'Id': operacion_id}, auth)
-
-
-def domiciliacion_telefono(doc_id: str, telefono: str, nombre: str,
-                           banco: str, monto, concepto: str = '') -> dict:
-    """Domiciliación por teléfono (DomiciliacionCELE) — PRUEBA EXPERIMENTAL.
-
-    Según el manual: "El PRIMER envío es para que el usuario realice la afiliación
-    en su banco y NO genera el cobro". Lo usamos para verificar si afiliar por este
-    medio destraba el rechazo MD01 ('No posee afiliación') del Débito Inmediato.
-
-    Firma HMAC = solo el 'telefono' (llave = token Commerce).
-    Respuesta exitosa: {'codigo': '202', 'mensaje': ..., 'uuid': ...}
-    (usa claves en español 'codigo'/'mensaje', distinto al débito).
-    """
-    monto = _fmt_monto(monto)
-    auth = firmar(telefono)
-    payload = {
-        'docId': doc_id, 'telefono': telefono, 'nombre': nombre,
-        'banco': banco, 'monto': monto, 'concepto': concepto,
-    }
-    return _post('/TransferenciaOnline/DomiciliacionCELE', payload, auth)

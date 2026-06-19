@@ -88,16 +88,3 @@ class TestConsultar(_TestBase):
         except services.R4Error as e:
             return Response({'ok': False, 'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({'ok': True, 'response': resp})
-
-
-class TestDomiciliacionTelefono(_TestBase):
-    """PRUEBA: afiliación por teléfono (DomiciliacionCELE). 1er envío afilia sin cobrar."""
-    def post(self, request):
-        d = request.data
-        try:
-            resp = services.domiciliacion_telefono(
-                d.get('docId', ''), d.get('telefono', ''), d.get('nombre', ''),
-                d.get('banco', ''), d.get('monto', '1.00'), d.get('concepto', ''))
-        except services.R4Error as e:
-            return Response({'ok': False, 'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
-        return Response({'ok': True, 'response': resp})

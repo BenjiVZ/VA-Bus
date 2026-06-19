@@ -6,10 +6,7 @@ from .views import (
     ConsultarOperacionView,
     OperacionDetalleView,
 )
-from .test_views import (
-    test_page, TestGenerarOtp, TestDebito, TestConsultar,
-    TestDomiciliacionTelefono,
-)
+from .test_views import test_page, TestGenerarOtp, TestDebito, TestConsultar
 
 urlpatterns = [
     path('bancos/', BancosListView.as_view(), name='r4-bancos'),
@@ -23,6 +20,4 @@ urlpatterns = [
     path('test/generar-otp/', TestGenerarOtp.as_view(), name='r4-test-generar-otp'),
     path('test/debito/', TestDebito.as_view(), name='r4-test-debito'),
     path('test/consultar/', TestConsultar.as_view(), name='r4-test-consultar'),
-    # PRUEBA experimental: afiliación por teléfono (Domiciliación). Quitar luego.
-    path('test/domiciliacion-telefono/', TestDomiciliacionTelefono.as_view(), name='r4-test-domiciliacion'),
 ]

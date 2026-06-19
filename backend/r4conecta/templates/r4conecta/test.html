@@ -34,24 +34,6 @@
   <p class="sub">Genera un OTP, confírmalo y verifica el resultado del banco.</p>
   <div class="warn">⚠️ Esto llama al banco REAL y debita fondos reales. Úsalo solo para pruebas controladas.</div>
 
-  <!-- Paso 0 (experimental): Afiliación por Domiciliación (teléfono) -->
-  <div class="card" style="border-color:#a78bfa;">
-    <h2><span class="step" style="background:#7c3aed;">A</span> Afiliación (Domiciliación por teléfono) — PRUEBA</h2>
-    <p class="muted">El 1er envío afilia la cuenta en su banco y NO cobra. Probamos si esto destraba el MD01 del débito. Luego volvé al paso 2 a confirmar el débito.</p>
-    <div class="row">
-      <div><label>Banco (4 díg.)</label><input id="a_banco" placeholder="0102" maxlength="4"></div>
-      <div><label>Monto (Bs)</label><input id="a_monto" placeholder="1.00"></div>
-    </div>
-    <div class="row">
-      <div><label>Cédula (docId)</label><input id="a_cedula" placeholder="V12345678"></div>
-      <div><label>Teléfono (11 díg.)</label><input id="a_telefono" placeholder="04145555555" maxlength="11"></div>
-    </div>
-    <label>Nombre</label><input id="a_nombre" placeholder="Maria Perez">
-    <label>Concepto</label><input id="a_concepto" placeholder="Afiliacion" maxlength="30">
-    <button id="btnAfiliar" onclick="afiliar()" style="background:#7c3aed;">Afiliar (Domiciliación)</button>
-    <div id="resAfiliar" class="result"></div>
-  </div>
-
   <!-- Paso 1 -->
   <div class="card">
     <h2><span class="step">1</span> Datos del pago + Generar OTP</h2>
@@ -119,23 +101,6 @@ function show(elId, ok, titulo, payload){
   const el = document.getElementById(elId);
   el.className = 'result ' + (ok ? 'ok' : 'err');
   el.innerHTML = '<strong>' + titulo + '</strong><pre>' + JSON.stringify(payload, null, 2) + '</pre>';
-}
-
-async function afiliar(){
-  const btn = document.getElementById('btnAfiliar');
-  btn.disabled = true; btn.textContent = 'Enviando…';
-  const { data } = await post('/domiciliacion-telefono/', {
-    docId: val('a_cedula'), telefono: val('a_telefono'), nombre: val('a_nombre'),
-    banco: val('a_banco'), monto: val('a_monto'), concepto: val('a_concepto'),
-  });
-  btn.disabled = false; btn.textContent = 'Afiliar (Domiciliación)';
-  if (!data.ok){ show('resAfiliar', false, '❌ Error', data.error || data); return; }
-  const resp = data.response;
-  const cod = String(resp.codigo || resp.code || '');
-  const ok = cod === '202' || resp.success === true;
-  show('resAfiliar', ok,
-    ok ? '✅ Enviado (1er envío = afilia sin cobrar). Ahora probá el débito.' : '⚠️ Respuesta del banco',
-    resp);
 }
 
 async function generarOtp(){
