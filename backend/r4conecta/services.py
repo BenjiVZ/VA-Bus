@@ -16,6 +16,7 @@ como concatenación DIRECTA (sin separadores) y con el `Monto` ya formateado a
 """
 import hmac
 import hashlib
+import json
 import logging
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
@@ -23,6 +24,24 @@ import requests
 from django.conf import settings
 
 logger = logging.getLogger('r4conecta')
+
+
+# ── Helpers para enmascarar datos sensibles en los logs ──
+
+def _mask(valor: str, visibles: int = 2) -> str:
+    """Deja visibles los primeros/últimos chars y enmascara el medio."""
+    s = str(valor or '')
+    if len(s) <= visibles * 2:
+        return '***'
+    return f'{s[:visibles]}***{s[-visibles:]}'
+
+
+def _redact_payload(payload: dict) -> dict:
+    """Copia del payload con el OTP enmascarado (no se loguea el OTP completo)."""
+    d = dict(payload)
+    if d.get('OTP'):
+        d['OTP'] = _mask(d['OTP'])
+    return d
 
 
 class R4Error(Exception):
@@ -84,6 +103,13 @@ def _post(path: str, payload: dict, authorization: str) -> dict:
         'Authorization': authorization,
         'Commerce': _commerce_token(),
     }
+
+    # ── Log del request (token y OTP enmascarados) ──
+    logger.info('REQUEST  POST %s', url)
+    logger.info('  header Commerce: %s', _mask(_commerce_token(), 4))
+    logger.info('  header Authorization (HMAC hex): %s', authorization)
+    logger.info('  body: %s', json.dumps(_redact_payload(payload), ensure_ascii=False))
+
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=_timeout())
     except requests.exceptions.RequestException as e:
@@ -106,6 +132,9 @@ def _post(path: str, payload: dict, authorization: str) -> dict:
             f'Probablemente tu IP/dominio no está autorizado. Respuesta: {cuerpo}',
             code=str(resp.status_code))
 
+    logger.info('RESPONSE %s | HTTP %s | %s', path, resp.status_code,
+                json.dumps(data, ensure_ascii=False))
+
     if resp.status_code >= 500:
         logger.error('R4 %s: HTTP %s %s', path, resp.status_code, data)
         raise R4Error(f'Error del banco (HTTP {resp.status_code}).', code=str(data.get('code', '')))
@@ -118,7 +147,9 @@ def _post(path: str, payload: dict, authorization: str) -> dict:
 def generar_otp(banco: str, monto, telefono: str, cedula: str) -> dict:
     """Solicita al banco que genere y envíe un OTP al cliente. Espera code '202'."""
     monto = _fmt_monto(monto)
-    auth = firmar(f'{banco}{monto}{telefono}{cedula}')
+    mensaje = f'{banco}{monto}{telefono}{cedula}'
+    logger.info('GenerarOtp | firma sobre (Banco+Monto+Telefono+Cedula): %s', mensaje)
+    auth = firmar(mensaje)
     payload = {'Banco': banco, 'Monto': monto, 'Telefono': telefono, 'Cedula': cedula}
     return _post('/GenerarOtp', payload, auth)
 
@@ -127,7 +158,10 @@ def debito_inmediato(banco: str, monto, telefono: str, cedula: str,
                      nombre: str, otp: str, concepto: str) -> dict:
     """Completa el débito inmediato con el OTP. Aprobado = code 'ACCP'."""
     monto = _fmt_monto(monto)
-    auth = firmar(f'{banco}{cedula}{telefono}{monto}{otp}')
+    mensaje = f'{banco}{cedula}{telefono}{monto}{otp}'
+    logger.info('DebitoInmediato | firma sobre (Banco+Cedula+Telefono+Monto+OTP): %s',
+                f'{banco}{cedula}{telefono}{monto}{_mask(otp)}')
+    auth = firmar(mensaje)
     payload = {
         'Banco': banco, 'Monto': monto, 'Telefono': telefono, 'Cedula': cedula,
         'Nombre': nombre, 'OTP': otp, 'Concepto': concepto,

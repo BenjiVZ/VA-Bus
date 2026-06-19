@@ -209,6 +209,21 @@ R4_BASE_URL = os.getenv('R4_BASE_URL', 'https://r4conecta.mibanco.com.ve')
 R4_COMMERCE_TOKEN = os.getenv('R4_COMMERCE_TOKEN', '')  # Token del comercio (Commerce)
 R4_TIMEOUT = int(os.getenv('R4_TIMEOUT', '20'))
 
+# Logging: que el logger 'r4conecta' escriba a consola (lo captura journalctl).
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'r4': {'format': '[%(asctime)s] R4 %(levelname)s %(message)s'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'r4'},
+    },
+    'loggers': {
+        'r4conecta': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}
+
 # ── Aerorutas (Sistema de control externo: oficinas/rutas/puestos) ──
 AERORUTAS_API_URL = os.getenv('AERORUTAS_API_URL', 'https://aerorutasdevenezuela.com/server/request.php')
 AERORUTAS_API_TOKEN = os.getenv('AERORUTAS_API_TOKEN', '')
