@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="{{ refresco }}">
+<title>Pagos R4 — Validación automática</title>
+<style>
+  :root { --azul:#1a3a6b; --bg:#f1f5f9; --bd:#e2e8f0; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); margin:0; padding:24px; color:#0f172a; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  h1 { font-size:20px; margin:0; color:var(--azul); }
+  .sub { color:#64748b; font-size:13px; margin:4px 0 0; }
+  a.btn { background:var(--azul); color:#fff; padding:9px 16px; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600; }
+  .resumen { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0; }
+  .chip { background:#fff; border:1px solid var(--bd); border-radius:10px; padding:10px 14px; font-size:13px; }
+  .chip b { font-size:18px; display:block; }
+  .auto { color:#15803d; font-size:12px; margin:8px 0 0; }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  th, td { text-align:left; padding:10px 12px; font-size:12.5px; border-bottom:1px solid #f1f5f9; }
+  th { background:#f8fafc; color:#475569; font-weight:600; }
+  td.mono { font-family:ui-monospace,Menlo,monospace; font-size:11px; color:#64748b; }
+  .badge { padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .b-aceptada { background:#dcfce7; color:#15803d; }
+  .b-en_espera { background:#fef9c3; color:#854d0e; }
+  .b-rechazada { background:#fee2e2; color:#b91c1c; }
+  .b-error { background:#fee2e2; color:#b91c1c; }
+  .b-otp_generado { background:#e0e7ff; color:#3730a3; }
+  .vacio { text-align:center; color:#94a3b8; padding:30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>💳 Pagos R4 — Débito Inmediato</h1>
+      <p class="sub">Las operaciones en espera (AC00) se consultan y validan solas al banco.</p>
+    </div>
+    <a class="btn" href="/admin/">← Volver al admin</a>
+  </div>
+
+  <div class="resumen">
+    <div class="chip">Última validación automática:</div>
+    <div class="chip"><b>{{ resumen.total }}</b> revisadas</div>
+    <div class="chip"><b style="color:#15803d;">{{ resumen.aprobadas }}</b> aprobadas</div>
+    <div class="chip"><b style="color:#854d0e;">{{ resumen.en_espera }}</b> en espera</div>
+    <div class="chip"><b style="color:#b91c1c;">{{ resumen.rechazadas }}</b> rechazadas</div>
+    <div class="chip"><b style="color:#b91c1c;">{{ resumen.error }}</b> con error</div>
+  </div>
+  <p class="auto">🔄 Esta página se actualiza y revalida sola cada {{ refresco }} segundos.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Estado</th><th>Código</th><th>Cliente</th><th>Cédula</th>
+        <th>Teléfono</th><th>Monto (Bs)</th><th>Referencia</th><th>Id banco</th><th>Creado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for op in operaciones %}
+      <tr>
+        <td>{{ op.id }}</td>
+        <td><span class="badge b-{{ op.estado }}">{{ op.get_estado_display }}</span></td>
+        <td>{{ op.code|default:"—" }}</td>
+        <td>{{ op.nombre|default:"—" }}</td>
+        <td>{{ op.cedula }}</td>
+        <td>{{ op.telefono }}</td>
+        <td>{{ op.monto }}</td>
+        <td>{{ op.referencia|default:"—" }}</td>
+        <td class="mono">{{ op.operacion_id|default:"—" }}</td>
+        <td>{{ op.creado|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" class="vacio">No hay operaciones de pago todavía.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

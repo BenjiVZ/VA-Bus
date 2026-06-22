@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from viajes.views import portal_viajes_view, eliminar_viaje_view
+from r4conecta.panel_views import panel_pagos
 
 admin.site.site_header = "Aerorutas de Venezuela — Administración"
 admin.site.site_title = "Aerorutas Admin"
@@ -14,6 +15,7 @@ admin.site.index_title = "Panel de Administración"
 urlpatterns = [
     path('admin/portal-viajes/', portal_viajes_view, name='portal-viajes'),
     path('admin/portal-viajes/eliminar/<int:viaje_id>/', eliminar_viaje_view, name='eliminar-viaje'),
+    path('admin/r4-pagos/', panel_pagos, name='r4-panel-pagos'),
     path('admin/', admin.site.urls),
     path('api/', include('viajes.urls')),
     path('api/', include('reservas.urls')),

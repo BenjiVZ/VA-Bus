@@ -61,9 +61,9 @@
 
   <!-- Paso 3 (solo si AC00) -->
   <div class="card" id="cardConsulta" style="display:none;">
-    <h2><span class="step">3</span> Consultar operación (estaba en espera AC00)</h2>
-    <p class="muted">Id: <span id="opId"></span></p>
-    <button onclick="consultar()">Consultar estado</button>
+    <h2><span class="step">3</span> Consultar operación (AC00) — se valida sola</h2>
+    <p class="muted">Id: <span id="opId"></span> · se revalida automáticamente cada 5s hasta resolver.</p>
+    <button onclick="consultar()">Consultar ahora</button>
     <div id="resConsulta" class="result"></div>
   </div>
 </div>
@@ -138,18 +138,39 @@ async function confirmar(){
     bankId = resp.Id || resp.id || '';
     document.getElementById('opId').textContent = bankId;
     document.getElementById('cardConsulta').style.display = 'block';
-    show('resDebito', false, '⏳ En espera del receptor (AC00) — usa el paso 3', resp);
+    show('resDebito', false, '⏳ En espera del receptor (AC00) — validando solo…', resp);
+    autoValidar(12);  // ~12 intentos cada 5s = 60s
   } else {
     show('resDebito', false, '❌ Rechazado (' + code + ')', resp);
   }
 }
 
+let autoTimer = null;
+function autoValidar(intentos){
+  if (autoTimer) clearTimeout(autoTimer);
+  consultar().then(resuelto => {
+    if (!resuelto && intentos > 1){
+      autoTimer = setTimeout(() => autoValidar(intentos - 1), 5000);
+    }
+  });
+}
+
+// Devuelve true si la operación quedó resuelta (aprobada o rechazada).
 async function consultar(){
   const { data } = await post('/consultar/', { id: bankId });
-  if (!data.ok){ show('resConsulta', false, '❌ Error', data.error || data); return; }
+  if (!data.ok){ show('resConsulta', false, '❌ Error', data.error || data); return false; }
   const resp = data.response;
-  const ok = String(resp.code||'') === 'ACCP' || resp.success === true;
-  show('resConsulta', ok, ok ? '✅ Aprobado (ACCP)' : '❌ No aprobado ('+(resp.code||'')+')', resp);
+  const code = String(resp.code || '');
+  if (code === 'ACCP' || resp.success === true){
+    show('resConsulta', true, '✅ Aprobado (ACCP) — Ref: ' + (resp.reference || '—'), resp);
+    return true;
+  }
+  if (code === 'AC00'){
+    show('resConsulta', false, '⏳ Aún en espera (AC00)… revalidando solo', resp);
+    return false;
+  }
+  show('resConsulta', false, '❌ No aprobado (' + code + ')', resp);
+  return true;
 }
 </script>
 </body>
