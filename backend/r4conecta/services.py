@@ -36,14 +36,6 @@ def _mask(valor: str, visibles: int = 2) -> str:
     return f'{s[:visibles]}***{s[-visibles:]}'
 
 
-def _redact_payload(payload: dict) -> dict:
-    """Copia del payload con el OTP enmascarado (no se loguea el OTP completo)."""
-    d = dict(payload)
-    if d.get('OTP'):
-        d['OTP'] = _mask(d['OTP'])
-    return d
-
-
 class R4Error(Exception):
     """Error al comunicarse con R4 Conecta o configuración faltante."""
 
@@ -104,11 +96,13 @@ def _post(path: str, payload: dict, authorization: str) -> dict:
         'Commerce': _commerce_token(),
     }
 
-    # ── Log del request (token y OTP enmascarados) ──
+    # ── Log del request (solo el token se enmascara; el body va completo) ──
+    body_json = json.dumps(payload, ensure_ascii=False)
     logger.info('REQUEST  POST %s', url)
+    logger.info('  header Content-Type: application/json')
     logger.info('  header Commerce: %s', _mask(_commerce_token(), 4))
     logger.info('  header Authorization (HMAC hex): %s', authorization)
-    logger.info('  body: %s', json.dumps(_redact_payload(payload), ensure_ascii=False))
+    logger.info('  JSON enviado (exacto): %s', body_json)
 
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=_timeout())
