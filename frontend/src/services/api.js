@@ -152,11 +152,19 @@ export const getStats = () =>
 export const buscarViajes = (params) =>
   api.get('/aerorutas/viajes/', { params });
 
+// Viajes LOCALES (tabla Viaje) — incluyen los de prueba. Mismo formato que Aerorutas.
+export const getViajesLocales = (params) =>
+  api.get('/viajes/', { params });
+
 export const getViaje = (id) =>
   api.get(`/viajes/${id}/`);
 
 export const getAsientos = (viajeId) =>
   api.get(`/aerorutas/viajes/${viajeId}/asientos/`);
+
+// Asientos de un viaje LOCAL (id entero). Para los de prueba / locales.
+export const getAsientosLocal = (viajeId) =>
+  api.get(`/viajes/${viajeId}/asientos/`);
 
 // Reservas
 export const crearReserva = (data) =>

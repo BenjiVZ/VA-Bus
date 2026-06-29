@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { buscarViajes, getTasaCambio, getAerorutasOficinas } from '../services/api';
+import { buscarViajes, getViajesLocales, getTasaCambio, getAerorutasOficinas } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import PriceDisplay from '../components/PriceDisplay';
 import { Bus, ArrowRight, Armchair, Search, MapPin, Calendar, X, Clock } from 'lucide-react';
 import Flatpickr from "react-flatpickr";
@@ -10,6 +11,8 @@ import { Spanish } from "flatpickr/dist/l10n/es.js";
 export default function ViajesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const esStaff = !!user?.is_staff;  // solo el staff ve los viajes de prueba locales
   const [viajes, setViajes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tasa, setTasa] = useState(null);
@@ -60,14 +63,17 @@ export default function ViajesPage() {
     setLoading(true);
     const params = { fecha };
     if (origen && destino) { params.origen = origen; params.destino = destino; }
-    buscarViajes(params)
-      .then((res) => {
-        const data = res.data;
-        setViajes(data.results || data || []);
-      })
+    const norm = (res) => res.data?.results || res.data || [];
+    Promise.all([
+      buscarViajes(params).then(norm).catch(() => []),
+      // Viajes locales (incluye los de PRUEBA). Solo el staff los ve, así no
+      // aparecen a los clientes. Sin filtro de fecha para que siempre se vean.
+      esStaff ? getViajesLocales().then(norm).catch(() => []) : Promise.resolve([]),
+    ])
+      .then(([aero, locales]) => setViajes([...locales, ...aero]))
       .catch(() => setViajes([]))
       .finally(() => setLoading(false));
-  }, [origen, destino, fecha, busquedaCompleta]);
+  }, [origen, destino, fecha, busquedaCompleta, esStaff]);
 
   const handleBuscar = (e) => {
     e.preventDefault();

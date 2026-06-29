@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAsientos, crearReserva, subirDocumentosMenor, subirDocVacunacion, subirDocDiscapacidad, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
+import { getAsientos, getAsientosLocal, crearReserva, subirDocumentosMenor, subirDocVacunacion, subirDocDiscapacidad, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useAsientosWebSocket } from '../hooks/useAsientosWebSocket';
 import SeatMap from '../components/SeatMap';
@@ -66,7 +66,9 @@ export default function AsientosPage() {
   }, [selectedSeats.length, selectionStart]);
 
   const cargarAsientos = useCallback(() => {
-    getAsientos(id)
+    // Aerorutas: id compuesto → endpoint de Aerorutas. Local (id entero, incluye
+    // los de prueba) → endpoint local, que sí soporta reservar/bloquear/pagar.
+    (esAerorutas ? getAsientos(id) : getAsientosLocal(id))
       .then((asientosRes) => {
         const newData = asientosRes.data;
         setData(newData);
@@ -135,7 +137,7 @@ export default function AsientosPage() {
       })
       .catch(() => setError('Error al cargar los asientos.'))
       .finally(() => setLoading(false));
-  }, [id, user, cedula]);
+  }, [id, user, cedula, esAerorutas]);
 
   useEffect(() => {
     cargarAsientos();
