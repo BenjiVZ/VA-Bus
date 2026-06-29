@@ -5,19 +5,20 @@ from .models import Reserva
 @admin.register(Reserva)
 class ReservaAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'usuario', 'viaje', 'numero_asiento', 'piso_asiento',
+        'id', 'codigo_ticket', 'usuario', 'viaje', 'numero_asiento', 'piso_asiento',
         'estado', 'nombre_pasajero', 'cedula_pasajero',
         'es_menor_edad', 'viaja_con_animal', 'es_discapacitado', 'fecha_creacion'
     )
     list_filter = ('estado', 'es_menor_edad', 'viaja_con_animal', 'es_discapacitado', 'viaje__fecha_salida', 'viaje__ruta')
     list_editable = ('estado',)
     search_fields = (
+        'codigo_ticket', 'grupo_pago',
         'usuario__username', 'usuario__first_name', 'usuario__last_name',
         'nombre_pasajero', 'cedula_pasajero',
         'viaje__ruta__origen', 'viaje__ruta__destino'
     )
     date_hierarchy = 'fecha_creacion'
-    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+    readonly_fields = ('codigo_ticket', 'grupo_pago', 'fecha_creacion', 'fecha_actualizacion')
 
     fieldsets = (
         ('Información del Viaje', {
@@ -43,8 +44,9 @@ class ReservaAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'description': 'Certificado médico, RCP o documento que acredite la discapacidad.'
         }),
-        ('Estado', {
-            'fields': ('estado',)
+        ('Estado y Ticket', {
+            'fields': ('estado', 'codigo_ticket', 'grupo_pago'),
+            'description': 'El código de ticket se genera solo al confirmar la reserva.'
         }),
         ('Fechas', {
             'fields': ('fecha_creacion', 'fecha_actualizacion'),
