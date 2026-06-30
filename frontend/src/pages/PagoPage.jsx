@@ -880,6 +880,11 @@ export default function PagoPage() {
                 </>
               )}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {metodoSeleccionado?.tipo === 'cobro_inmediato' && grupoPago && (
+                  <button className="btn btn-success" onClick={() => navigate(`/ticket/${grupoPago}`)}>
+                    🎫 Descargar boleto
+                  </button>
+                )}
                 <button className="btn btn-primary" onClick={() => navigate('/mis-reservas')}>
                   Ver mis reservas
                 </button>
