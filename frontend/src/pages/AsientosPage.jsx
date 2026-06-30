@@ -50,6 +50,10 @@ export default function AsientosPage() {
   const [showWarnings, setShowWarnings] = useState(false);
 
   const selectedSeatsRef = useRef([]);
+  // Los datos del comprador se precargan del perfil UNA sola vez. Si no, el
+  // polling (cada 30s) volvería a rellenarlos y pisaría lo que el usuario
+  // escribió (p. ej. al marcar "Asignar a otra persona", que vacía los campos).
+  const prefilledRef = useRef(false);
 
   useEffect(() => {
     selectedSeatsRef.current = selectedSeats;
@@ -119,25 +123,27 @@ export default function AsientosPage() {
           });
         }
 
-        // Pre-fill passenger info from user profile (only first load)
-        if (user) {
+        // Pre-fill passenger info from user profile — SOLO la primera carga.
+        // En cargas posteriores (polling/WS) NO tocamos los campos, para no
+        // pisar lo que el usuario escribió ni revertir el vaciado de
+        // "Asignar a otra persona".
+        if (user && !prefilledRef.current) {
+          prefilledRef.current = true;
           const nombreCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-          if (nombreCompleto) {
-            setNombre((prev) => prev || nombreCompleto);
-          }
+          if (nombreCompleto) setNombre((prev) => prev || nombreCompleto);
           const rawCedula = user.cedula || '';
           const match = rawCedula.match(/^([VJE])-?(.*)$/i);
-          if (match && !cedula) {
+          if (match) {
             setCedulaTipo(match[1].toUpperCase());
-            setCedula(match[2]);
-          } else if (!cedula) {
-            setCedula((prev) => prev || rawCedula);
+            setCedula((prev) => prev || match[2].replace(/\D/g, ''));
+          } else {
+            setCedula((prev) => prev || rawCedula.replace(/\D/g, ''));
           }
         }
       })
       .catch(() => setError('Error al cargar los asientos.'))
       .finally(() => setLoading(false));
-  }, [id, user, cedula, esAerorutas]);
+  }, [id, user, esAerorutas]);
 
   useEffect(() => {
     cargarAsientos();
