@@ -414,6 +414,9 @@ export default function PagoPage() {
   const bancosFiltrados = bancos.filter(b =>
     `${b.codigo} ${b.nombre}`.toLowerCase().includes(bancoFiltro.toLowerCase()));
 
+  // Nombre del banco elegido (para mostrarlo en la pantalla del OTP).
+  const bancoNombre = bancos.find(b => b.codigo === ciBanco)?.nombre || '';
+
   // ── Expired state ──
   if (timeLeft !== null && timeLeft <= 0 && !comprobanteEnviado) {
     return (
@@ -649,9 +652,27 @@ export default function PagoPage() {
             ) : (
               <>
                 <h2>Ingresa el código OTP</h2>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-                  Enviamos un código a tu teléfono <strong>{ciTelefono}</strong>. Ingrésalo para autorizar el débito.
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Enviamos un código a tu teléfono. Ingrésalo para autorizar el débito.
                 </p>
+
+                {/* Resumen: a qué teléfono y banco se hizo la solicitud */}
+                <div className="otp-resumen">
+                  <div className="otp-resumen-item">
+                    <Smartphone size={16} />
+                    <div>
+                      <span className="otp-resumen-label">Teléfono</span>
+                      <span className="otp-resumen-value">{ciTelefono || '—'}</span>
+                    </div>
+                  </div>
+                  <div className="otp-resumen-item">
+                    <Landmark size={16} />
+                    <div>
+                      <span className="otp-resumen-label">Banco</span>
+                      <span className="otp-resumen-value">{bancoNombre || ciBanco || '—'}</span>
+                    </div>
+                  </div>
+                </div>
 
                 {ciError && <div className="alert alert-error">{ciError}</div>}
 

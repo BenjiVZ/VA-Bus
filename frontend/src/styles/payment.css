@@ -311,6 +311,48 @@
   flex-direction: column;
   gap: 1rem;
 }
+
+/* Resumen de teléfono/banco en la pantalla del OTP */
+.otp-resumen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.otp-resumen-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--bg-surface, #f8fafc);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  min-width: 0;
+}
+.otp-resumen-item svg {
+  color: var(--blue-500, #0052cc);
+  flex-shrink: 0;
+}
+.otp-resumen-label {
+  display: block;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.otp-resumen-value {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 480px) {
+  .otp-resumen { grid-template-columns: 1fr; }
+}
 .pago-upload-area {
   display: flex;
   flex-direction: column;
