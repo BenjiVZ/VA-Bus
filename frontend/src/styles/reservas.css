@@ -42,33 +42,47 @@
   word-break: break-word;
 }
 
-/* My Reservations */
-.reserva-card {
+/* ── My Reservations · forma de boleto ── */
+.reserva-ticket {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  padding: 1.25rem 1.4rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   background: var(--bg-card);
   border: 1px solid var(--border-standard);
-  border-left: 4px solid var(--border-standard);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-.reserva-card:hover {
+.reserva-ticket:hover {
   box-shadow: var(--shadow-md, 0 6px 22px rgba(0, 0, 0, 0.1));
   transform: translateY(-1px);
 }
 
-/* Acento lateral según estado */
-.estado-borde-confirmado { border-left-color: var(--green-500); }
-.estado-borde-pendiente  { border-left-color: var(--yellow-600, #f59e0b); }
-.estado-borde-cancelado  { border-left-color: var(--red-500); }
+/* Franja de color a la izquierda según estado */
+.reserva-ticket::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  background: var(--border-standard);
+}
+.estado-borde-confirmado::before { background: var(--green-500); }
+.estado-borde-pendiente::before  { background: var(--yellow-600, #f59e0b); }
+.estado-borde-cancelado::before  { background: var(--red-500); }
 
-/* Encabezado: ruta + badge */
-.reserva-card-head {
+/* Cuerpo principal */
+.reserva-ticket-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.4rem 1.25rem 1.55rem;
+  min-width: 0;
+}
+
+.reserva-ticket-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -90,42 +104,49 @@
   font-weight: 400;
 }
 
-/* Chips de datos del viaje */
-.reserva-meta {
+/* Datos del viaje en grilla (estilo boleto) */
+.reserva-ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.reserva-dato {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.5rem;
 }
 
-.reserva-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
-  background: var(--bg-surface, #f3f4f6);
-  border-radius: 999px;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
+.reserva-dato svg {
+  color: var(--primary-400, #3b82f6);
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
-/* Pie: identificadores + precio + acción */
-.reserva-card-foot {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding-top: 0.85rem;
-  border-top: 1px dashed var(--border-color, #e5e7eb);
+.reserva-dato-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.reserva-dato-value {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .reserva-ids {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
   font-size: 0.75rem;
   color: var(--text-muted);
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--border-color, #e5e7eb);
 }
 
 .reserva-id-item code {
@@ -135,33 +156,91 @@
   color: var(--text-secondary);
 }
 
-.reserva-precio-accion {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.reserva-precio {
-  text-align: right;
+/* ── Talón derecho con perforación ── */
+.reserva-ticket-stub {
+  position: relative;
+  flex-shrink: 0;
+  width: 160px;
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem;
+  background: var(--bg-surface, #f8fafc);
+  border-left: 2px dashed var(--border-color, #d1d5db);
+}
+
+/* Muescas (círculos) arriba y abajo de la perforación */
+.reserva-ticket-stub::before,
+.reserva-ticket-stub::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-main, #f1f5f9);
+}
+.reserva-ticket-stub::before { top: -8px; }
+.reserva-ticket-stub::after  { bottom: -8px; }
+
+.reserva-precio {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.reserva-precio-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 0.15rem;
 }
 
 .reserva-precio .price-usd {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
 }
 
 .reserva-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   white-space: nowrap;
   font-size: 0.82rem;
-  padding: 0.45rem 0.9rem;
+  padding: 0.5rem 0.9rem;
 }
 
 .reserva-btn-pagar {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border: none;
   color: #fff;
+}
+
+/* En móvil el talón pasa abajo, con perforación horizontal */
+@media (max-width: 560px) {
+  .reserva-ticket {
+    flex-direction: column;
+  }
+  .reserva-ticket-stub {
+    width: auto;
+    flex-direction: row;
+    justify-content: space-between;
+    border-left: none;
+    border-top: 2px dashed var(--border-color, #d1d5db);
+  }
+  .reserva-ticket-stub::before,
+  .reserva-ticket-stub::after {
+    left: auto;
+    top: -9px;
+    bottom: auto;
+  }
+  .reserva-ticket-stub::before { left: -8px; }
+  .reserva-ticket-stub::after  { right: -8px; }
+  .reserva-precio { text-align: left; }
 }
 
 .reserva-estado {
