@@ -52,12 +52,18 @@ export default function TickerBar() {
   return (
     <div className="ticker-bar">
       <div className="ticker-track">
-        {tickerItems.map((item, i) => (
-          <span key={`a-${i}`}>{item}<span className="ticker-dot">•</span></span>
-        ))}
-        {tickerItems.map((item, i) => (
-          <span key={`b-${i}`}>{item}<span className="ticker-dot">•</span></span>
-        ))}
+        {/* Dos mitades idénticas: cada una ocupa el ancho completo y reparte los
+            ítems, así no se ve "a la mitad" cuando hay pocos. */}
+        <div className="ticker-half">
+          {tickerItems.map((item, i) => (
+            <span key={`a-${i}`}>{item}<span className="ticker-dot">•</span></span>
+          ))}
+        </div>
+        <div className="ticker-half" aria-hidden="true">
+          {tickerItems.map((item, i) => (
+            <span key={`b-${i}`}>{item}<span className="ticker-dot">•</span></span>
+          ))}
+        </div>
       </div>
     </div>
   );

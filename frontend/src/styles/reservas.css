@@ -331,9 +331,21 @@
 }
 
 .ticker-track {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  width: max-content;
+  min-width: 100%;
   animation: ticker-scroll 40s linear infinite;
+}
+
+/* Cada mitad ocupa al menos todo el ancho visible y reparte sus ítems, para
+   que con pocos elementos no quede "a la mitad" ni amontonado a un lado. */
+.ticker-half {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 100%;
+  justify-content: space-around;
   padding: 0.6rem 0;
 }
 
