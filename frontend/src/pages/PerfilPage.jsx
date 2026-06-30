@@ -16,9 +16,11 @@ export default function PerfilPage() {
     first_name: '',
     last_name: '',
     email: '',
-    cedula: '',
     telefono: '',
   });
+  // Cédula separada: tipo (V/E/J/P) por selección + número.
+  const [cedulaTipo, setCedulaTipo] = useState('V');
+  const [cedulaNum, setCedulaNum] = useState('');
   const [saving, setSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
   const [profileErr, setProfileErr] = useState('');
@@ -43,9 +45,16 @@ export default function PerfilPage() {
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       email: user.email || '',
-      cedula: user.cedula || '',
       telefono: user.telefono || '',
     });
+    // Separar la cédula guardada (ej. "V-12345678") en tipo + número.
+    const m = (user.cedula || '').match(/^([VEJP])-?(.*)$/i);
+    if (m) {
+      setCedulaTipo(m[1].toUpperCase());
+      setCedulaNum(m[2].replace(/\D/g, ''));
+    } else {
+      setCedulaNum((user.cedula || '').replace(/\D/g, ''));
+    }
   }, [user, navigate]);
 
   const handleChange = (e) => {
@@ -67,7 +76,11 @@ export default function PerfilPage() {
     setProfileErr('');
 
     try {
-      await actualizarPerfil(form);
+      const payload = {
+        ...form,
+        cedula: cedulaNum ? `${cedulaTipo}-${cedulaNum}` : '',
+      };
+      await actualizarPerfil(payload);
       if (refreshUser) await refreshUser();
       setProfileMsg('Perfil actualizado correctamente.');
       setTimeout(() => setProfileMsg(''), 4000);
@@ -172,14 +185,28 @@ export default function PerfilPage() {
           <div className="perfil-grid">
             <div className="form-group">
               <label><CreditCard size={14} /> Cédula</label>
-              <input
-                type="text"
-                className="form-control"
-                name="cedula"
-                value={form.cedula}
-                onChange={handleChange}
-                placeholder="V-12345678"
-              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select
+                  className="form-control"
+                  value={cedulaTipo}
+                  onChange={(e) => setCedulaTipo(e.target.value)}
+                  style={{ maxWidth: '80px' }}
+                  aria-label="Tipo de cédula"
+                >
+                  <option value="V">V</option>
+                  <option value="E">E</option>
+                  <option value="J">J</option>
+                  <option value="P">P</option>
+                </select>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={cedulaNum}
+                  onChange={(e) => setCedulaNum(e.target.value.replace(/\D/g, ''))}
+                  placeholder="12345678"
+                  inputMode="numeric"
+                />
+              </div>
             </div>
 
             <div className="form-group">
