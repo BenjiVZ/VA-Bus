@@ -19,8 +19,12 @@ export default function Footer() {
               Tu empresa de transporte de confianza. Viaja seguro y cómodo por las mejores rutas nacionales de Venezuela.
             </p>
             <div className="footer-socials">
-              <a href="#" aria-label="Facebook" className="footer-social"><Facebook size={18} /></a>
-              <a href="#" aria-label="Instagram" className="footer-social"><Instagram size={18} /></a>
+              <a href="https://www.facebook.com/share/1JwqfkzsQd/?mibextid=wwXIfr"
+                target="_blank" rel="noopener noreferrer"
+                aria-label="Facebook" className="footer-social"><Facebook size={18} /></a>
+              <a href="https://www.instagram.com/aerorutas.venezuela?igsh=aGppZGV0eG56cXA2"
+                target="_blank" rel="noopener noreferrer"
+                aria-label="Instagram" className="footer-social"><Instagram size={18} /></a>
             </div>
           </div>
 
