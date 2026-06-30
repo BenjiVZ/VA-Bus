@@ -142,6 +142,10 @@ export default function PagoPage() {
     const target = new Date(fechaExpiracion).getTime();
 
     const interval = setInterval(() => {
+      // Mientras el banco valida (AC00 / "en espera") el reloj se CONGELA: la orden
+      // no debe expirar mientras esperamos la confirmación del banco. Solo vuelve a
+      // correr si la operación se rechaza (es decir, si hubo un error).
+      if (ciEstado === 'en_espera') return;
       const now = Date.now();
       const diff = Math.max(0, Math.floor((target - now) / 1000));
       setTimeLeft(diff);
@@ -152,7 +156,7 @@ export default function PagoPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [fechaExpiracion, comprobanteEnviado]);
+  }, [fechaExpiracion, comprobanteEnviado, ciEstado]);
 
   // Save progress on step changes (incluye el estado del débito R4 en curso)
   useEffect(() => {
@@ -614,9 +618,33 @@ export default function PagoPage() {
                 <Clock size={48} style={{ color: 'var(--blue-500)' }} className="spin" />
                 <h2 style={{ marginTop: '1rem' }}>Validando tu pago…</h2>
                 <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', textAlign: 'center' }}>
-                  El banco está procesando la operación. Esto puede tardar unos segundos.
-                  Tu silla queda reservada y se confirmará en cuanto el banco apruebe.
+                  El banco está procesando la operación. Tu silla queda reservada y se
+                  confirmará automáticamente en cuanto el banco apruebe — el tiempo no
+                  corre mientras validamos.
                 </p>
+
+                {ciError && (
+                  <div className="alert alert-error" style={{ marginTop: '1rem', width: '100%' }}>{ciError}</div>
+                )}
+
+                {/* OTP editable por si el banco se tarda o quedó pendiente: el cliente
+                    puede corregir el código y volver a validar la operación. */}
+                <div className="pago-upload-form" style={{ marginTop: '1.25rem', width: '100%' }}>
+                  <div className="form-group">
+                    <label>Código OTP</label>
+                    <input className="form-control" value={ciOtp} maxLength={8}
+                      onChange={(e) => setCiOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Ej: 19807849" inputMode="numeric" />
+                  </div>
+                  <button className="btn btn-primary btn-lg" style={{ width: '100%' }}
+                    onClick={handleConfirmarDebito} disabled={ciLoading}>
+                    {ciLoading ? 'Validando…' : 'Volver a validar'}
+                  </button>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.75rem' }}>
+                    Estamos consultando al banco automáticamente. Usa este botón solo si
+                    el pago tarda demasiado.
+                  </p>
+                </div>
               </div>
             ) : (
               <>
