@@ -277,6 +277,15 @@ export default function AsientosPage() {
     setSelectedSeats((prev) => [...prev, seat]);
   };
 
+  // Rellena "Datos del Comprador" con los datos del usuario logueado.
+  const ponerMisDatos = () => {
+    if (!user) return;
+    setNombre(`${user.first_name || ''} ${user.last_name || ''}`.trim());
+    const m = (user.cedula || '').match(/^([VEJP])-?(.*)$/i);
+    if (m) { setCedulaTipo(m[1].toUpperCase()); setCedula(m[2].replace(/\D/g, '')); }
+    else { setCedula((user.cedula || '').replace(/\D/g, '')); }
+  };
+
   const updateSeatOption = (key, field, value) => {
     // Track if user toggled "es_menor" on then off
     if (field === 'es_menor') {
@@ -284,6 +293,17 @@ export default function AsientosPage() {
       if (currentlyMinor && !value) {
         // User is unchecking minor → flag this seat
         setMenorToggled((prev) => ({ ...prev, [key]: true }));
+      }
+    }
+    // "Asignar a otra persona": al marcar, se vacían MIS datos para escribir los
+    // del otro; al desmarcar, vuelven mis datos (si ningún otro asiento es "para otra").
+    if (field === 'para_otra') {
+      if (value) {
+        setNombre(''); setCedula(''); setCedulaTipo('V');
+      } else {
+        const otroParaOtra = selectedSeats.some(
+          (s) => getSeatKey(s) !== key && seatOptions[getSeatKey(s)]?.para_otra);
+        if (!otroParaOtra) ponerMisDatos();
       }
     }
     setSeatOptions((opts) => ({
@@ -373,14 +393,12 @@ export default function AsientosPage() {
 
     if (selectedSeats.length === 0) return;
 
-    // Validate: if para_otra, must have nombre_asignado
-    for (const seat of selectedSeats) {
-      const key = getSeatKey(seat);
-      const opts = seatOptions[key] || {};
-      if (opts.para_otra && !opts.nombre_asignado.trim()) {
-        setError(`Asiento #${seat.numero}: Debes ingresar el nombre de la persona asignada.`);
-        return;
-      }
+    // Validate: si algún asiento es "para otra persona", el nombre (en Datos del
+    // Comprador) debe tener los datos de esa persona.
+    const hayParaOtra = selectedSeats.some((s) => seatOptions[getSeatKey(s)]?.para_otra);
+    if (hayParaOtra && !nombre.trim()) {
+      setError('Ingresa el nombre de la persona a la que asignas el asiento (en "Datos del Comprador").');
+      return;
     }
 
     setError('');
@@ -416,10 +434,10 @@ export default function AsientosPage() {
             viaja_con_animal: opts.viaja_con_animal || false,
             tipo_mascota: opts.tipo_mascota || '',
             es_discapacitado: opts.es_discapacitado || false,
-            nombre_asignado: opts.nombre_asignado || '',
-            cedula_asignado: opts.cedula_asignado
-              ? `${opts.cedula_tipo_asignado || 'V'}-${opts.cedula_asignado}`
-              : '',
+            // Si es "para otra persona", el asignado son los datos escritos en
+            // "Datos del Comprador" (el campo se vacía/recarga según el toggle).
+            nombre_asignado: opts.para_otra ? nombre : '',
+            cedula_asignado: opts.para_otra && cedula ? `${cedulaTipo}-${cedula}` : '',
           };
         }),
         nombre_pasajero: nombre,
@@ -655,53 +673,6 @@ export default function AsientosPage() {
                   </div>
                 </div>
 
-                {/* ── Datos del asignado (por asiento con "para_otra") ── */}
-                {selectedSeats.filter(s => seatOptions[getSeatKey(s)]?.para_otra).map((seat) => {
-                  const key = getSeatKey(seat);
-                  const opts = seatOptions[key] || {};
-                  return (
-                    <div key={key} className="assignee-section" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px dashed var(--border-color, #e2e4e9)' }}>
-                      <h4 style={{ fontSize: '0.85rem', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <UserPlus size={15} /> Persona Asignada — Asiento #{seat.numero}
-                      </h4>
-                      <div className="buyer-fields-grid">
-                        <div className="form-group">
-                          <label>Nombre del asignado</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={opts.nombre_asignado}
-                            onChange={(e) => updateSeatOption(key, 'nombre_asignado', e.target.value)}
-                            placeholder="Nombre y apellido"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Cédula del asignado</label>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <select
-                              className="form-control"
-                              value={opts.cedula_tipo_asignado || 'V'}
-                              onChange={(e) => updateSeatOption(key, 'cedula_tipo_asignado', e.target.value)}
-                              style={{ width: '70px', flexShrink: 0 }}
-                            >
-                              <option value="V">V</option>
-                              <option value="J">J</option>
-                              <option value="E">E</option>
-                            </select>
-                            <input
-                              type="text"
-                              className="form-control"
-                              value={opts.cedula_asignado}
-                              onChange={(e) => updateSeatOption(key, 'cedula_asignado', e.target.value.replace(/\D/g, ''))}
-                              placeholder="12345678"
-                              inputMode="numeric"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
 
               {/* Right card: Seat options */}
@@ -787,7 +758,7 @@ export default function AsientosPage() {
                         {opts.para_otra && (
                           <div className="seat-assign-fields" style={{ animation: 'fadeIn 0.2s ease', padding: '0.5rem 0.75rem', background: 'var(--bg-light, #f0f4ff)', borderRadius: '0.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <UserPlus size={13} /> Los datos del asignado se encuentran debajo de <strong>Datos del Comprador</strong>
+                              <UserPlus size={13} /> Escribe los datos de esa persona en <strong>Datos del Comprador</strong>
                             </span>
                           </div>
                         )}
