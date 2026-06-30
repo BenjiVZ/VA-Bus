@@ -54,14 +54,25 @@ export default function RegisterPage() {
       navigate(`/verificar-email?email=${encodeURIComponent(form.email)}`);
     } catch (err) {
       const data = err.response?.data;
-      if (data) {
-        if (typeof data === 'object' && !Array.isArray(data)) {
-          setFieldErrors(data);
-          setError('Por favor, corrige los errores en el formulario.');
-        } else {
-          const messages = Object.values(data).flat().join(' ');
-          setError(messages || 'Error al registrar.');
-        }
+      // Etiquetas legibles para mostrar el detalle exacto en el cartel superior.
+      const labels = {
+        first_name: 'Nombre', last_name: 'Apellido', username: 'Usuario',
+        email: 'Correo electrónico', cedula: 'Cédula', telefono: 'Teléfono',
+        fecha_nacimiento: 'Fecha de nacimiento', password: 'Contraseña',
+        password2: 'Confirmar contraseña',
+      };
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        setFieldErrors(data);
+        const detalle = Object.entries(data)
+          .map(([campo, msgs]) => {
+            const texto = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+            return `${labels[campo] || campo}: ${texto}`;
+          })
+          .join(' · ');
+        setError(detalle || 'Por favor, corrige los errores en el formulario.');
+      } else if (data) {
+        const messages = Object.values(data).flat().join(' ');
+        setError(messages || 'Error al registrar.');
       } else {
         setError('Error al registrar. Intenta de nuevo.');
       }
