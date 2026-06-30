@@ -305,8 +305,11 @@ export default function PagoPage() {
   };
 
   const handleGenerarOtp = async () => {
+    // El banco/validador esperan la cédula como letra + dígitos, SIN guion ni
+    // espacios (ej: "V30719983"). El perfil la guarda como "V-30719983".
+    const cedulaLimpia = ciCedula.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!/^\d{4}$/.test(ciBanco)) { setCiError('Selecciona tu banco.'); return; }
-    if (!ciCedula.trim()) { setCiError('Ingresa tu cédula.'); return; }
+    if (!/^[VEJP]\d{6,9}$/.test(cedulaLimpia)) { setCiError('Cédula inválida. Ej: V12345678.'); return; }
     if (!/^\d{11}$/.test(ciTelefono)) { setCiError('El teléfono debe tener 11 dígitos (ej: 04141234567).'); return; }
     if (submitLockRef.current) return;   // evita generar dos OTP / operaciones
     submitLockRef.current = true;
@@ -315,7 +318,7 @@ export default function PagoPage() {
       const { data } = await r4GenerarOtp({
         grupo_pago: grupoPago,
         banco: ciBanco,
-        cedula: ciCedula.trim().toUpperCase(),
+        cedula: cedulaLimpia,
         telefono: ciTelefono.trim(),
         nombre: ciNombre.trim(),
         concepto: ciConcepto.trim(),
