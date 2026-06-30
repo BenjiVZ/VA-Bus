@@ -47,8 +47,8 @@ export default function RegisterPage() {
         ...form,
         cedula: form.cedula ? `${form.cedula_tipo}-${form.cedula}` : '',
       };
+      // El backend (RegistroSerializer) valida password2, así que NO se elimina.
       delete submitData.cedula_tipo;
-      delete submitData.password2;
       await registro(submitData);
       // Redirigir a verificación de email (sin auto-login)
       navigate(`/verificar-email?email=${encodeURIComponent(form.email)}`);
