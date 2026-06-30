@@ -45,14 +45,123 @@
 /* My Reservations */
 .reserva-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.4rem;
   margin-bottom: 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border-standard);
+  border-left: 4px solid var(--border-standard);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.reserva-card:hover {
+  box-shadow: var(--shadow-md, 0 6px 22px rgba(0, 0, 0, 0.1));
+  transform: translateY(-1px);
+}
+
+/* Acento lateral según estado */
+.estado-borde-confirmado { border-left-color: var(--green-500); }
+.estado-borde-pendiente  { border-left-color: var(--yellow-600, #f59e0b); }
+.estado-borde-cancelado  { border-left-color: var(--red-500); }
+
+/* Encabezado: ruta + badge */
+.reserva-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reserva-ruta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.reserva-flecha {
+  color: var(--primary-400, #3b82f6);
+  font-weight: 400;
+}
+
+/* Chips de datos del viaje */
+.reserva-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reserva-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--bg-surface, #f3f4f6);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Pie: identificadores + precio + acción */
+.reserva-card-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--border-color, #e5e7eb);
+}
+
+.reserva-ids {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.reserva-id-item code {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.reserva-precio-accion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.reserva-precio {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.reserva-precio .price-usd {
+  font-size: 1.25rem;
+}
+
+.reserva-btn {
+  white-space: nowrap;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.9rem;
+}
+
+.reserva-btn-pagar {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none;
+  color: #fff;
 }
 
 .reserva-estado {

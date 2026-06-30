@@ -60,79 +60,73 @@ export default function MisReservasPage() {
         ) : (
           <div className="reservas-list">
             {reservas.map((reserva) => (
-              <div key={reserva.id} className="card reserva-card">
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h4 style={{ margin: 0 }}>
-                      {reserva.viaje_info.origen} → {reserva.viaje_info.destino}
-                    </h4>
-                    <span className={`reserva-estado estado-${reserva.estado}`}>
-                      {reserva.estado_display}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                    <span>
-                      📅 {new Date(reserva.viaje_info.fecha_salida + 'T00:00:00').toLocaleDateString('es-VE', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </span>
-                    <span>🕐 {reserva.viaje_info.hora_salida?.slice(0, 5)}</span>
-                    <span>💺 Asiento #{reserva.numero_asiento}</span>
-                    <span>🚌 {reserva.viaje_info.autobus}</span>
-                  </div>
+              <div key={reserva.id} className={`reserva-card estado-borde-${reserva.estado}`}>
+                {/* Encabezado: ruta + estado */}
+                <div className="reserva-card-head">
+                  <h4 className="reserva-ruta">
+                    {reserva.viaje_info.origen}
+                    <span className="reserva-flecha">→</span>
+                    {reserva.viaje_info.destino}
+                  </h4>
+                  <span className={`reserva-estado estado-${reserva.estado}`}>
+                    {reserva.estado_display}
+                  </span>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <div className="price-usd" style={{ fontSize: '1.1rem' }}>
-                    ${Number(reserva.viaje_info.precio_usd).toFixed(2)}
+                {/* Datos del viaje en chips */}
+                <div className="reserva-meta">
+                  <span className="reserva-chip">
+                    📅 {new Date(reserva.viaje_info.fecha_salida + 'T00:00:00').toLocaleDateString('es-VE', {
+                      day: 'numeric', month: 'short', year: 'numeric',
+                    })}
+                  </span>
+                  <span className="reserva-chip">🕐 {reserva.viaje_info.hora_salida?.slice(0, 5)}</span>
+                  <span className="reserva-chip">💺 Asiento #{reserva.numero_asiento}</span>
+                  <span className="reserva-chip">🚌 {reserva.viaje_info.autobus}</span>
+                </div>
+
+                {/* Pie: identificadores + precio + acción */}
+                <div className="reserva-card-foot">
+                  <div className="reserva-ids">
+                    <span className="reserva-id-item">Reserva <strong>#{reserva.id}</strong></span>
+                    {reserva.codigo_ticket && (
+                      <span className="reserva-id-item">Ticket <code>{reserva.codigo_ticket}</code></span>
+                    )}
+                    {(reserva.referencia_pago?.referencia || reserva.referencia_pago?.operacion_id) && (
+                      <span className="reserva-id-item">
+                        Operación <code>{reserva.referencia_pago.referencia || reserva.referencia_pago.operacion_id}</code>
+                      </span>
+                    )}
                   </div>
-                  {tasa && (
-                    <div className="price-bs">
-                      Bs. {(reserva.viaje_info.precio_usd * tasa).toLocaleString('es-VE', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+
+                  <div className="reserva-precio-accion">
+                    <div className="reserva-precio">
+                      <span className="price-usd">${Number(reserva.viaje_info.precio_usd).toFixed(2)}</span>
+                      {tasa && (
+                        <span className="price-bs">
+                          Bs. {(reserva.viaje_info.precio_usd * tasa).toLocaleString('es-VE', {
+                            minimumFractionDigits: 2, maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    Reserva #{reserva.id}
+                    {reserva.estado === 'confirmado' && reserva.grupo_pago && (
+                      <button
+                        className="btn btn-primary reserva-btn"
+                        onClick={() => navigate(`/ticket/${reserva.grupo_pago}`)}
+                      >
+                        🎫 Ver Ticket
+                      </button>
+                    )}
+                    {reserva.estado === 'pendiente' && reserva.grupo_pago && (
+                      <button
+                        className="btn reserva-btn reserva-btn-pagar"
+                        onClick={() => navigate(`/pago?grupo=${reserva.grupo_pago}`)}
+                      >
+                        💳 Ir a pagar
+                      </button>
+                    )}
                   </div>
-                  {reserva.codigo_ticket && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Ticket: <strong>{reserva.codigo_ticket}</strong>
-                    </div>
-                  )}
-                  {(reserva.referencia_pago?.referencia || reserva.referencia_pago?.operacion_id) && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Operación: <strong>{reserva.referencia_pago.referencia || reserva.referencia_pago.operacion_id}</strong>
-                    </div>
-                  )}
-                  {reserva.estado === 'confirmado' && reserva.grupo_pago && (
-                    <button
-                      className="btn btn-primary"
-                      style={{ marginTop: '0.5rem', fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
-                      onClick={() => navigate(`/ticket/${reserva.grupo_pago}`)}
-                    >
-                      🎫 Ver Ticket
-                    </button>
-                  )}
-                  {reserva.estado === 'pendiente' && reserva.grupo_pago && (
-                    <button
-                      className="btn btn-primary"
-                      style={{
-                        marginTop: '0.5rem',
-                        fontSize: '0.8rem',
-                        padding: '0.35rem 0.75rem',
-                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                        border: 'none',
-                      }}
-                      onClick={() => navigate(`/pago?grupo=${reserva.grupo_pago}`)}
-                    >
-                      💳 Ir a pagar
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
