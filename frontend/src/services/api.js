@@ -251,9 +251,13 @@ export const r4ConfirmarDebito = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
-// Estado de la operación (para polling mientras queda "en espera").
+// Estado de la operación (lectura simple del estado guardado).
 export const r4EstadoOperacion = (operacionId) =>
   api.get(`/r4/debito/${operacionId}/`);
+
+// Consulta ACTIVA al banco (resuelve los AC00 "en espera" -> ACCP/rechazada).
+export const r4ConsultarOperacion = (operacionId) =>
+  api.post(`/r4/debito/${operacionId}/consultar/`);
 
 export const adminGetComprobantes = (estado) =>
   api.get('/admin/comprobantes/', { params: estado ? { estado } : {} });

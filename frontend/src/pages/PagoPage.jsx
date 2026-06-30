@@ -16,7 +16,7 @@ const getPaymentIcon = (nombre) => {
 };
 import {
   getMetodosPago, crearComprobante, getEstadoComprobante, getTasaCambio,
-  getBancos, r4GenerarOtp, r4ConfirmarDebito, r4EstadoOperacion,
+  getBancos, r4GenerarOtp, r4ConfirmarDebito, r4EstadoOperacion, r4ConsultarOperacion,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -379,24 +379,32 @@ export default function PagoPage() {
     }
   };
 
-  // Polling mientras la operación queda "en espera" (el banco confirma luego;
-  // el backend la valida cada 30s y aquí solo leemos el estado).
+  // Polling mientras la operación queda "en espera" (AC00). Le PREGUNTA al banco
+  // (ConsultarOperaciones) en cada ciclo para resolver a aprobada/rechazada, sin
+  // depender de un proceso de fondo.
   useEffect(() => {
     if (ciEstado !== 'en_espera' || !ciOperacionId) return;
-    const iv = setInterval(async () => {
+    let activo = true;
+    let iv;
+    const stop = () => { activo = false; if (iv) clearInterval(iv); };
+    const consultar = async () => {
+      if (!activo) return;
       try {
-        const { data } = await r4EstadoOperacion(ciOperacionId);
+        const { data } = await r4ConsultarOperacion(ciOperacionId);
+        if (!activo) return;
         if (data.estado === 'aceptada') {
-          clearInterval(iv);
+          stop();
           setComprobanteEnviado(true); setPaso(5); clearProgress();
         } else if (data.estado === 'rechazada') {
-          clearInterval(iv);
+          stop();
           setCiEstado('rechazada');
           setCiError('El pago fue rechazado por el banco.');
         }
       } catch { /* reintentar en el siguiente ciclo */ }
-    }, 8000);
-    return () => clearInterval(iv);
+    };
+    consultar();                       // primera consulta inmediata
+    iv = setInterval(consultar, 8000);
+    return stop;
   }, [ciEstado, ciOperacionId]);
 
   const bancosFiltrados = bancos.filter(b =>
