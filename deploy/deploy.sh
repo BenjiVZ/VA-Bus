@@ -28,7 +28,15 @@ echo "==> 4/6 Precarga del catálogo de hoy (si falta)"
 echo "==> 5/6 Frontend: build"
 cd "$FRONT"
 pnpm install --frozen-lockfile || pnpm install
-VITE_API_URL=https://aerorutasdevenezuela.net/api pnpm build
+# El login con Google necesita el client ID en tiempo de build (Vite). Reusamos
+# el mismo GOOGLE_CLIENT_ID que ya está en backend/.env para no duplicarlo.
+GOOGLE_CLIENT_ID=$(grep -E '^GOOGLE_CLIENT_ID=' "$BACK/.env" | head -1 | cut -d= -f2- | tr -d '\047"\r ')
+if [ -z "$GOOGLE_CLIENT_ID" ]; then
+  echo "    (aviso: GOOGLE_CLIENT_ID vacío en backend/.env — el botón de Google no aparecerá)"
+fi
+VITE_API_URL=https://aerorutasdevenezuela.net/api \
+VITE_GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
+pnpm build
 
 echo "==> 6/6 Reiniciar backend + recargar nginx"
 systemctl restart vabus-backend
