@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registro } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import GoogleLoginButton from '../components/GoogleLoginButton';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import Flatpickr from "react-flatpickr";
@@ -9,6 +10,13 @@ import { Spanish } from "flatpickr/dist/l10n/es.js";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Si ya hay sesión activa, no mostrar el registro: ir al inicio.
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
+
   const [form, setForm] = useState({
     username: '',
     email: '',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { login, getPerfil } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -7,13 +7,18 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loginUser } = useAuth();
+  const { user, loginUser } = useAuth();
   const [searchParams] = useSearchParams();
   const recienRegistrado = searchParams.get('registrado') === '1';
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Si ya hay sesión activa, no mostrar el login: ir al inicio.
+  useEffect(() => {
+    if (user) navigate('/', { replace: true });
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
