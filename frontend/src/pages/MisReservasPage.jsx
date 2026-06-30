@@ -99,6 +99,16 @@ export default function MisReservasPage() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                     Reserva #{reserva.id}
                   </div>
+                  {reserva.codigo_ticket && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Ticket: <strong>{reserva.codigo_ticket}</strong>
+                    </div>
+                  )}
+                  {(reserva.referencia_pago?.referencia || reserva.referencia_pago?.operacion_id) && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Operación: <strong>{reserva.referencia_pago.referencia || reserva.referencia_pago.operacion_id}</strong>
+                    </div>
+                  )}
                   {reserva.estado === 'confirmado' && reserva.grupo_pago && (
                     <button
                       className="btn btn-primary"
