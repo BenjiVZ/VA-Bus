@@ -374,7 +374,10 @@
 @media print {
   .no-print,
   nav,
-  footer {
+  footer,
+  .ticker-bar,
+  .chat-fab,
+  .chat-window {
     display: none !important;
   }
 
