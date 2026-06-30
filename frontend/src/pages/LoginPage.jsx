@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { login, getPerfil } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import GoogleLoginButton from '../components/GoogleLoginButton';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -45,7 +45,9 @@ export default function LoginPage() {
       <div className="auth-container">
         <div className="card auth-card">
           <div className="auth-title">
-            <h2>Bienvenido 👋</h2>
+            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <LogIn size={24} style={{ color: '#0052cc' }} /> Bienvenido
+            </h2>
             <p>Ingresa a tu cuenta para reservar</p>
           </div>
 

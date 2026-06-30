@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { verificarEmail, reenviarCodigo } from '../services/api';
+import { MailCheck, CheckCircle } from 'lucide-react';
 
 export default function VerificarEmailPage() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function VerificarEmailPage() {
 
     try {
       const res = await verificarEmail(email, codigo);
-      setSuccess('¡Email verificado exitosamente! ✅ Redirigiendo al login...');
+      setSuccess('¡Email verificado exitosamente! Redirigiendo al login...');
       setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al verificar.');
@@ -51,7 +52,9 @@ export default function VerificarEmailPage() {
       <div className="auth-container">
         <div className="card auth-card">
           <div className="auth-title">
-            <h2>Verifica tu Email 📧</h2>
+            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <MailCheck size={26} style={{ color: '#0052cc' }} /> Verifica tu Email
+            </h2>
             <p>
               Enviamos un código de 6 dígitos a<br />
               <strong style={{ color: '#0052cc' }}>{email}</strong>
@@ -60,8 +63,8 @@ export default function VerificarEmailPage() {
 
           {error && <div className="alert alert-error">{error}</div>}
           {success && (
-            <div className="alert" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px' }}>
-              {success}
+            <div className="alert" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px' }}>
+              <CheckCircle size={18} style={{ flexShrink: 0 }} /> {success}
             </div>
           )}
 

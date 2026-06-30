@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registro } from '../services/api';
 import GoogleLoginButton from '../components/GoogleLoginButton';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
 import { Spanish } from "flatpickr/dist/l10n/es.js";
@@ -91,7 +91,9 @@ export default function RegisterPage() {
       <div className="auth-container" style={{ maxWidth: '500px' }}>
         <div className="card auth-card">
           <div className="auth-title">
-            <h2>Crear Cuenta ✨</h2>
+            <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <UserPlus size={24} style={{ color: '#0052cc' }} /> Crear Cuenta
+            </h2>
             <p>Regístrate para reservar tus viajes</p>
           </div>
 
