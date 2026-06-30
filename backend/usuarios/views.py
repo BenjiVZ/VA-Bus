@@ -1,3 +1,5 @@
+import threading
+
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,9 +12,9 @@ from .models import Usuario
 from .serializers import RegistroSerializer, UsuarioSerializer, AdminClienteSerializer
 
 
-def _enviar_codigo_email(usuario, asunto, mensaje_intro):
-    """Envía un código de verificación por email."""
-    codigo = usuario.generar_codigo(minutos=15)
+def _enviar_email_codigo(email, asunto, mensaje_intro, codigo):
+    """Envía (solo envía) el correo con un código ya generado. Pensado para
+    ejecutarse en un hilo aparte: NO toca la base de datos."""
     html = f'''
     <div style="font-family:Inter,Arial,sans-serif;max-width:500px;margin:0 auto;background:#fff;">
         <div style="background:linear-gradient(135deg,#0a1628,#1a365d);padding:24px;text-align:center;border-radius:12px 12px 0 0;">
@@ -34,14 +36,31 @@ def _enviar_codigo_email(usuario, asunto, mensaje_intro):
             subject=asunto,
             message=f'{mensaje_intro}\n\nTu código: {codigo}\n\nExpira en 15 minutos.',
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[usuario.email],
+            recipient_list=[email],
             html_message=html,
             fail_silently=False,
         )
         return True
     except Exception as e:
-        print(f'[EMAIL ERROR] No se pudo enviar email a {usuario.email}: {e}')
+        print(f'[EMAIL ERROR] No se pudo enviar email a {email}: {e}')
         return False
+
+
+def _enviar_codigo_email(usuario, asunto, mensaje_intro):
+    """Genera el código de verificación y lo envía (de forma SÍNCRONA)."""
+    codigo = usuario.generar_codigo(minutos=15)
+    return _enviar_email_codigo(usuario.email, asunto, mensaje_intro, codigo)
+
+
+def _enviar_codigo_email_async(usuario, asunto, mensaje_intro):
+    """Genera el código (en DB, síncrono) y dispara el envío del correo en un
+    hilo aparte para no bloquear la respuesta HTTP si el SMTP se cuelga."""
+    codigo = usuario.generar_codigo(minutos=15)
+    threading.Thread(
+        target=_enviar_email_codigo,
+        args=(usuario.email, asunto, mensaje_intro, codigo),
+        daemon=True,
+    ).start()
 
 
 class RegistroView(generics.CreateAPIView):
@@ -56,10 +75,11 @@ class RegistroView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Enviar código de verificación de email
-        email_enviado = False
+        # Enviar código de verificación de email en segundo plano: el correo no
+        # debe bloquear la respuesta (si el SMTP se cuelga, daba 504). El código
+        # ya queda generado en DB, así que el usuario puede verificar apenas llegue.
         if user.email:
-            email_enviado = _enviar_codigo_email(
+            _enviar_codigo_email_async(
                 user,
                 '📧 Verifica tu email — Aerorutas de Venezuela',
                 f'Hola <strong>{user.first_name or user.username}</strong>, ingresa este código para verificar tu email.'
@@ -68,7 +88,7 @@ class RegistroView(generics.CreateAPIView):
         return Response({
             "mensaje": "Usuario registrado exitosamente.",
             "usuario": UsuarioSerializer(user).data,
-            "verificacion_enviada": email_enviado,
+            "verificacion_enviada": bool(user.email),
         }, status=status.HTTP_201_CREATED)
 
 
@@ -133,7 +153,7 @@ class ReenviarCodigoView(APIView):
         if user.email_verificado:
             return Response({"mensaje": "El email ya está verificado."})
 
-        _enviar_codigo_email(
+        _enviar_codigo_email_async(
             user,
             '📧 Nuevo código de verificación — Aerorutas de Venezuela',
             f'Hola <strong>{user.first_name or user.username}</strong>, aquí tienes un nuevo código de verificación.'
@@ -164,7 +184,7 @@ class SolicitarResetPasswordView(APIView):
                 "mensaje": "Si el email está registrado, recibirás un código de recuperación."
             })
 
-        _enviar_codigo_email(
+        _enviar_codigo_email_async(
             user,
             '🔑 Recuperar contraseña — Aerorutas de Venezuela',
             f'Hola <strong>{user.first_name or user.username}</strong>, ingresa este código para restablecer tu contraseña.'
