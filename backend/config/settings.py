@@ -197,6 +197,11 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Aerorutas de Venezuela <no
 # socket no debe colgar la petición: se corta a los N segundos.
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
 
+# Verificación de email por código al registrarse. Hoy está DESACTIVADA porque el
+# droplet no puede enviar correos (puerto SMTP saliente bloqueado). Para volver a
+# exigirla, poné EMAIL_VERIFICATION_REQUIRED=true en el .env cuando el envío funcione.
+EMAIL_VERIFICATION_REQUIRED = os.getenv('EMAIL_VERIFICATION_REQUIRED', 'False').lower() in ('true', '1', 'yes')
+
 # ── Seguridad: Limite de tamaño de archivos (5MB) ──
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5MB

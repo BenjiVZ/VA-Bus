@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { login, getPerfil } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import GoogleLoginButton from '../components/GoogleLoginButton';
@@ -8,6 +8,8 @@ import { Eye, EyeOff } from 'lucide-react';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { loginUser } = useAuth();
+  const [searchParams] = useSearchParams();
+  const recienRegistrado = searchParams.get('registrado') === '1';
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,6 +48,12 @@ export default function LoginPage() {
             <h2>Bienvenido 👋</h2>
             <p>Ingresa a tu cuenta para reservar</p>
           </div>
+
+          {recienRegistrado && !error && (
+            <div className="alert alert-success">
+              ¡Cuenta creada! Ya puedes iniciar sesión con tu usuario y contraseña.
+            </div>
+          )}
 
           {error && <div className="alert alert-error">{error}</div>}
 

@@ -49,9 +49,14 @@ export default function RegisterPage() {
       };
       // El backend (RegistroSerializer) valida password2, así que NO se elimina.
       delete submitData.cedula_tipo;
-      await registro(submitData);
-      // Redirigir a verificación de email (sin auto-login)
-      navigate(`/verificar-email?email=${encodeURIComponent(form.email)}`);
+      const res = await registro(submitData);
+      // Si la verificación por email está activa, ir a ingresar el código.
+      // Si no (correo deshabilitado), la cuenta ya queda lista → al login.
+      if (res.data?.requiere_verificacion) {
+        navigate(`/verificar-email?email=${encodeURIComponent(form.email)}`);
+      } else {
+        navigate('/login?registrado=1');
+      }
     } catch (err) {
       const data = err.response?.data;
       // Etiquetas legibles para mostrar el detalle exacto en el cartel superior.

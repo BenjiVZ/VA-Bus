@@ -75,20 +75,29 @@ class RegistroView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Enviar código de verificación de email en segundo plano: el correo no
-        # debe bloquear la respuesta (si el SMTP se cuelga, daba 504). El código
-        # ya queda generado en DB, así que el usuario puede verificar apenas llegue.
-        if user.email:
+        requiere = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', False)
+        verificacion_enviada = False
+
+        if requiere and user.email:
+            # Enviar código en segundo plano: el correo no debe bloquear la
+            # respuesta (si el SMTP se cuelga daba 504). El código queda en DB.
             _enviar_codigo_email_async(
                 user,
                 '📧 Verifica tu email — Aerorutas de Venezuela',
                 f'Hola <strong>{user.first_name or user.username}</strong>, ingresa este código para verificar tu email.'
             )
+            verificacion_enviada = True
+        else:
+            # Verificación desactivada: la cuenta queda lista para usar de una.
+            if not user.email_verificado:
+                user.email_verificado = True
+                user.save(update_fields=['email_verificado'])
 
         return Response({
             "mensaje": "Usuario registrado exitosamente.",
             "usuario": UsuarioSerializer(user).data,
-            "verificacion_enviada": bool(user.email),
+            "requiere_verificacion": requiere,
+            "verificacion_enviada": verificacion_enviada,
         }, status=status.HTTP_201_CREATED)
 
 
