@@ -12,7 +12,7 @@ export default function ViajesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const esStaff = !!user?.is_staff;  // solo el staff ve los viajes de prueba locales
+  const esLogueado = !!user;  // cualquier usuario logueado ve los viajes de prueba locales
   const [viajes, setViajes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tasa, setTasa] = useState(null);
@@ -66,14 +66,14 @@ export default function ViajesPage() {
     const norm = (res) => res.data?.results || res.data || [];
     Promise.all([
       buscarViajes(params).then(norm).catch(() => []),
-      // Viajes locales (incluye los de PRUEBA). Solo el staff los ve, así no
-      // aparecen a los clientes. Sin filtro de fecha para que siempre se vean.
-      esStaff ? getViajesLocales().then(norm).catch(() => []) : Promise.resolve([]),
+      // Viajes locales (incluye los de PRUEBA). Los ve cualquier usuario logueado,
+      // así todos pueden probar la compra. Sin filtro de fecha para que siempre se vean.
+      esLogueado ? getViajesLocales().then(norm).catch(() => []) : Promise.resolve([]),
     ])
       .then(([aero, locales]) => setViajes([...locales, ...aero]))
       .catch(() => setViajes([]))
       .finally(() => setLoading(false));
-  }, [origen, destino, fecha, busquedaCompleta, esStaff]);
+  }, [origen, destino, fecha, busquedaCompleta, esLogueado]);
 
   const handleBuscar = (e) => {
     e.preventDefault();
