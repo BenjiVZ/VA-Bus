@@ -1,7 +1,35 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Clock, Facebook, Instagram, ChevronRight } from 'lucide-react';
+import { getConfiguracion } from '../services/api';
+
+const EMAIL_CONTACTO = 'aerorutasdevenezuela@gmail.com';
+
+// Formatea un número internacional (ej 584121234567) a +58 412-1234567.
+function formatTelefono(raw) {
+  if (!raw) return '';
+  const d = String(raw).replace(/\D/g, '');
+  if (d.startsWith('58') && d.length === 12) {
+    return `+58 ${d.slice(2, 5)}-${d.slice(5)}`;
+  }
+  if (d.length === 11) { // 04121234567
+    return `${d.slice(0, 4)}-${d.slice(4)}`;
+  }
+  return raw;
+}
 
 export default function Footer() {
+  const [telefono, setTelefono] = useState('');
+
+  useEffect(() => {
+    getConfiguracion()
+      .then((res) => {
+        const c = res.data || {};
+        setTelefono(c.telefono_contacto || c.whatsapp_vendedor || '');
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <footer className="footer">
       <div className="container">
@@ -43,13 +71,15 @@ export default function Footer() {
           <div className="footer-col">
             <h4 className="footer-col-title">Contacto</h4>
             <ul className="footer-contact">
-              <li>
-                <Phone size={15} />
-                <span>+58 412-000-0000</span>
-              </li>
+              {telefono && (
+                <li>
+                  <Phone size={15} />
+                  <a href={`tel:${String(telefono).replace(/\D/g, '')}`}>{formatTelefono(telefono)}</a>
+                </li>
+              )}
               <li>
                 <Mail size={15} />
-                <span>info@aerorutasvzla.com</span>
+                <a href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a>
               </li>
               <li>
                 <MapPin size={15} />
