@@ -42,7 +42,10 @@ export default function GoogleLoginButton() {
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <GoogleLogin
           onSuccess={handleSuccess}
-          onError={() => setError('Error al conectar con Google.')}
+          onError={() => setError(
+            'No se pudo conectar con Google. Tu proveedor de internet puede estar ' +
+            'bloqueándolo. Probá con tu usuario y contraseña más abajo, o activá un VPN.'
+          )}
           text="signin_with"
           shape="rectangular"
           width="300"
