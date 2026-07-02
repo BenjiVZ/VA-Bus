@@ -23,12 +23,12 @@ export default function AtencionModal({ visible, onAccept, onClose, viajeInfo })
 
   return (
     <div className={`atencion-overlay ${animateIn ? 'atencion-overlay-visible' : ''}`} onClick={onClose}>
-      <div className={`atencion-modal ${animateIn ? 'atencion-modal-visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+      {/* Close button — afuera en la esquina */}
+      <button className="atencion-close" onClick={onClose} aria-label="Cerrar">
+        <X size={20} />
+      </button>
 
-        {/* Close button */}
-        <button className="atencion-close" onClick={onClose} aria-label="Cerrar">
-          <X size={20} />
-        </button>
+      <div className={`atencion-modal ${animateIn ? 'atencion-modal-visible' : ''}`} onClick={(e) => e.stopPropagation()}>
 
         {/* Header with route info */}
         <div className="atencion-header">

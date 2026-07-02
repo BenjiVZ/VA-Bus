@@ -47,30 +47,30 @@
   display: none;
 }
 
-/* Close Button */
+/* Close Button — en la esquina del overlay */
 .atencion-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  width: 32px;
-  height: 32px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 .atencion-close:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.4);
   color: #fff;
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
 /* Header â€” dark gradient with route */
