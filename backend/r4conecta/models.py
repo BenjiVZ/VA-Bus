@@ -33,9 +33,10 @@ class OperacionDebitoOTP(models.Model):
     otp_response = models.JSONField(blank=True, null=True, help_text="Respuesta cruda de GenerarOtp")
     debito_response = models.JSONField(blank=True, null=True, help_text="Respuesta cruda de DebitoInmediato")
     consulta_response = models.JSONField(blank=True, null=True, help_text="Respuesta cruda de ConsultarOperaciones")
+    comprobante = models.ImageField(blank=True, null=True, upload_to='comprobantes/r4/%Y/%m/', verbose_name="Comprobante (opcional)")
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, verbose_name="Creado")
+    updated_at = models.DateTimeField(auto_now=True, null=True, verbose_name="Actualizado")
 
     class Meta:
         verbose_name = "Operación Débito OTP"

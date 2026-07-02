@@ -9,18 +9,18 @@ from .operaciones import aplicar_respuesta
 class OperacionDebitoOTPAdmin(admin.ModelAdmin):
     """Página de movimientos de Débito Inmediato (OTP)."""
     list_display = ('id', 'estado', 'code', 'cliente', 'cedula', 'telefono',
-                    'monto', 'referencia', 'operacion_id', 'creado')
-    list_filter = ('estado', 'creado')
+                    'monto', 'referencia', 'operacion_id', 'created_at')
+    list_filter = ('estado', 'created_at')
     search_fields = ('cedula', 'telefono', 'nombre', 'referencia',
                      'operacion_id', 'grupo_pago', 'usuario__username')
-    date_hierarchy = 'creado'
-    ordering = ('-creado',)
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
     actions = ['validar_en_banco']
     readonly_fields = (
         'usuario', 'grupo_pago', 'banco', 'cedula', 'telefono', 'nombre',
         'monto', 'concepto', 'comprobante', 'estado', 'code', 'mensaje',
         'referencia', 'operacion_id', 'otp_response', 'debito_response',
-        'consulta_response', 'creado', 'actualizado',
+        'consulta_response', 'created_at', 'updated_at',
     )
 
     def cliente(self, obj):
