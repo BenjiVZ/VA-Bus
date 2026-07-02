@@ -15,6 +15,8 @@ export default function ViajesPage() {
   const esLogueado = !!user;  // cualquier usuario logueado ve los viajes de prueba locales
   const [viajes, setViajes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errorCarga, setErrorCarga] = useState(false); // falla real (no "vacío")
+  const [reintento, setReintento] = useState(0);        // fuerza recarga
   const [tasa, setTasa] = useState(null);
   const [oficinas, setOficinas] = useState([]);
 
@@ -61,19 +63,25 @@ export default function ViajesPage() {
       return;
     }
     setLoading(true);
+    setErrorCarga(false);
     const params = { fecha };
     if (origen && destino) { params.origen = origen; params.destino = destino; }
     const norm = (res) => res.data?.results || res.data || [];
+    let huboError = false;  // distingue "falló la consulta" de "no hay viajes"
     Promise.all([
-      buscarViajes(params).then(norm).catch(() => []),
+      buscarViajes(params).then(norm).catch(() => { huboError = true; return []; }),
       // Viajes locales (incluye los de PRUEBA). Los ve cualquier usuario logueado,
       // así todos pueden probar la compra. Sin filtro de fecha para que siempre se vean.
       esLogueado ? getViajesLocales().then(norm).catch(() => []) : Promise.resolve([]),
     ])
-      .then(([aero, locales]) => setViajes([...locales, ...aero]))
-      .catch(() => setViajes([]))
+      .then(([aero, locales]) => {
+        setViajes([...locales, ...aero]);
+        // Solo marcamos error si la consulta principal falló y no quedó nada que mostrar.
+        setErrorCarga(huboError && aero.length === 0 && locales.length === 0);
+      })
+      .catch(() => setErrorCarga(true))
       .finally(() => setLoading(false));
-  }, [origen, destino, fecha, busquedaCompleta, esLogueado]);
+  }, [origen, destino, fecha, busquedaCompleta, esLogueado, reintento]);
 
   const handleBuscar = (e) => {
     e.preventDefault();
@@ -184,6 +192,22 @@ export default function ViajesPage() {
           </div>
         ) : loading ? (
           <div className="loading"><div className="spinner" /></div>
+        ) : errorCarga ? (
+          <div className="empty-state">
+            <div className="empty-state-icon"><Bus size={48} strokeWidth={1.5} /></div>
+            <h3>No pudimos cargar los viajes</h3>
+            <p style={{ marginTop: '0.5rem' }}>
+              Hubo un problema al consultar la disponibilidad. Puede ser una demora del
+              sistema; intentá de nuevo en unos segundos.
+            </p>
+            <button
+              className="btn btn-primary"
+              style={{ marginTop: '1rem' }}
+              onClick={() => setReintento((n) => n + 1)}
+            >
+              Reintentar
+            </button>
+          </div>
         ) : viajes.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon"><Bus size={48} strokeWidth={1.5} /></div>

@@ -32,6 +32,9 @@ export const resolveApiFileUrl = (path = '') => {
 
 const api = axios.create({
   baseURL: API_URL,
+  // Sin timeout, una petición al backend colgado deja el spinner infinito. Con
+  // timeout, axios corta y dispara el manejo de error / aviso de "sin conexión".
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
   },

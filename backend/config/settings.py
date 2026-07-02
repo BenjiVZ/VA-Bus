@@ -11,10 +11,22 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-va-bus-dev-key-change-in-production-2024')
+_SECRET_KEY_DEV = 'django-insecure-va-bus-dev-key-change-in-production-2024'
+SECRET_KEY = os.getenv('SECRET_KEY', _SECRET_KEY_DEV)
 
-# En local DEBUG=True por defecto; en el server se pone DEBUG=False en el .env.
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+# Seguro por defecto: DEBUG=False salvo que el .env diga lo contrario.
+# En LOCAL poné DEBUG=True en backend/.env para el modo desarrollo.
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
+# En producción NO se permite arrancar con la SECRET_KEY de desarrollo: los JWT se
+# firman con SECRET_KEY, y esa clave está en el repo → cualquiera podría falsificar
+# tokens de admin. Si falta, fallar ruidosamente en vez de arrancar inseguro.
+if not DEBUG and SECRET_KEY == _SECRET_KEY_DEV:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        'SECRET_KEY no está configurada. Definí SECRET_KEY en backend/.env antes de '
+        'correr en producción (DEBUG=False).'
+    )
 
 # Local: '*'. En producción se restringe vía .env (ALLOWED_HOSTS=dominio,localhost).
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
@@ -169,7 +181,16 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOW_ALL_ORIGINS = True  # Development only
+# En local (DEBUG) se permite cualquier origen para comodidad. En producción, el
+# frontend se sirve del MISMO dominio que el API (same-origin), así que por defecto
+# no se habilita ningún origen cruzado; si hiciera falta, se listan por env.
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
+    ]
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF — orígenes confiables para formularios POST (admin, etc.)
@@ -235,7 +256,9 @@ LOGGING = {
 # ── Aerorutas (Sistema de control externo: oficinas/rutas/puestos) ──
 AERORUTAS_API_URL = os.getenv('AERORUTAS_API_URL', 'https://aerorutasdevenezuela.com/server/request.php')
 AERORUTAS_API_TOKEN = os.getenv('AERORUTAS_API_TOKEN', '')
-AERORUTAS_TIMEOUT = int(os.getenv('AERORUTAS_TIMEOUT', '20'))
+# Timeout corto: el backend corre en daphne de 1 hilo para vistas sync, así que una
+# llamada externa lenta congela TODA la app. Mejor cortar rápido y mostrar error.
+AERORUTAS_TIMEOUT = int(os.getenv('AERORUTAS_TIMEOUT', '8'))
 
 # ── SQLite WAL mode para mejor concurrencia ──
 from django.db.backends.signals import connection_created

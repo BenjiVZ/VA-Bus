@@ -96,13 +96,18 @@ def _post(path: str, payload: dict, authorization: str) -> dict:
         'Commerce': _commerce_token(),
     }
 
-    # ── Log del request (solo el token se enmascara; el body va completo) ──
-    body_json = json.dumps(payload, ensure_ascii=False)
+    # ── Log del request (datos sensibles ENMASCARADOS: OTP, cédula, teléfono,
+    # nombre, token). NUNCA loguear el OTP ni PII en claro: el log va a journalctl.
+    sensibles = {'OTP', 'Otp', 'otp', 'Cedula', 'cedula', 'Telefono', 'telefono', 'Nombre', 'nombre'}
+    payload_log = {
+        k: (_mask(str(v)) if (k in sensibles and v not in (None, '')) else v)
+        for k, v in payload.items()
+    }
     logger.info('REQUEST  POST %s', url)
     logger.info('  header Content-Type: application/json')
     logger.info('  header Commerce: %s', _mask(_commerce_token(), 4))
-    logger.info('  header Authorization (HMAC hex): %s', authorization)
-    logger.info('  JSON enviado (exacto): %s', body_json)
+    logger.info('  header Authorization (HMAC hex): %s', _mask(authorization, 6))
+    logger.info('  JSON enviado (enmascarado): %s', json.dumps(payload_log, ensure_ascii=False))
 
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=_timeout())
