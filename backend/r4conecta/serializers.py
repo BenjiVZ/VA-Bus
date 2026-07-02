@@ -1,37 +1,43 @@
-import re
 from rest_framework import serializers
-
-from .bancos import CODIGOS_VALIDOS
-
-CEDULA_RE = re.compile(r'^[VEJPvejp]\d{6,9}$')
+import re
 
 
 class GenerarOtpSerializer(serializers.Serializer):
-    """Datos para iniciar un débito inmediato (paso 1: generar OTP)."""
-    grupo_pago = serializers.UUIDField()
-    banco = serializers.RegexField(r'^\d{4}$', error_messages={
-        'invalid': 'El código de banco debe tener 4 dígitos.'})
-    cedula = serializers.CharField(max_length=12)
-    telefono = serializers.RegexField(r'^\d{11}$', error_messages={
-        'invalid': 'El teléfono debe tener 11 dígitos.'})
-    nombre = serializers.CharField(max_length=40, required=False, allow_blank=True, default='')
-    concepto = serializers.CharField(max_length=30, required=False, allow_blank=True, default='')
+    """Valida los datos para generar un OTP."""
+    grupo_pago = serializers.UUIDField(help_text="UUID del grupo de reserva")
+    banco = serializers.CharField(max_length=4, help_text="Código banco (4 dígitos)")
+    cedula = serializers.CharField(max_length=20, help_text="Cédula (ej: V12345678)")
+    telefono = serializers.CharField(max_length=20, help_text="Teléfono (11 dígitos)")
+    concepto = serializers.CharField(max_length=30, required=False, default="Boletos Aerorutas")
 
     def validate_banco(self, value):
-        if value not in CODIGOS_VALIDOS:
-            raise serializers.ValidationError("Código de banco no reconocido.")
+        if not re.match(r'^\d{4}$', value):
+            raise serializers.ValidationError("Banco debe ser 4 dígitos numéricos")
         return value
 
     def validate_cedula(self, value):
-        value = value.strip().upper()
-        if not CEDULA_RE.match(value):
-            raise serializers.ValidationError(
-                "Cédula inválida. Formato: letra (V/E/J/P) + 6 a 9 dígitos.")
+        if not re.match(r'^[VEJPvejp]\d{6,9}$', value):
+            raise serializers.ValidationError("Cédula inválida (ej: V12345678)")
+        return value.upper()
+
+    def validate_telefono(self, value):
+        digits = re.sub(r'\D', '', value)
+        if len(digits) != 11:
+            raise serializers.ValidationError("Teléfono debe tener 11 dígitos")
+        return digits
+
+    def validate_concepto(self, value):
+        if len(value) > 30:
+            raise serializers.ValidationError("Concepto máximo 30 caracteres")
         return value
 
 
 class ConfirmarDebitoSerializer(serializers.Serializer):
-    """Datos para completar el débito (paso 2: confirmar con OTP)."""
-    operacion_id = serializers.IntegerField()
-    otp = serializers.RegexField(r'^\d{1,8}$', error_messages={
-        'invalid': 'El OTP debe ser numérico (hasta 8 dígitos).'})
+    """Valida los datos para confirmar el débito con OTP."""
+    operacion_id = serializers.IntegerField(help_text="ID de la operación de débito")
+    otp = serializers.CharField(max_length=8, help_text="Código OTP de 8 dígitos")
+
+    def validate_otp(self, value):
+        if not re.match(r'^\d{8}$', value):
+            raise serializers.ValidationError("OTP debe ser 8 dígitos")
+        return value

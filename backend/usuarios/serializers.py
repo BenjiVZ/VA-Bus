@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth.password_validation import validate_password
 from .models import Usuario
 
 
@@ -17,9 +19,16 @@ class RegistroSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name', 'cedula', 'telefono', 'fecha_nacimiento')
 
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value
+
     def validate(self, data):
         if data['password'] != data['password2']:
-            raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
+            raise serializers.ValidationError({"password2": "Las contraseñas no coinciden."})
         return data
 
     def create(self, validated_data):

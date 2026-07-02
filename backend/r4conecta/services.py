@@ -1,174 +1,168 @@
-"""
-Conexión con la pasarela de pagos R4 Conecta (Mibanco).
-
-Implementa el flujo de Débito Inmediato (OTP):
-    GenerarOtp -> DebitoInmediato -> (si AC00) ConsultarOperaciones
-
-Autenticación (por cada request):
-    - Header `Commerce`: token único del comercio (settings.R4_COMMERCE_TOKEN).
-    - Header `Authorization`: HMAC-SHA256 (hex) de una concatenación de campos
-      específica por método, usando el token Commerce como llave.
-
-NOTA sobre la firma: el banco define la firma como HMAC de los campos
-"concatenados" (ej. "Banco + Monto + Telefono + Cedula"). Aquí se interpreta
-como concatenación DIRECTA (sin separadores) y con el `Monto` ya formateado a
-"x.xx". Si el banco esperara otro formato, se ajusta en `firmar()` / `_fmt_monto()`.
-"""
-import hmac
 import hashlib
-import json
+import hmac
 import logging
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-
 import requests
+from decimal import Decimal
 from django.conf import settings
 
-logger = logging.getLogger('r4conecta')
-
-
-# ── Helpers para enmascarar datos sensibles en los logs ──
-
-def _mask(valor: str, visibles: int = 2) -> str:
-    """Deja visibles los primeros/últimos chars y enmascara el medio."""
-    s = str(valor or '')
-    if len(s) <= visibles * 2:
-        return '***'
-    return f'{s[:visibles]}***{s[-visibles:]}'
+logger = logging.getLogger("r4conecta")
 
 
 class R4Error(Exception):
-    """Error al comunicarse con R4 Conecta o configuración faltante."""
-
-    def __init__(self, message, code=None):
-        super().__init__(message)
-        self.message = message
+    """Excepción para errores de R4 Conecta."""
+    def __init__(self, code, message):
         self.code = code
+        self.message = message
+        super().__init__(f"[{code}] {message}")
 
 
-# ── Configuración ──
+def _mask(value, prefix_len=2, suffix_len=2):
+    """Enmascara un valor mostrando solo los primeros y últimos caracteres."""
+    s = str(value)
+    if len(s) <= prefix_len + suffix_len:
+        return "*" * len(s)
+    return s[:prefix_len] + "*" * (len(s) - prefix_len - suffix_len) + s[-suffix_len:]
 
-def _commerce_token() -> str:
-    token = getattr(settings, 'R4_COMMERCE_TOKEN', '') or ''
+
+def firmar(mensaje):
+    """Genera un HMAC-SHA256 hex con el token Commerce como clave."""
+    token = settings.R4_COMMERCE_TOKEN
     if not token:
-        raise R4Error('R4_COMMERCE_TOKEN no está configurado en el entorno.')
-    return token
+        raise ValueError("R4_COMMERCE_TOKEN no está configurado")
+    return hmac.new(
+        token.encode(),
+        mensaje.encode(),
+        hashlib.sha256
+    ).hexdigest()
 
 
-def _base_url() -> str:
-    return getattr(settings, 'R4_BASE_URL', 'https://r4conecta.mibanco.com.ve').rstrip('/')
+def _fmt_monto(v):
+    """Formatea un Decimal o número a 'x.xx' para la firma y request."""
+    if isinstance(v, Decimal):
+        return f"{v:.2f}"
+    return f"{float(v):.2f}"
 
 
-def _timeout() -> int:
-    return int(getattr(settings, 'R4_TIMEOUT', 20))
-
-
-# ── Helpers de firma / formato ──
-
-def _fmt_monto(value) -> str:
-    """Normaliza el monto a string con 2 decimales y punto: '50.00'.
-
-    Acepta coma decimal ('50,00') y espacios. Si no es un número válido o no es
-    positivo, lanza R4Error (en vez de reventar con InvalidOperation -> 500).
+def _post(path, payload, authorization):
     """
-    try:
-        d = Decimal(str(value).strip().replace(',', '.'))
-    except (InvalidOperation, ValueError):
-        raise R4Error(f'Monto inválido: {value!r}. Escribe un número como 50.00')
-    if d <= 0:
-        raise R4Error('El monto debe ser mayor que 0.')
-    return str(d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-
-
-def firmar(mensaje: str) -> str:
-    """HMAC-SHA256 (hex) del mensaje usando el token Commerce como llave."""
-    key = _commerce_token().encode('utf-8')
-    return hmac.new(key, mensaje.encode('utf-8'), hashlib.sha256).hexdigest()
-
-
-# ── Cliente HTTP ──
-
-def _post(path: str, payload: dict, authorization: str) -> dict:
-    """POST autenticado a R4 Conecta. Devuelve el JSON o lanza R4Error."""
-    url = f'{_base_url()}{path}'
+    POST a R4 Conecta con manejo de excepciones.
+    
+    Returns:
+        dict: La respuesta JSON del banco
+    
+    Raises:
+        R4Error: Si hay error de conexión o respuesta del banco
+    """
+    url = f"{settings.R4_BASE_URL}{path}"
     headers = {
-        'Content-Type': 'application/json',
-        'Authorization': authorization,
-        'Commerce': _commerce_token(),
+        "Content-Type": "application/json",
+        "Commerce": settings.R4_COMMERCE_TOKEN,
+        "Authorization": authorization,
     }
-
-    # ── Log del request (datos sensibles ENMASCARADOS: OTP, cédula, teléfono,
-    # nombre, token). NUNCA loguear el OTP ni PII en claro: el log va a journalctl.
-    sensibles = {'OTP', 'Otp', 'otp', 'Cedula', 'cedula', 'Telefono', 'telefono', 'Nombre', 'nombre'}
-    payload_log = {
-        k: (_mask(str(v)) if (k in sensibles and v not in (None, '')) else v)
-        for k, v in payload.items()
-    }
-    logger.info('REQUEST  POST %s', url)
-    logger.info('  header Content-Type: application/json')
-    logger.info('  header Commerce: %s', _mask(_commerce_token(), 4))
-    logger.info('  header Authorization (HMAC hex): %s', _mask(authorization, 6))
-    logger.info('  JSON enviado (enmascarado): %s', json.dumps(payload_log, ensure_ascii=False))
-
+    
     try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=_timeout())
+        resp = requests.post(url, json=payload, headers=headers, timeout=settings.R4_TIMEOUT)
+        resp.raise_for_status()
+        return resp.json()
     except requests.exceptions.RequestException as e:
-        logger.error('R4 %s: error de conexión: %s', path, e)
-        raise R4Error(f'No se pudo contactar al banco: {e}')
-
-    # El banco puede devolver códigos de negocio con HTTP 200 o con 4xx;
-    # intentamos parsear JSON en cualquier caso para no perder el detalle.
-    try:
-        data = resp.json()
-    except ValueError:
-        # Respuesta no-JSON (típico de un bloqueo de IP/dominio en el borde/WAF).
-        cuerpo = (resp.text or '').strip().replace('\n', ' ')[:300]
-        servidor = resp.headers.get('Server', '')
-        logger.error('R4 %s: respuesta no-JSON (HTTP %s) Server=%s body=%s',
-                     path, resp.status_code, servidor, cuerpo)
-        detalle = f' [Server: {servidor}]' if servidor else ''
-        raise R4Error(
-            f'El banco rechazó la petición (HTTP {resp.status_code}).{detalle} '
-            f'Probablemente tu IP/dominio no está autorizado. Respuesta: {cuerpo}',
-            code=str(resp.status_code))
-
-    logger.info('RESPONSE %s | HTTP %s | %s', path, resp.status_code,
-                json.dumps(data, ensure_ascii=False))
-
-    if resp.status_code >= 500:
-        logger.error('R4 %s: HTTP %s %s', path, resp.status_code, data)
-        raise R4Error(f'Error del banco (HTTP {resp.status_code}).', code=str(data.get('code', '')))
-
-    return data
+        logger.error(f"R4 request error to {path}: {str(e)}")
+        raise R4Error("999", f"Error de conexión: {str(e)}")
 
 
-# ── Métodos del API ──
-
-def generar_otp(banco: str, monto, telefono: str, cedula: str) -> dict:
-    """Solicita al banco que genere y envíe un OTP al cliente. Espera code '202'."""
-    monto = _fmt_monto(monto)
-    mensaje = f'{banco}{monto}{telefono}{cedula}'
-    logger.info('GenerarOtp | firma sobre (Banco+Monto+Telefono+Cedula): %s', mensaje)
-    auth = firmar(mensaje)
-    payload = {'Banco': banco, 'Monto': monto, 'Telefono': telefono, 'Cedula': cedula}
-    return _post('/GenerarOtp', payload, auth)
-
-
-def debito_inmediato(banco: str, monto, telefono: str, cedula: str,
-                     nombre: str, otp: str, concepto: str) -> dict:
-    """Completa el débito inmediato con el OTP. Aprobado = code 'ACCP'."""
-    monto = _fmt_monto(monto)
-    mensaje = f'{banco}{cedula}{telefono}{monto}{otp}'
-    logger.info('DebitoInmediato | firma sobre (Banco+Cedula+Telefono+Monto+OTP): %s',
-                f'{banco}{cedula}{telefono}{monto}{_mask(otp)}')
-    auth = firmar(mensaje)
+def generar_otp(banco, monto, telefono, cedula):
+    """
+    Genera un OTP en Mibanco.
+    
+    Args:
+        banco: Código de 4 dígitos (ej: "0192")
+        monto: Decimal (ej: Decimal("50.00"))
+        telefono: Teléfono en formato 11 dígitos
+        cedula: Cédula (ej: "V12345678")
+    
+    Returns:
+        dict: {"code", "message", "id", ...}
+    
+    Raises:
+        R4Error
+    """
+    monto_str = _fmt_monto(monto)
+    mensaje = f"{banco}{monto_str}{telefono}{cedula}"
+    firma = firmar(mensaje)
+    
     payload = {
-        'Banco': banco, 'Monto': monto, 'Telefono': telefono, 'Cedula': cedula,
-        'Nombre': nombre, 'OTP': otp, 'Concepto': concepto,
+        "Banco": banco,
+        "Monto": monto_str,
+        "Telefono": telefono,
+        "Cedula": cedula,
     }
-    return _post('/DebitoInmediato', payload, auth)
+    
+    logger.info(f"GenerarOtp: banco={banco}, monto={monto_str}, telefono={_mask(telefono)}, cedula={_mask(cedula)}")
+    
+    respuesta = _post("/debito-inmediato/generar-otp", payload, firma)
+    logger.info(f"GenerarOtp respuesta: code={respuesta.get('code')}, message={respuesta.get('message')}")
+    return respuesta
 
 
-def consultar_operacion(operacion_id: str) -> dict:
-    """Consulta el estado final de una operación (cuando débito devolvió AC00)."""
-    auth = firmar(operacion_id)
-    return _post('/ConsultarOperaciones', {'Id': operacion_id}, auth)
+def debito_inmediato(banco, cedula, telefono, monto, otp, nombre, concepto="Boletos"):
+    """
+    Realiza el débito inmediato en Mibanco.
+    
+    Args:
+        banco: Código de 4 dígitos
+        cedula: Cédula
+        telefono: Teléfono
+        monto: Decimal
+        otp: Código OTP (8 dígitos)
+        nombre: Nombre del titular
+        concepto: Concepto de la transacción (máx 30 chars)
+    
+    Returns:
+        dict: {"code", "message", "id", ...}
+    
+    Raises:
+        R4Error
+    """
+    monto_str = _fmt_monto(monto)
+    mensaje = f"{banco}{cedula}{telefono}{monto_str}{otp}"
+    firma = firmar(mensaje)
+    
+    payload = {
+        "Banco": banco,
+        "Cedula": cedula,
+        "Telefono": telefono,
+        "Monto": monto_str,
+        "OTP": otp,
+        "Nombre": nombre,
+        "Concepto": concepto[:30],
+    }
+    
+    logger.info(f"DebitoInmediato: banco={banco}, cedula={_mask(cedula)}, telefono={_mask(telefono)}, monto={monto_str}, otp={_mask(otp)}")
+    
+    respuesta = _post("/debito-inmediato/confirmar", payload, firma)
+    logger.info(f"DebitoInmediato respuesta: code={respuesta.get('code')}, message={respuesta.get('message')}, id={respuesta.get('id')}")
+    return respuesta
+
+
+def consultar_operacion(operacion_id):
+    """
+    Consulta el estado de una operación (AC00 → ACCP).
+    
+    Args:
+        operacion_id: ID de operación del banco (numérico o string)
+    
+    Returns:
+        dict: {"code", "message", "estado", ...}
+    
+    Raises:
+        R4Error
+    """
+    mensaje = str(operacion_id)
+    firma = firmar(mensaje)
+    
+    payload = {"Id": operacion_id}
+    
+    logger.info(f"ConsultarOperacion: id={operacion_id}")
+    
+    respuesta = _post("/debito-inmediato/consultar", payload, firma)
+    logger.info(f"ConsultarOperacion respuesta: code={respuesta.get('code')}, message={respuesta.get('message')}, estado={respuesta.get('estado')}")
+    return respuesta
