@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
+import { toPng } from 'html-to-image';
 import { getTicket, getTasaCambio } from '../services/api';
-import { Bus, MapPin, Calendar, Clock, Armchair, User, CreditCard, Printer } from 'lucide-react';
+import { Bus, MapPin, Calendar, Clock, Armchair, User, CreditCard, Printer, Download } from 'lucide-react';
 import '../styles/TicketPage.css';
 
 export default function TicketPage() {
@@ -11,6 +12,8 @@ export default function TicketPage() {
   const [tasa, setTasa] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [descargando, setDescargando] = useState(false);
+  const ticketRefs = useRef([]);
 
   useEffect(() => {
     Promise.all([
@@ -25,6 +28,36 @@ export default function TicketPage() {
   }, [grupoPago]);
 
   const handlePrint = () => window.print();
+
+  const descargarImagen = async (node, nombreArchivo) => {
+    if (!node) return;
+    const dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: '#ffffff',
+    });
+    const link = document.createElement('a');
+    link.download = nombreArchivo;
+    link.href = dataUrl;
+    link.click();
+  };
+
+  const handleDescargarTodo = async () => {
+    setDescargando(true);
+    try {
+      for (let i = 0; i < ticketRefs.current.length; i++) {
+        const node = ticketRefs.current[i];
+        if (!node) continue;
+        const ticketId = tickets[i]?.codigo_ticket || tickets[i]?.id || i + 1;
+        await descargarImagen(node, `boleto-${ticketId}.png`);
+      }
+    } catch (e) {
+      console.error('Error al generar la imagen del boleto:', e);
+      alert('No se pudo generar la imagen del boleto. Intenta de nuevo.');
+    } finally {
+      setDescargando(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -66,13 +99,26 @@ export default function TicketPage() {
       <div className="container">
         <div className="ticket-header-actions no-print">
           <h2>🎫 Tus Boletos</h2>
-          <button className="btn btn-secondary" onClick={handlePrint}>
-            <Printer size={16} /> Imprimir
-          </button>
+          <div className="ticket-header-buttons">
+            <button
+              className="btn btn-secondary"
+              onClick={handleDescargarTodo}
+              disabled={descargando}
+            >
+              <Download size={16} /> {descargando ? 'Generando...' : 'Descargar imagen'}
+            </button>
+            <button className="btn btn-secondary" onClick={handlePrint} disabled={descargando}>
+              <Printer size={16} /> Imprimir
+            </button>
+          </div>
         </div>
 
         {tickets.map((ticket, index) => (
-          <div key={ticket.id} className="ticket-boleto">
+          <div
+            key={ticket.id}
+            className="ticket-boleto"
+            ref={(el) => { ticketRefs.current[index] = el; }}
+          >
             {/* Top decorative border */}
             <div className="ticket-top-border" />
 
