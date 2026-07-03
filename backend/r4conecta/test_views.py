@@ -70,9 +70,10 @@ class TestDebito(_TestBase):
         d = request.data
         try:
             resp = services.debito_inmediato(
-                d.get('banco', ''), d.get('monto', '0'), d.get('telefono', ''),
-                d.get('cedula', ''), d.get('nombre', ''), d.get('otp', ''),
-                d.get('concepto', ''))
+                banco=d.get('banco', ''), cedula=d.get('cedula', ''),
+                telefono=d.get('telefono', ''), monto=d.get('monto', '0'),
+                otp=d.get('otp', ''), nombre=d.get('nombre', ''),
+                concepto=d.get('concepto', '') or 'Boletos')
         except services.R4Error as e:
             return Response({'ok': False, 'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({'ok': True, 'response': resp})

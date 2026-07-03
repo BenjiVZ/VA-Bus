@@ -9,6 +9,7 @@ User = get_user_model()
 class OperacionDebitoOTP(models.Model):
     ESTADO_CHOICES = [
         ("otp_generado", "OTP Generado"),
+        ("procesando", "Procesando (débito en curso)"),
         ("en_espera", "En Espera (AC00)"),
         ("aceptada", "Aceptada (ACCP)"),
         ("rechazada", "Rechazada"),

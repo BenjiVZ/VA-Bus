@@ -27,7 +27,7 @@ class ReservaSerializer(serializers.ModelSerializer):
         from r4conecta.models import OperacionDebitoOTP
         op = (OperacionDebitoOTP.objects
               .filter(grupo_pago=obj.grupo_pago, estado='aceptada')
-              .order_by('-actualizado').first())
+              .order_by('-updated_at').first())
         if not op:
             return None
         return {

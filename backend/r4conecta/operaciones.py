@@ -54,7 +54,7 @@ def aplicar_respuesta(op, resp, campo=None):
     op.code = code[:10]
     op.mensaje = str(resp.get('message', ''))[:255]
     if resp.get('reference'):
-        op.referencia = str(resp.get('reference'))[:30]
+        op.referencia = str(resp.get('reference'))[:100]
     nuevo_id = resp.get('id') or resp.get('Id')
     if nuevo_id:
         op.operacion_id = str(nuevo_id)[:36]

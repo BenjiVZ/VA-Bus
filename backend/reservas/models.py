@@ -167,6 +167,18 @@ class Reserva(models.Model):
         verbose_name = "Reserva"
         verbose_name_plural = "Reservas"
         ordering = ['-fecha_creacion']
+        constraints = [
+            # Cinturón de seguridad a nivel de DB contra la doble venta del
+            # mismo asiento: solo puede existir UNA reserva activa por
+            # (viaje, asiento, piso). En PostgreSQL select_for_update() no
+            # bloquea filas que aún no existen, así que este constraint es
+            # la única garantía real bajo concurrencia.
+            models.UniqueConstraint(
+                fields=['viaje', 'numero_asiento', 'piso_asiento'],
+                condition=models.Q(estado__in=['pendiente', 'apartado', 'confirmado']),
+                name='uniq_asiento_activo_por_viaje',
+            ),
+        ]
 
     def __str__(self):
         return f"Reserva #{self.pk} - Asiento {self.numero_asiento} (Piso {self.piso_asiento}) - {self.get_estado_display()}"

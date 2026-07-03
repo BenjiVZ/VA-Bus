@@ -1,6 +1,7 @@
 import logging
 from decimal import Decimal
 
+from django.db import transaction
 from rest_framework import permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -86,17 +87,20 @@ class GenerarOtpView(APIView):
         )
 
         try:
-            resp = services.generar_otp(d['banco'], monto_str, d['telefono'], d['cedula'])
+            resp = services.generar_otp(
+                banco=d['banco'], monto=monto_str,
+                telefono=d['telefono'], cedula=d['cedula'],
+            )
         except services.R4Error as e:
             op.estado = 'error'
             op.mensaje = e.message[:255]
-            op.save(update_fields=['estado', 'mensaje', 'actualizado'])
+            op.save(update_fields=['estado', 'mensaje', 'updated_at'])
             return Response({'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
 
         op.otp_response = resp
         op.code = str(resp.get('code', ''))[:10]
         op.mensaje = str(resp.get('message', ''))[:255]
-        op.save(update_fields=['otp_response', 'code', 'mensaje', 'actualizado'])
+        op.save(update_fields=['otp_response', 'code', 'mensaje', 'updated_at'])
 
         otp_enviado = op.code == '202' or resp.get('success') is True
         return Response({
@@ -112,6 +116,8 @@ class ConfirmarDebitoView(APIView):
     """Paso 2: completa el débito con el OTP. Acepta un comprobante opcional."""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'r4_otp'
 
     def post(self, request):
         ser = ConfirmarDebitoSerializer(data=request.data)
@@ -120,38 +126,59 @@ class ConfirmarDebitoView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         d = ser.validated_data
 
-        try:
-            op = OperacionDebitoOTP.objects.get(pk=d['operacion_id'], usuario=request.user)
-        except OperacionDebitoOTP.DoesNotExist:
-            return Response({'error': 'Operación no encontrada.'},
-                            status=status.HTTP_404_NOT_FOUND)
-        if op.estado == 'aceptada':
-            return Response({'error': 'Esta operación ya fue aprobada.'},
-                            status=status.HTTP_409_CONFLICT)
-        # Que no se cobre dos veces el mismo grupo (otra operación ya aprobada,
-        # o reservas ya confirmadas por otro método de pago).
-        if _grupo_ya_pagado(op.grupo_pago):
-            return Response({'error': 'Este pago ya fue aprobado.'},
-                            status=status.HTTP_409_CONFLICT)
+        # ── Reclamo atómico anti doble-cobro ──────────────────────────────
+        # UPDATE ... WHERE estado IN (...) es atómico en la DB: si dos requests
+        # llegan a la vez, solo UNO logra pasar la operación a 'procesando'.
+        claimed = (OperacionDebitoOTP.objects
+                   .filter(pk=d['operacion_id'], usuario=request.user,
+                           estado__in=['otp_generado', 'rechazada', 'error'])
+                   .update(estado='procesando'))
+        if not claimed:
+            try:
+                op = OperacionDebitoOTP.objects.get(pk=d['operacion_id'], usuario=request.user)
+            except OperacionDebitoOTP.DoesNotExist:
+                return Response({'error': 'Operación no encontrada.'},
+                                status=status.HTTP_404_NOT_FOUND)
+            if op.estado == 'aceptada':
+                return Response({'error': 'Esta operación ya fue aprobada.'},
+                                status=status.HTTP_409_CONFLICT)
+            if op.estado == 'procesando':
+                return Response({'error': 'Esta operación ya se está procesando.'},
+                                status=status.HTTP_409_CONFLICT)
+            return Response({'error': 'La operación está en espera de confirmación; usa el endpoint de consulta.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        op = OperacionDebitoOTP.objects.get(pk=d['operacion_id'])
 
         # Comprobante opcional adjunto por el cliente.
         comprobante = request.FILES.get('comprobante')
         if comprobante:
             op.comprobante = comprobante
-            op.save(update_fields=['comprobante', 'actualizado'])
+            op.save(update_fields=['comprobante', 'updated_at'])
 
         try:
-            resp = services.debito_inmediato(
-                op.banco, op.monto, op.telefono, op.cedula,
-                op.nombre, d['otp'], op.concepto,
-            )
+            with transaction.atomic():
+                # Lock del grupo: serializa confirmaciones de DISTINTAS operaciones
+                # sobre el mismo grupo de pago (dos OTP abiertos, doble clic, etc.).
+                list(Reserva.objects.select_for_update().filter(grupo_pago=op.grupo_pago))
+                if _grupo_ya_pagado(op.grupo_pago):
+                    op.estado = 'rechazada'
+                    op.mensaje = 'El grupo ya fue pagado por otra operación.'
+                    op.save(update_fields=['estado', 'mensaje', 'updated_at'])
+                    return Response({'error': 'Este pago ya fue aprobado.'},
+                                    status=status.HTTP_409_CONFLICT)
+
+                resp = services.debito_inmediato(
+                    banco=op.banco, cedula=op.cedula, telefono=op.telefono,
+                    monto=op.monto, otp=d['otp'], nombre=op.nombre,
+                    concepto=op.concepto,
+                )
+                return _resolver_respuesta(op, resp, campo='debito_response')
         except services.R4Error as e:
             op.estado = 'error'
             op.mensaje = e.message[:255]
-            op.save(update_fields=['estado', 'mensaje', 'actualizado'])
+            op.save(update_fields=['estado', 'mensaje', 'updated_at'])
             return Response({'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
-
-        return _resolver_respuesta(op, resp, campo='debito_response')
 
 
 class ConsultarOperacionView(APIView):
