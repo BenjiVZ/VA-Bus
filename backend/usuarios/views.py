@@ -12,6 +12,17 @@ from .models import Usuario
 from .serializers import RegistroSerializer, UsuarioSerializer, AdminClienteSerializer
 
 
+def usuario_por_email(email):
+    """Busca un usuario por email tolerando duplicados históricos.
+
+    Antes se usaba Usuario.objects.get(email=...) que lanza
+    MultipleObjectsReturned (=500) si existen cuentas duplicadas con el mismo
+    correo. Devuelve la cuenta más antigua (la original) o None.
+    """
+    return (Usuario.objects.filter(email__iexact=(email or '').strip())
+            .order_by('id').first())
+
+
 def _enviar_email_codigo(email, asunto, mensaje_intro, codigo):
     """Envía (solo envía) el correo con un código ya generado. Pensado para
     ejecutarse en un hilo aparte: NO toca la base de datos."""
@@ -115,9 +126,8 @@ class VerificarEmailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = Usuario.objects.get(email=email)
-        except Usuario.DoesNotExist:
+        user = usuario_por_email(email)
+        if user is None:
             return Response(
                 {"error": "No se encontró un usuario con ese email."},
                 status=status.HTTP_404_NOT_FOUND
@@ -153,9 +163,8 @@ class ReenviarCodigoView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = Usuario.objects.get(email=email)
-        except Usuario.DoesNotExist:
+        user = usuario_por_email(email)
+        if user is None:
             # No revelamos si el email existe o no (seguridad)
             return Response({"mensaje": "Si el email existe, se envió un nuevo código."})
 
@@ -185,9 +194,8 @@ class SolicitarResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = Usuario.objects.get(email=email)
-        except Usuario.DoesNotExist:
+        user = usuario_por_email(email)
+        if user is None:
             # No revelamos si el email existe (seguridad)
             return Response({
                 "mensaje": "Si el email está registrado, recibirás un código de recuperación."
@@ -232,9 +240,8 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = Usuario.objects.get(email=email)
-        except Usuario.DoesNotExist:
+        user = usuario_por_email(email)
+        if user is None:
             return Response(
                 {"error": "No se encontró un usuario con ese email."},
                 status=status.HTTP_404_NOT_FOUND
@@ -350,15 +357,17 @@ class GoogleLoginView(APIView):
         first_name = idinfo.get('given_name', '')
         last_name = idinfo.get('family_name', '')
 
-        user, created = Usuario.objects.get_or_create(
-            email=email,
-            defaults={
-                'username': email.split('@')[0],
-                'first_name': first_name,
-                'last_name': last_name,
-                'email_verificado': True,  # Google ya verificó el email
-            }
-        )
+        # Tolerante a emails duplicados históricos (get_or_create daría 500).
+        user = usuario_por_email(email)
+        created = user is None
+        if created:
+            user = Usuario.objects.create(
+                email=email,
+                username=email.split('@')[0],
+                first_name=first_name,
+                last_name=last_name,
+                email_verificado=True,  # Google ya verificó el email
+            )
 
         if not created:
             if not user.first_name and first_name:

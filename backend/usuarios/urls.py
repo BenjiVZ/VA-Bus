@@ -27,12 +27,14 @@ class LoginThrottledView(TokenObtainPairView):
         user = authenticate(request, username=username, password=password)
 
         if user is None:
-            # Intentar buscar por email como username
-            try:
-                user_by_email = Usuario.objects.get(email=username)
+            # Intentar buscar por email como username (tolerante a duplicados)
+            from .views import usuario_por_email
+            user_by_email = usuario_por_email(username)
+            if user_by_email:
                 user = authenticate(request, username=user_by_email.username, password=password)
-            except Usuario.DoesNotExist:
-                pass
+                if user:
+                    # El serializer JWT busca por username: pasarle el real
+                    request.data['username'] = user_by_email.username
 
         if user is None:
             return Response(

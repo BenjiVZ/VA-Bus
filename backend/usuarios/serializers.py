@@ -14,10 +14,20 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class RegistroSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
     password2 = serializers.CharField(write_only=True, min_length=6)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = Usuario
         fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name', 'cedula', 'telefono', 'fecha_nacimiento')
+
+    def validate_email(self, value):
+        # Sin esto se crean cuentas duplicadas y TODOS los flujos que buscan
+        # por email (login por email, reset, reenviar código) explotan con 500.
+        if Usuario.objects.filter(email__iexact=value.strip()).exists():
+            raise serializers.ValidationError(
+                'Ya existe una cuenta registrada con este email. '
+                'Inicia sesión o usa "¿Olvidaste tu contraseña?".')
+        return value.strip()
 
     def validate_password(self, value):
         try:

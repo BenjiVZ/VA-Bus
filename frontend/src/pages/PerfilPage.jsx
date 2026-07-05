@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { actualizarPerfil, cambiarPassword } from '../services/api';
+import { actualizarPerfil, cambiarPassword, solicitarResetPassword, resetPassword } from '../services/api';
 import {
   User, Mail, Phone, CreditCard, Save, Lock,
   CheckCircle, AlertTriangle, Eye, EyeOff,
@@ -35,6 +35,14 @@ export default function PerfilPage() {
   const [savingPass, setSavingPass] = useState(false);
   const [passMsg, setPassMsg] = useState('');
   const [passErr, setPassErr] = useState('');
+
+  // Recuperación sin contraseña actual (código por email)
+  const [recMode, setRecMode] = useState(false);     // formulario visible
+  const [recSent, setRecSent] = useState(false);     // código ya enviado
+  const [recForm, setRecForm] = useState({ codigo: '', new_password: '', new_password2: '' });
+  const [recBusy, setRecBusy] = useState(false);
+  const [recMsg, setRecMsg] = useState('');
+  const [recErr, setRecErr] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -114,6 +122,36 @@ export default function PerfilPage() {
       setPassErr(err.response?.data?.error || 'Error al cambiar la contraseña.');
     } finally {
       setSavingPass(false);
+    }
+  };
+
+  const handleEnviarCodigo = async () => {
+    setRecBusy(true); setRecErr(''); setRecMsg('');
+    try {
+      await solicitarResetPassword(user.email);
+      setRecSent(true);
+      setRecMsg(`Te enviamos un código de 6 dígitos a ${user.email}. Revisa también spam.`);
+    } catch {
+      setRecErr('No se pudo enviar el código. Intenta de nuevo en unos minutos.');
+    } finally {
+      setRecBusy(false);
+    }
+  };
+
+  const handleResetConCodigo = async (e) => {
+    e.preventDefault();
+    setRecBusy(true); setRecErr(''); setRecMsg('');
+    try {
+      const res = await resetPassword(user.email, recForm.codigo.trim(),
+        recForm.new_password, recForm.new_password2);
+      setRecMsg(res.data.mensaje || 'Contraseña restablecida.');
+      setRecForm({ codigo: '', new_password: '', new_password2: '' });
+      setRecSent(false);
+      setTimeout(() => { setRecMode(false); setRecMsg(''); }, 4000);
+    } catch (err) {
+      setRecErr(err.response?.data?.error || 'No se pudo restablecer la contraseña.');
+    } finally {
+      setRecBusy(false);
     }
   };
 
@@ -314,6 +352,81 @@ export default function PerfilPage() {
           >
             {savingPass ? 'Cambiando...' : <><Lock size={16} /> Cambiar contraseña</>}
           </button>
+
+          {/* ── Recuperación sin contraseña actual ── */}
+          {!recMode ? (
+            <button
+              type="button"
+              onClick={() => { setRecMode(true); setRecMsg(''); setRecErr(''); }}
+              style={{ background: 'none', border: 'none', color: 'var(--blue-600, #2563eb)', cursor: 'pointer', marginTop: '0.9rem', fontSize: '0.85rem', textDecoration: 'underline', width: '100%' }}
+            >
+              ¿No recuerdas tu contraseña actual? Restablécela con un código por email
+            </button>
+          ) : (
+            <div style={{ marginTop: '1.2rem', paddingTop: '1rem', borderTop: '1px dashed var(--border, #e2e8f0)' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)', marginBottom: '0.6rem' }}>
+                Te enviaremos un código de 6 dígitos a <strong>{user.email}</strong> para crear una contraseña nueva sin necesidad de la actual.
+              </p>
+
+              {recMsg && <div className="alert alert-success"><CheckCircle size={16} /> {recMsg}</div>}
+              {recErr && <div className="alert alert-error"><AlertTriangle size={16} /> {recErr}</div>}
+
+              {!recSent ? (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="button" className="btn btn-accent" onClick={handleEnviarCodigo} disabled={recBusy} style={{ flex: 1 }}>
+                    {recBusy ? 'Enviando…' : <><Mail size={15} /> Enviarme el código</>}
+                  </button>
+                  <button type="button" className="btn" onClick={() => setRecMode(false)} disabled={recBusy}>
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="form-group">
+                    <label>Código recibido</label>
+                    <input
+                      type="text" className="form-control" maxLength={6} inputMode="numeric"
+                      value={recForm.codigo}
+                      onChange={(e) => setRecForm({ ...recForm, codigo: e.target.value.replace(/\D/g, '') })}
+                      placeholder="000000"
+                    />
+                  </div>
+                  <div className="perfil-grid">
+                    <div className="form-group">
+                      <label>Nueva contraseña</label>
+                      <input
+                        type="password" className="form-control"
+                        value={recForm.new_password}
+                        onChange={(e) => setRecForm({ ...recForm, new_password: e.target.value })}
+                        placeholder="Mín. 6 caracteres"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Confirmar nueva</label>
+                      <input
+                        type="password" className="form-control"
+                        value={recForm.new_password2}
+                        onChange={(e) => setRecForm({ ...recForm, new_password2: e.target.value })}
+                        placeholder="Repetir contraseña"
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button" className="btn btn-accent" onClick={handleResetConCodigo}
+                      disabled={recBusy || recForm.codigo.length !== 6 || !recForm.new_password}
+                      style={{ flex: 1 }}
+                    >
+                      {recBusy ? 'Restableciendo…' : 'Restablecer contraseña'}
+                    </button>
+                    <button type="button" className="btn" onClick={handleEnviarCodigo} disabled={recBusy}>
+                      Reenviar código
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>
