@@ -217,7 +217,10 @@ EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 'ye
 EMAIL_USE_TLS = not EMAIL_USE_SSL  # mutuamente excluyentes
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Aerorutas de Venezuela <noreply@aerorutas.com>')
+# El remitente debe coincidir con la cuenta Gmail que envía (EMAIL_HOST_USER);
+# un dominio inexistente (noreply@aerorutas.com) hace que Gmail lo reescriba
+# y que los filtros lo marquen como spam.
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Aerorutas de Venezuela <aerorutasdevenezuela@gmail.com>')
 # Si el SMTP no responde (p. ej. el proveedor bloquea el puerto saliente), el
 # socket no debe colgar la petición: se corta a los N segundos.
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
