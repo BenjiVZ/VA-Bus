@@ -225,6 +225,15 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Aerorutas de Venezuela <ae
 # socket no debe colgar la petición: se corta a los N segundos.
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
 
+# ── Envío por API HTTPS (Brevo) ──
+# DigitalOcean bloquea los puertos SMTP salientes del droplet (verificado con
+# scripts/probar_correos.py), así que en producción el correo sale por la API
+# HTTPS de Brevo (puerto 443, imbloqueable). Con solo definir BREVO_API_KEY en
+# el .env se activa; sin ella, se usa el SMTP normal (útil en desarrollo).
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')
+if BREVO_API_KEY:
+    EMAIL_BACKEND = 'config.email_backend.BrevoApiEmailBackend'
+
 # Verificación de email por código al registrarse. Hoy está DESACTIVADA porque el
 # droplet no puede enviar correos (puerto SMTP saliente bloqueado). Para volver a
 # exigirla, poné EMAIL_VERIFICATION_REQUIRED=true en el .env cuando el envío funcione.

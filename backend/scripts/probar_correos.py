@@ -53,8 +53,12 @@ def main():
     pwd = settings.EMAIL_HOST_PASSWORD
     timeout = getattr(settings, 'EMAIL_TIMEOUT', 10)
 
+    brevo_key = getattr(settings, 'BREVO_API_KEY', '')
+
     # ── 1. Configuración ─────────────────────────────────────────────
     print('\n═══ 1. Configuración cargada ═══')
+    print(f'  EMAIL_BACKEND      = {settings.EMAIL_BACKEND}')
+    print(f'  BREVO_API_KEY      = {"**** (" + str(len(brevo_key)) + " chars) → envío por API HTTPS" if brevo_key else "(no configurada → envío por SMTP)"}')
     print(f'  EMAIL_HOST         = {host}')
     print(f'  EMAIL_PORT         = {settings.EMAIL_PORT}')
     print(f'  EMAIL_USE_TLS      = {settings.EMAIL_USE_TLS}')
@@ -63,8 +67,11 @@ def main():
     print(f'  EMAIL_HOST_PASSWORD= {"*" * 4 + f" ({len(pwd)} chars)" if pwd else "(VACÍA ⚠️)"}')
     print(f'  DEFAULT_FROM_EMAIL = {settings.DEFAULT_FROM_EMAIL}')
     print(f'  EMAIL_TIMEOUT      = {timeout}s')
-    registrar('Credenciales presentes en .env', bool(user and pwd),
-              '' if (user and pwd) else 'faltan EMAIL_HOST_USER/EMAIL_HOST_PASSWORD')
+    if brevo_key:
+        registrar('Credenciales presentes (API Brevo)', True)
+    else:
+        registrar('Credenciales presentes en .env', bool(user and pwd),
+                  '' if (user and pwd) else 'faltan EMAIL_HOST_USER/EMAIL_HOST_PASSWORD')
     if user and user not in settings.DEFAULT_FROM_EMAIL:
         print(f'  {AMARILLO}⚠️  DEFAULT_FROM_EMAIL no coincide con la cuenta Gmail; Gmail lo '
               f'reescribe y algunos filtros lo marcan como spam.{FIN}')
@@ -198,7 +205,19 @@ def main():
 
     print('\nDIAGNÓSTICO:')
     fallo = {n: ok for n, ok, _ in resultados}
-    if not (user and pwd):
+    # Si los 3 métodos reales de la app enviaron, el correo FUNCIONA — los
+    # tests TCP/SMTP solo importan para el backend SMTP.
+    if all(fallo.get(k) for k in ('send_mail simple', 'send_mail HTML', 'EmailMessage + adjunto')):
+        via = 'API HTTPS de Brevo' if brevo_key else 'SMTP'
+        print(f'  → ✅ TODOS los métodos de envío funcionan (vía {via}). Revisa la bandeja')
+        print(f'    (y spam) de {destino}: deben haber llegado 3 correos [QA VA-Bus].')
+        print('    Si el problema era la verificación de registro, ya se puede activar:')
+        print('       EMAIL_VERIFICATION_REQUIRED=true  en el .env + restart.')
+    elif brevo_key:
+        print('  → BREVO_API_KEY está configurada pero el envío falló. Revisa el detalle de')
+        print('    los FAIL de arriba: 401 = clave inválida; 400 con "sender" = el remitente')
+        print('    no está verificado en Brevo (Senders & IP → añade y confirma la cuenta).')
+    elif not (user and pwd):
         print('  → Faltan credenciales en el .env. Configura EMAIL_HOST_USER y')
         print('    EMAIL_HOST_PASSWORD (App Password de Gmail, no la contraseña normal).')
     elif not puertos_ok.get(587) and not puertos_ok.get(465):
@@ -215,11 +234,6 @@ def main():
         print('       EMAIL_PORT=465')
         print('       EMAIL_USE_SSL=true')
         print('    y reinicia: systemctl restart vabus-backend')
-    elif all(fallo.get(k) for k in ('send_mail simple', 'send_mail HTML', 'EmailMessage + adjunto')):
-        print('  → ✅ TODOS los métodos de envío funcionan. Revisa la bandeja (y spam) de')
-        print(f'    {destino}: deben haber llegado 3-4 correos [QA VA-Bus].')
-        print('    Si el problema era la verificación de registro, ya se puede activar:')
-        print('       EMAIL_VERIFICATION_REQUIRED=true  en el .env + restart.')
     else:
         print('  → Falla parcial: revisa los FAIL de arriba (el detalle indica la capa exacta).')
     print()
