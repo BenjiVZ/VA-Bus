@@ -61,6 +61,11 @@ class Reserva(models.Model):
         default=False,
         verbose_name="¿Es menor de edad?"
     )
+    menor_no_es_hijo = models.BooleanField(
+        default=False,
+        verbose_name="¿El menor no es hijo del comprador?",
+        help_text="Si es verdadero, se exige el permiso/autorización de viaje del menor"
+    )
     para_otra_persona = models.BooleanField(
         default=False,
         verbose_name="¿Asiento para otra persona?"
@@ -130,6 +135,13 @@ class Reserva(models.Model):
         null=True, blank=True,
         verbose_name="Cédula del representante",
         help_text="Foto o escaneo de la cédula del representante legal"
+    )
+    doc_permiso_viaje = models.FileField(
+        upload_to='documentos/menores/permisos/',
+        null=True, blank=True,
+        verbose_name="Permiso de viaje del menor",
+        help_text="Autorización de viaje expedida por la autoridad competente "
+                  "(obligatoria cuando el menor no es hijo del comprador)"
     )
 
     def save(self, *args, **kwargs):

@@ -44,7 +44,10 @@ class ViajeListView(generics.ListAPIView):
 
     def get_queryset(self):
         from reservas.models import Reserva
-        hoy = timezone.now().date()
+        # localdate(): fecha en hora de Venezuela (settings.TIME_ZONE). Con USE_TZ,
+        # timezone.now().date() daría la fecha en UTC y ocultaría/incluiría viajes
+        # del día equivocado según la hora.
+        hoy = timezone.localdate()
 
         # 1) Limpiar expiradas una sola vez (no por viaje)
         Reserva.limpiar_expiradas()
@@ -464,10 +467,10 @@ class StatsPublicView(APIView):
 
     def get(self, request):
         from reservas.models import Reserva
-        from datetime import date
 
         # Datos reales del catálogo de Aerorutas precargado para hoy.
-        snap = RutaAerorutasSnapshot.objects.filter(fecha=date.today()).first()
+        # localdate() = fecha en hora de Venezuela, no el reloj del SO/UTC.
+        snap = RutaAerorutasSnapshot.objects.filter(fecha=timezone.localdate()).first()
         viajes = snap.data if (snap and snap.data) else []
         # Rutas nacionales = corredores distintos (origen → destino) de hoy.
         total_rutas = len({
@@ -551,8 +554,35 @@ class AerorutasViajesView(APIView):
     Búsqueda de viajes de Aerorutas devuelta con el MISMO formato que /viajes/
     (paginación DRF + ViajeListSerializer), para reusar la UI actual.
     Params: inicio, fin (codofi), fecha. (acepta origen/destino como alias)
+
+    Autorecuperación: si piden el catálogo de HOY y no hay snapshot (cron caído,
+    droplet recreado, etc.), dispara la precarga en background — mismo patrón
+    que TasaCambioView. El sitio se repara solo en unos minutos.
     """
     permission_classes = [permissions.AllowAny]
+    _precargando = False
+
+    @classmethod
+    def _lanzar_precarga_bg(cls):
+        """Corre precargar_rutas en un hilo daemon, con candado anti-estampida."""
+        if cls._precargando:
+            return
+        cls._precargando = True
+
+        def _run():
+            try:
+                import django
+                from django.core.management import call_command
+                django.db.connections.close_all()
+                call_command('precargar_rutas', dias=1, solo_si_falta=True,
+                             intentos=2, espera_red=30)
+            except Exception:
+                pass  # red caída: el próximo request lo reintenta
+            finally:
+                cls._precargando = False
+
+        import threading
+        threading.Thread(target=_run, daemon=True).start()
 
     def get(self, request):
         q = request.query_params
@@ -577,6 +607,9 @@ class AerorutasViajesView(APIView):
                 # Sin origen/destino: servir el catálogo PRECARGADO (instantáneo).
                 snap = RutaAerorutasSnapshot.objects.filter(fecha=fecha).first()
                 results = snap.data if snap else []
+                # Falta el catálogo de HOY → autorecuperación en background.
+                if not results and fecha == timezone.localdate().isoformat():
+                    self._lanzar_precarga_bg()
         except aerorutas.AerorutasError as e:
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 

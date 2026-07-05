@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRutas, getStats } from '../services/api';
+import { getRutas, getStats, getConfiguracion } from '../services/api';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 import {
   Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar,
   ShieldCheck, Clock, Users, Star, Bus, Route, CreditCard,
@@ -99,6 +100,7 @@ export default function HomePage() {
   const [heroIdx, setHeroIdx] = useState(0);
   const [dbStats, setDbStats] = useState({ rutas: 0, buses: 0, pasajeros: 0 });
   const [promoShown, setPromoShown] = useState(() => !!sessionStorage.getItem('promo_shown'));
+  const [whatsapp, setWhatsapp] = useState('');
 
   useEffect(() => {
     getRutas()
@@ -106,6 +108,9 @@ export default function HomePage() {
       .catch(() => {});
     getStats()
       .then((res) => setDbStats(res.data))
+      .catch(() => {});
+    getConfiguracion()
+      .then((res) => setWhatsapp(res.data?.whatsapp_vendedor || ''))
       .catch(() => {});
   }, []);
 
@@ -319,7 +324,7 @@ export default function HomePage() {
                 seguridad y confort.
               </p>
               <a
-                href="https://wa.me/584120000000?text=Hola%2C%20me%20interesa%20el%20servicio%20especial"
+                href={buildWhatsAppUrl(whatsapp, 'Hola, me interesa el servicio especial')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="service-link"
@@ -336,7 +341,7 @@ export default function HomePage() {
                 y conforme a las condiciones del viaje establecidas con el solicitante.
               </p>
               <a
-                href="https://wa.me/584120000000?text=Hola%2C%20me%20interesa%20el%20servicio%20de%20turismo"
+                href={buildWhatsAppUrl(whatsapp, 'Hola, me interesa el servicio de turismo')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="service-link"
@@ -399,7 +404,7 @@ export default function HomePage() {
                   Buscar viajes ahora
                 </button>
                 <a
-                  href="https://wa.me/584120000000"
+                  href={buildWhatsAppUrl(whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-lg cta-btn-secondary"

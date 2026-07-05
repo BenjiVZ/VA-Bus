@@ -26,13 +26,14 @@ class ReservaAdmin(admin.ModelAdmin):
         }),
         ('Pasajero', {
             'fields': ('usuario', 'nombre_pasajero', 'cedula_pasajero',
-                       'es_menor_edad', 'viaja_con_animal', 'tipo_mascota', 'es_discapacitado',
+                       'es_menor_edad', 'menor_no_es_hijo', 'viaja_con_animal', 'tipo_mascota', 'es_discapacitado',
                        'para_otra_persona', 'nombre_asignado', 'cedula_asignado')
         }),
         ('Documentos de Menor de Edad', {
-            'fields': ('doc_partida_nacimiento', 'doc_foto_menor', 'doc_cedula_representante'),
+            'fields': ('doc_partida_nacimiento', 'doc_foto_menor', 'doc_cedula_representante', 'doc_permiso_viaje'),
             'classes': ('collapse',),
-            'description': 'Documentos subidos cuando el pasajero es menor de edad.'
+            'description': 'Documentos subidos cuando el pasajero es menor de edad. '
+                           'El permiso de viaje es obligatorio si el menor no es hijo del comprador.'
         }),
         ('Documentos de Mascota', {
             'fields': ('doc_vacunacion_animal',),

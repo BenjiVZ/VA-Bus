@@ -35,8 +35,22 @@ class AppConfig {
     return base.endsWith('/api') ? base.substring(0, base.length - 4) : base;
   }
 
-  /// Google OAuth Client ID — déjalo vacío para deshabilitar Google Sign-In.
-  static const String googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+  /// Google OAuth **Web** Client ID (el mismo con el que valida el backend
+  /// Django). Con esto el botón "Continuar con Google" aparece siempre, sin
+  /// tener que pasar --dart-define al compilar.
+  ///
+  /// ⚠️ Pegá aquí el Web Client ID (termina en `.apps.googleusercontent.com`).
+  /// Es público (va embebido en la app), no es un secreto. Vacío = Google
+  /// Sign-In deshabilitado (el botón se oculta).
+  static const String _googleClientIdDefault = '';
+
+  /// Override opcional al compilar: --dart-define=GOOGLE_CLIENT_ID=xxx
+  static const String _googleClientIdEnv =
+      String.fromEnvironment('GOOGLE_CLIENT_ID');
+
+  /// Client ID efectivo: gana el --dart-define; si no, el valor por defecto.
+  static String get googleClientId =>
+      _googleClientIdEnv.isNotEmpty ? _googleClientIdEnv : _googleClientIdDefault;
 
   static const String appName = 'Aerorutas de Venezuela';
   static const String appShortName = 'Aerorutas';

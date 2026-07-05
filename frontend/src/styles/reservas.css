@@ -482,6 +482,16 @@
   color: var(--yellow-500);
   flex-shrink: 0;
 }
+
+.footer-contact a {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-contact a:hover {
+  color: white;
+}
 /* ── Ticker Bar (marquee) ── */
 @keyframes ticker-scroll {
   0% { transform: translateX(0); }

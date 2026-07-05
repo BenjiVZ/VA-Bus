@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/reserva.dart';
 import '../../services/api_client.dart';
+import '../../utils/format.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/reservas_service.dart';
 import '../../widgets/official_stamp.dart';
@@ -352,10 +353,7 @@ class _GrupoCard extends StatelessWidget {
     }
   }
 
-  String _hora(String? hms) {
-    if (hms == null || hms.isEmpty) return '—';
-    return hms.length >= 5 ? hms.substring(0, 5) : hms;
-  }
+  String _hora(String? hms) => horaAmPm(hms);
 }
 
 class _EstadoChip extends StatelessWidget {

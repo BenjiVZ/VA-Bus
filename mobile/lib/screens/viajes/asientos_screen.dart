@@ -12,6 +12,7 @@ import '../../services/api_client.dart';
 import '../../services/asientos_ws.dart';
 import '../../services/reservas_service.dart';
 import '../../services/viajes_service.dart';
+import '../../utils/format.dart';
 import '../../widgets/atencion_dialog.dart';
 import '../../widgets/pending_order_banner.dart';
 import '../../widgets/route_map.dart';
@@ -20,6 +21,7 @@ import '../../widgets/seat_map.dart';
 /// Estado por asiento — espeja seatOptions del frontend (AsientosPage.jsx).
 class _SeatOpts {
   bool esMenor = false;
+  bool menorNoEsHijo = false;
   bool paraOtra = false;
   bool viajaConAnimal = false;
   bool esDiscapacitado = false;
@@ -31,10 +33,11 @@ class _SeatOpts {
 }
 
 class _SeatFiles {
-  // Menor (3 archivos)
+  // Menor (3 archivos + permiso opcional si no es hijo)
   PlatformFile? partida;
   PlatformFile? foto;
   PlatformFile? cedulaRep;
+  PlatformFile? permiso;
   // Animal (1 archivo)
   PlatformFile? vacunacion;
   // Discapacidad (1 archivo)
@@ -309,6 +312,9 @@ class _AsientosScreenState extends State<AsientosScreen> {
         if (f.partida == null || f.foto == null || f.cedulaRep == null) {
           return 'Asiento #${s.numero}: faltan documentos del menor (partida, foto, cédula del representante).';
         }
+        if (o.menorNoEsHijo && f.permiso == null) {
+          return 'Asiento #${s.numero}: falta el permiso de viaje del menor (obligatorio si no es tu hijo/a).';
+        }
       }
       if (o.viajaConAnimal) {
         if (o.tipoMascota.isEmpty) {
@@ -370,6 +376,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
           'numero': s.numero,
           'piso': s.piso,
           'es_menor': o.esMenor,
+          'menor_no_es_hijo': o.esMenor && o.menorNoEsHijo,
           'para_otra': o.paraOtra,
           'viaja_con_animal': o.viajaConAnimal,
           'tipo_mascota': o.tipoMascota,
@@ -434,6 +441,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
             partida: files.partida!,
             foto: files.foto!,
             cedulaRep: files.cedulaRep!,
+            permiso: opts.menorNoEsHijo ? files.permiso : null,
           );
         } catch (_) {/* no bloquear navegación */}
       }
@@ -646,7 +654,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'Este viaje ya salió (${(viaje.horaSalida ?? '').length >= 5 ? viaje.horaSalida!.substring(0, 5) : viaje.horaSalida ?? ''}). Expiró — no se pueden seleccionar puestos.',
+                                      'Este viaje ya salió (${horaAmPm(viaje.horaSalida)}). Expiró — no se pueden seleccionar puestos.',
                                       style: const TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
@@ -1097,9 +1105,23 @@ class _SeatOptionsCard extends StatelessWidget {
                   value: opts.esMenor,
                   onChanged: (v) {
                     opts.esMenor = v ?? false;
+                    if (!opts.esMenor) opts.menorNoEsHijo = false;
                     onChanged();
                   },
                 ),
+                if (opts.esMenor)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 24),
+                    child: _checkRow(
+                      icon: Icons.assignment_ind_rounded,
+                      label: 'El menor no es mi hijo/a (requiere permiso)',
+                      value: opts.menorNoEsHijo,
+                      onChanged: (v) {
+                        opts.menorNoEsHijo = v ?? false;
+                        onChanged();
+                      },
+                    ),
+                  ),
                 _checkRow(
                   icon: Icons.pets_rounded,
                   label: 'Viaja con animal',
@@ -1220,7 +1242,7 @@ class _SeatOptionsCard extends StatelessWidget {
   /// Cantidad total de documentos requeridos según los toggles activos.
   int _docsRequeridos(_SeatOpts opts) {
     var n = 0;
-    if (opts.esMenor) n += 3;
+    if (opts.esMenor) n += opts.menorNoEsHijo ? 4 : 3;
     if (opts.viajaConAnimal) n += 1;
     if (opts.esDiscapacitado) n += 1;
     return n;
@@ -1233,6 +1255,7 @@ class _SeatOptionsCard extends StatelessWidget {
       if (files.partida != null) n++;
       if (files.foto != null) n++;
       if (files.cedulaRep != null) n++;
+      if (opts.menorNoEsHijo && files.permiso != null) n++;
     }
     if (opts.viajaConAnimal && files.vacunacion != null) n++;
     if (opts.esDiscapacitado && files.discapacidad != null) n++;
@@ -1516,6 +1539,17 @@ class _DocsBottomSheetState extends State<_DocsBottomSheet> {
                                   setState(() => files.cedulaRep = f),
                             ),
                           ),
+                          if (opts.menorNoEsHijo)
+                            _fileTile(
+                              label: 'Permiso de viaje del menor',
+                              file: files.permiso,
+                              icon: Icons.verified_user_rounded,
+                              onPick: () => widget.onPickFile(
+                                allowPdf: true,
+                                onPicked: (f) =>
+                                    setState(() => files.permiso = f),
+                              ),
+                            ),
                         ],
                       ),
                     if (opts.viajaConAnimal) ...[
@@ -1759,9 +1793,7 @@ class _TripDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bus = viaje.autobus;
-    final hora = viaje.horaSalida.length >= 5
-        ? viaje.horaSalida.substring(0, 5)
-        : viaje.horaSalida;
+    final hora = horaAmPm(viaje.horaSalida);
 
     return Container(
       decoration: BoxDecoration(

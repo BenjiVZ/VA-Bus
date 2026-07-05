@@ -35,3 +35,6 @@ staticfiles/
 
 # Logs
 *.log
+
+# Herramienta local de diagnóstico de rutas (no versionar)
+scripts/probar_ruta.py

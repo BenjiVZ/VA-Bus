@@ -13,9 +13,10 @@ Uso:
     python manage.py precargar_rutas --loop --cada 1800   # cada 30 min
 """
 import time
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from viajes import aerorutas
 from viajes.models import RutaAerorutasSnapshot
@@ -37,7 +38,10 @@ class Command(BaseCommand):
 
     def _hay_data_hoy(self):
         """True si ya existe un snapshot con viajes para HOY (chequeo barato de BD)."""
-        snap = RutaAerorutasSnapshot.objects.filter(fecha=date.today()).first()
+        # localdate(): fecha en hora de Venezuela (settings.TIME_ZONE), NO la del
+        # reloj del SO. Así el snapshot se guarda/consulta bajo la misma fecha que
+        # pide el navegador aunque el servidor esté en UTC.
+        snap = RutaAerorutasSnapshot.objects.filter(fecha=timezone.localdate()).first()
         return bool(snap and snap.data)
 
     def _descubrir_activos(self, fecha0, intentos, espera):
@@ -68,7 +72,7 @@ class Command(BaseCommand):
         return encontrados0, activos
 
     def _precargar(self, dias, intentos, espera):
-        hoy = date.today()
+        hoy = timezone.localdate()  # hora de Venezuela, no el reloj del SO
         fechas = [hoy + timedelta(days=i) for i in range(dias)]
 
         # Fase 1: descubrir corredores activos con la primera fecha (barrido completo, con reintentos)

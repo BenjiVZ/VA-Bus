@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../services/api_client.dart';
 import '../../services/reservas_service.dart';
+import '../../utils/format.dart';
 
 class TicketScreen extends StatefulWidget {
   final String grupoPago;
@@ -475,7 +476,7 @@ class _BoardingPass extends StatelessWidget {
     }
   }
 
-  String _hora(String hms) => hms.length >= 5 ? hms.substring(0, 5) : hms;
+  String _hora(String hms) => horaAmPm(hms);
 }
 
 /// Clipper que recorta las muescas semicirculares en los costados

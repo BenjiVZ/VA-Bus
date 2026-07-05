@@ -7,6 +7,7 @@ import '../../config/theme.dart';
 import '../../models/viaje.dart';
 import '../../services/api_client.dart';
 import '../../services/viajes_service.dart';
+import '../../utils/format.dart';
 import '../../widgets/skeleton_card.dart';
 import '../shell.dart';
 
@@ -244,7 +245,7 @@ class _ViajeCard extends StatelessWidget {
   final String fecha;
   const _ViajeCard({required this.viaje, required this.fecha});
 
-  String _hora(String hms) => hms.length >= 5 ? hms.substring(0, 5) : hms;
+  String _hora(String hms) => horaAmPm(hms);
 
   @override
   Widget build(BuildContext context) {

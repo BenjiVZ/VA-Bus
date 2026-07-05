@@ -246,6 +246,7 @@ class CrearReservaView(APIView):
                     numero = asiento_data.get('numero')
                     piso = asiento_data.get('piso', 1)
                     es_menor = asiento_data.get('es_menor', False)
+                    menor_no_hijo = asiento_data.get('menor_no_es_hijo', False)
                     para_otra = asiento_data.get('para_otra', False)
                     nombre_asig = asiento_data.get('nombre_asignado', '')
                     cedula_asig = asiento_data.get('cedula_asignado', '')
@@ -289,6 +290,7 @@ class CrearReservaView(APIView):
                         grupo_pago=grupo_pago,
                         fecha_expiracion=fecha_expiracion,
                         es_menor_edad=es_menor,
+                        menor_no_es_hijo=menor_no_hijo if es_menor else False,
                         para_otra_persona=para_otra,
                         nombre_asignado=nombre_asig,
                         cedula_asignado=cedula_asig,
@@ -386,8 +388,10 @@ class SubirDocumentosMenorView(APIView):
         partida = request.FILES.get('doc_partida_nacimiento')
         foto = request.FILES.get('doc_foto_menor')
         cedula_rep = request.FILES.get('doc_cedula_representante')
+        permiso = request.FILES.get('doc_permiso_viaje')
 
-        # Validar archivos
+        # Validar archivos: la partida, foto y cédula siempre son obligatorias.
+        # El permiso de viaje solo es obligatorio si el menor no es hijo del comprador.
         errores = []
         for archivo, nombre in [
             (partida, 'Partida de nacimiento'),
@@ -395,6 +399,16 @@ class SubirDocumentosMenorView(APIView):
             (cedula_rep, 'Cédula del representante'),
         ]:
             err = validar_archivo(archivo, nombre)
+            if err:
+                errores.append(err)
+
+        if reserva.menor_no_es_hijo:
+            err = validar_archivo(permiso, 'Permiso de viaje del menor')
+            if err:
+                errores.append(err)
+        elif permiso:
+            # No es obligatorio, pero si lo suben igual, validamos formato/tamaño.
+            err = validar_archivo(permiso, 'Permiso de viaje del menor')
             if err:
                 errores.append(err)
 
@@ -407,9 +421,11 @@ class SubirDocumentosMenorView(APIView):
         reserva.doc_partida_nacimiento = partida
         reserva.doc_foto_menor = foto
         reserva.doc_cedula_representante = cedula_rep
-        reserva.save(update_fields=[
-            'doc_partida_nacimiento', 'doc_foto_menor', 'doc_cedula_representante'
-        ])
+        campos = ['doc_partida_nacimiento', 'doc_foto_menor', 'doc_cedula_representante']
+        if permiso:
+            reserva.doc_permiso_viaje = permiso
+            campos.append('doc_permiso_viaje')
+        reserva.save(update_fields=campos)
 
         return Response({
             "ok": True,

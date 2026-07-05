@@ -15,6 +15,9 @@
 *.pdf
 R4 CONECTA V3.0 (006).pdf
 
+# ─── Herramientas locales de diagnóstico (no versionar) ────
+backend/scripts/probar_ruta.py
+
 # ─── Python / Django (backend) ─────────────────────────────
 __pycache__/
 *.py[cod]

@@ -278,7 +278,7 @@ export default function AsientosPage() {
     setError('');
     setSeatOptions((opts) => ({
       ...opts,
-      [key]: { es_menor: false, para_otra: false, viaja_con_animal: false, es_discapacitado: false, nombre_asignado: '', cedula_asignado: '', cedula_tipo_asignado: 'V' },
+      [key]: { es_menor: false, menor_no_es_hijo: false, para_otra: false, viaja_con_animal: false, es_discapacitado: false, nombre_asignado: '', cedula_asignado: '', cedula_tipo_asignado: 'V' },
     }));
     setSelectedSeats((prev) => [...prev, seat]);
   };
@@ -312,10 +312,12 @@ export default function AsientosPage() {
         if (!otroParaOtra) ponerMisDatos();
       }
     }
-    setSeatOptions((opts) => ({
-      ...opts,
-      [key]: { ...opts[key], [field]: value },
-    }));
+    setSeatOptions((opts) => {
+      const next = { ...opts[key], [field]: value };
+      // Al desmarcar "es menor", se limpia también el flag de "no es hijo".
+      if (field === 'es_menor' && !value) next.menor_no_es_hijo = false;
+      return { ...opts, [key]: next };
+    });
   };
 
   // Check if any seat currently has es_menor checked
@@ -324,13 +326,15 @@ export default function AsientosPage() {
     return opts.es_menor;
   });
 
-  // Check if all minor seats have their 3 required documents uploaded
+  // Check if all minor seats have their required documents uploaded.
+  // Partida, foto y cédula siempre; el permiso de viaje solo si el menor no es hijo.
   const minorDocsComplete = selectedSeats.every((s) => {
     const key = getSeatKey(s);
     const opts = seatOptions[key] || {};
     if (!opts.es_menor) return true;
     const files = seatFiles[key] || {};
-    return files.partida && files.foto && files.cedula_rep;
+    const base = files.partida && files.foto && files.cedula_rep;
+    return opts.menor_no_es_hijo ? base && files.permiso : base;
   });
 
   // Check if any seat had minor toggled on then off
@@ -436,6 +440,7 @@ export default function AsientosPage() {
             numero: s.numero,
             piso: s.piso,
             es_menor: opts.es_menor || false,
+            menor_no_es_hijo: (opts.es_menor && opts.menor_no_es_hijo) || false,
             para_otra: opts.para_otra || false,
             viaja_con_animal: opts.viaja_con_animal || false,
             tipo_mascota: opts.tipo_mascota || '',
@@ -471,6 +476,7 @@ export default function AsientosPage() {
           if (files.partida) formData.append('doc_partida_nacimiento', files.partida);
           if (files.foto) formData.append('doc_foto_menor', files.foto);
           if (files.cedula_rep) formData.append('doc_cedula_representante', files.cedula_rep);
+          if (files.permiso) formData.append('doc_permiso_viaje', files.permiso);
 
           uploadPromises.push(
             subirDocumentosMenor(reserva.id, formData).catch((uploadErr) => {
@@ -707,6 +713,12 @@ export default function AsientosPage() {
                             <input type="checkbox" checked={opts.es_menor || false} onChange={(e) => updateSeatOption(key, 'es_menor', e.target.checked)} />
                             <Baby size={14} /><span>Es menor de edad</span>
                           </label>
+                          {opts.es_menor && (
+                            <label className="seat-checkbox" style={{ marginLeft: '1.5rem' }}>
+                              <input type="checkbox" checked={opts.menor_no_es_hijo || false} onChange={(e) => updateSeatOption(key, 'menor_no_es_hijo', e.target.checked)} />
+                              <span>El menor <strong>no es mi hijo/a</strong> (requiere permiso de viaje)</span>
+                            </label>
+                          )}
                           <label className="seat-checkbox">
                             <input type="checkbox" checked={opts.viaja_con_animal || false} onChange={(e) => updateSeatOption(key, 'viaja_con_animal', e.target.checked)} />
                             <PawPrint size={14} /><span>Viaja con animal</span>
@@ -724,12 +736,15 @@ export default function AsientosPage() {
                         {/* ── Compact status badges (docs handled in floating overlay) ── */}
                         {opts.es_menor && (() => {
                           const files = seatFiles[key] || {};
-                          const uploaded = [files.partida, files.foto, files.cedula_rep].filter(Boolean).length;
+                          const docs = [files.partida, files.foto, files.cedula_rep];
+                          if (opts.menor_no_es_hijo) docs.push(files.permiso);
+                          const total = opts.menor_no_es_hijo ? 4 : 3;
+                          const uploaded = docs.filter(Boolean).length;
                           return (
                             <div className="doc-status-badge minor">
                               <Baby size={13} />
-                              <span>Menor de edad — Docs: {uploaded}/3</span>
-                              {uploaded === 3 && <CheckCircle size={13} className="doc-island-check" />}
+                              <span>Menor de edad — Docs: {uploaded}/{total}</span>
+                              {uploaded === total && <CheckCircle size={13} className="doc-island-check" />}
                             </div>
                           );
                         })()}
@@ -825,8 +840,11 @@ export default function AsientosPage() {
                       )}
                       {opts.es_menor && (() => {
                         const files = seatFiles[key] || {};
-                        const uploaded = [files.partida, files.foto, files.cedula_rep].filter(Boolean).length;
-                        const total = 3;
+                        const needPermiso = opts.menor_no_es_hijo;
+                        const docs = [files.partida, files.foto, files.cedula_rep];
+                        if (needPermiso) docs.push(files.permiso);
+                        const total = needPermiso ? 4 : 3;
+                        const uploaded = docs.filter(Boolean).length;
                         const isOpen = expandedDocs[key]?.minor !== false;
                         return (
                           <div className={`doc-island ${uploaded === total ? 'complete' : ''}`}>
@@ -872,6 +890,17 @@ export default function AsientosPage() {
                                   <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], cedula_rep: file } })); }} />
                                   <span className={`file-upload-btn ${files.cedula_rep ? 'uploaded' : ''}`}>{files.cedula_rep ? '✓' : 'Subir'}</span>
                                 </label>
+                                {needPermiso && (
+                                  <label className="file-upload-field">
+                                    <ShieldCheck size={15} />
+                                    <div className="file-upload-info">
+                                      <span className="file-upload-label">Permiso de viaje del menor</span>
+                                      <span className="file-upload-hint">{files.permiso ? files.permiso.name : 'Autorización de la autoridad competente · PDF o imagen (máx. 5MB)'}</span>
+                                    </div>
+                                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files[0]; if (file) setSeatFiles(prev => ({ ...prev, [key]: { ...prev[key], permiso: file } })); }} />
+                                    <span className={`file-upload-btn ${files.permiso ? 'uploaded' : ''}`}>{files.permiso ? '✓' : 'Subir'}</span>
+                                  </label>
+                                )}
                                 <div className="docs-physical-notice">
                                   <AlertTriangle size={13} />
                                   <span>Llevar documentos <strong>en físico</strong> al abordar.</span>

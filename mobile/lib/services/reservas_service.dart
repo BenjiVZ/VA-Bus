@@ -78,11 +78,13 @@ class ReservasService {
     required PlatformFile partida,
     required PlatformFile foto,
     required PlatformFile cedulaRep,
+    PlatformFile? permiso,
   }) async {
     final form = FormData.fromMap({
       'doc_partida_nacimiento': await _asMultipart(partida),
       'doc_foto_menor': await _asMultipart(foto),
       'doc_cedula_representante': await _asMultipart(cedulaRep),
+      if (permiso != null) 'doc_permiso_viaje': await _asMultipart(permiso),
     });
     final res = await client.dio.post(
       '/reservas/$reservaId/documentos-menor/',

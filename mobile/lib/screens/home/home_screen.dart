@@ -9,6 +9,7 @@ import '../../config/theme.dart';
 import '../../models/viaje.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/viajes_service.dart';
+import '../../utils/format.dart';
 import '../../widgets/app_logo.dart';
 import '../shell.dart';
 
@@ -832,7 +833,7 @@ class _DepartureBoard extends StatelessWidget {
   final List<Viaje> viajes;
   const _DepartureBoard({required this.viajes});
 
-  String _hora(String hms) => hms.length >= 5 ? hms.substring(0, 5) : hms;
+  String _hora(String hms) => horaAmPm(hms);
 
   @override
   Widget build(BuildContext context) {

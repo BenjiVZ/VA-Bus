@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Bot, User, ExternalLink, ChevronRight, Sparkles, RotateCcw, ArrowLeft, Home } from 'lucide-react';
+import { getConfiguracion } from '../services/api';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 import '../styles/ChatBot.css';
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -11,11 +13,7 @@ import '../styles/ChatBot.css';
    o saltar a WhatsApp.
    ══════════════════════════════════════════════════════════════════════════ */
 
-const WHATSAPP_NUMBER = '584227779152'; // 0422-7779152 (Venezuela +58)
 const WHATSAPP_DEFAULT_MSG = 'Hola, tengo una consulta sobre Aerorutas:';
-
-const buildWhatsAppUrl = (text = WHATSAPP_DEFAULT_MSG) =>
-  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 
 /** Devuelve las opciones estándar al final de una respuesta hoja. */
 const leafOptions = (parent, { showAgent = true, agentMsg } = {}) => [
@@ -140,7 +138,7 @@ const FLOW = {
   },
   doc_menor: {
     text:
-      '👶 **Menores de edad:**\n\n• Partida de nacimiento\n• Cédula del representante legal\n• Foto reciente del menor (tipo carnet o selfie)\n\nAl reservar marca "Es menor de edad" y sube los tres documentos en la sección correspondiente.',
+      '👶 **Menores de edad:**\n\n• Partida de nacimiento\n• Cédula del representante legal\n• Foto reciente del menor (tipo carnet o selfie)\n\nAl reservar marca "Es menor de edad" y sube esos documentos en la sección correspondiente.\n\n⚠️ Si el menor **no es tu hijo/a**, marca también esa casilla y sube el **permiso de viaje** (autorización expedida por la autoridad competente).',
     options: leafOptions('documentos'),
   },
   doc_mascota: {
@@ -299,6 +297,109 @@ const FLOW = {
   },
 };
 
+/* ══════════════════════════════════════════════════════════════════
+   Motor de comprensión (sin IA): relaciona lo que el usuario ESCRIBE
+   con la mejor respuesta del FAQ. Normaliza acentos, tokeniza y puntúa
+   contra palabras clave/sinónimos. Si acierta, responde en lenguaje
+   natural; si no, ofrece temas + agente. Esto es lo que hace que el
+   asistente "entienda" en vez de rebotar todo a WhatsApp.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** minúsculas, sin acentos, solo letras/números → base para comparar. */
+const normalize = (str) =>
+  str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/* Palabras clave por respuesta. Las frases (con espacio) valen más que
+   los tokens sueltos, así una pregunta específica gana a una genérica. */
+const KB = [
+  { node: 'reservas_como', kw: ['como reservo', 'como reservar', 'como compro', 'como comprar', 'hago una reserva', 'reservar un pasaje', 'comprar pasaje', 'comprar boleto', 'sacar pasaje', 'proceso de compra', 'pasos para reservar', 'reservar', 'comprar', 'adquirir'] },
+  { node: 'reservas_tiempo', kw: ['cuanto dura', 'cuanto tiempo', 'dura mi reserva', 'se libera', 'se vence', '15 minutos', 'tiempo para pagar', 'tiempo de reserva', 'expira', 'caduca', 'libera', 'minutos'] },
+  { node: 'reservas_otro', kw: ['otra persona', 'reservar para otro', 'para un familiar', 'a nombre de', 'asignar a otra', 'comprar para alguien', 'para mi mama', 'para mi esposo', 'tercero', 'familiar'] },
+  { node: 'reservas_mascota', kw: ['viajar con mascota', 'llevar mi perro', 'con mi gato', 'mascota a bordo', 'puedo llevar animal', 'viajar con animal', 'mascota', 'perro', 'gato', 'animal'] },
+  { node: 'reservas_cancelar', kw: ['cancelar', 'cancelacion', 'cambiar mi reserva', 'cambiar de viaje', 'reembolso', 'devolucion', 'anular', 'modificar reserva', 'me devuelven'] },
+
+  { node: 'pagos_metodos', kw: ['metodos de pago', 'formas de pago', 'como pago', 'con que pago', 'como puedo pagar', 'medios de pago', 'aceptan zelle', 'pago movil', 'transferencia', 'zelle', 'binance', 'zinli', 'efectivo', 'divisas', 'metodo'] },
+  { node: 'pagos_moneda', kw: ['en que moneda', 'que moneda', 'bolivares o dolares', 'tasa bcv', 'precio en dolares', 'pago en bolivares', 'cambio del dia', 'moneda', 'dolares', 'bolivares', 'bcv'] },
+  { node: 'pagos_comprobante', kw: ['como subo el comprobante', 'subir comprobante', 'subir el pago', 'adjuntar comprobante', 'enviar captura', 'subir captura', 'donde subo el pago', 'comprobante', 'captura', 'adjuntar'] },
+  { node: 'pagos_tiempo', kw: ['cuanto tarda', 'cuanto demora', 'validar el pago', 'aprobar el pago', 'tarda en aprobarse', 'revisan el pago', 'cuando aprueban', 'validacion', 'validar', 'demora', 'aprobar', 'aprobacion'] },
+  { node: 'pagos_problema', kw: ['no pude subir', 'no puedo subir', 'error al subir', 'problema con el pago', 'no me deja subir', 'no carga el comprobante', 'falla el comprobante', 'error de pago'] },
+
+  { node: 'doc_adulto', kw: ['documentos adulto', 'que documentos necesito', 'que necesito para viajar', 'que debo llevar', 'requisitos para viajar', 'documentos para viajar', 'cedula', 'requisitos', 'documentos', 'documento'] },
+  { node: 'doc_menor', kw: ['viajo con un menor', 'menor de edad', 'con un nino', 'partida de nacimiento', 'representante legal', 'documentos nino', 'viaja un menor', 'llevar un menor', 'menor', 'nino', 'partida'] },
+  { node: 'doc_mascota', kw: ['documentos mascota', 'papeles de mi perro', 'tarjeta de vacunacion', 'requisitos mascota', 'que necesita mi mascota', 'vacunacion', 'vacuna'] },
+  { node: 'doc_discapacidad', kw: ['persona con discapacidad', 'silla de ruedas', 'certificado medico', 'movilidad reducida', 'discapacidad', 'discapacitado'] },
+
+  { node: 'viajes_rutas', kw: ['que rutas', 'rutas disponibles', 'a donde viajan', 'hacia donde', 'que destinos', 'que ciudades', 'cobertura', 'viajan a', 'rutas', 'destinos', 'destino'] },
+  { node: 'viajes_horarios', kw: ['horarios', 'a que hora', 'hora de salida', 'a que horas', 'que salidas hay', 'frecuencia', 'horario', 'salidas', 'salida'] },
+  { node: 'viajes_ida_vuelta', kw: ['ida y vuelta', 'ida y regreso', 'viaje redondo', 'boleto de regreso', 'round trip', 'vuelta', 'regreso', 'retorno'] },
+  { node: 'viajes_precio', kw: ['cuanto cuesta', 'precio del pasaje', 'cuanto vale', 'cuanto sale', 'costo del boleto', 'que precio', 'tarifa', 'precio', 'cuesta', 'costo'] },
+  { node: 'viajes_capacidad', kw: ['cuantos puestos', 'cuantos asientos', 'capacidad del bus', 'cuantas personas', 'tamano del autobus', 'puestos', 'asientos', 'capacidad', 'pisos'] },
+
+  { node: 'ticket_donde', kw: ['donde esta mi ticket', 'donde veo mi boleto', 'ver mi ticket', 'encontrar mi ticket', 'descargar ticket', 'donde esta mi boleto', 'mi pasaje', 'ticket', 'boleto'] },
+  { node: 'ticket_qr', kw: ['codigo qr', 'verificar qr', 'como verifico', 'validar ticket', 'escanear', 'codigo de 8', 'verificar mi boleto', 'qr', 'escanear'] },
+  { node: 'ticket_imprimir', kw: ['imprimir boleto', 'puedo imprimir', 'imprimir mi ticket', 'imprimo', 'impreso', 'imprimir', 'pdf'] },
+  { node: 'ticket_email', kw: ['no me llego el email', 'no llego mi ticket', 'no recibi el correo', 'no me llega el correo', 'no me llego el boleto', 'email con ticket', 'no me llego'] },
+
+  { node: 'cuenta_crear', kw: ['crear cuenta', 'crear una cuenta', 'como me registro', 'quiero registrarme', 'abrir cuenta', 'nueva cuenta', 'registrarme', 'registro', 'registrar'] },
+  { node: 'cuenta_verificar', kw: ['codigo de verificacion', 'no me llego el codigo', 'verificar cuenta', 'activar cuenta', 'codigo de 6', 'reenviar codigo', 'verificacion'] },
+  { node: 'cuenta_password', kw: ['olvide mi contrasena', 'recuperar contrasena', 'cambiar contrasena', 'resetear clave', 'olvide mi clave', 'nueva contrasena', 'contrasena', 'clave', 'password'] },
+  { node: 'cuenta_editar', kw: ['editar perfil', 'cambiar mis datos', 'actualizar perfil', 'modificar mi cuenta', 'cambiar mi telefono', 'editar mi informacion', 'perfil', 'actualizar'] },
+  { node: 'cuenta_google', kw: ['iniciar sesion con google', 'entrar con google', 'login con google', 'cuenta de google', 'boton de google', 'google'] },
+
+  { node: 'vip_que_es', kw: ['que es vip', 'que es el programa', 'programa vip', 'pasajero frecuente', 'beneficios vip', 'programa de lealtad', 'lealtad', 'frecuente'] },
+  { node: 'vip_niveles', kw: ['niveles vip', 'que niveles', 'plata oro platino', 'categorias vip', 'niveles', 'plata', 'platino'] },
+  { node: 'vip_subir', kw: ['subir de nivel', 'como subo de nivel', 'ascender de nivel', 'mejorar mi nivel', 'como califico', 'subir', 'ascender', 'calificar'] },
+  { node: 'vip_ver', kw: ['ver mi nivel', 'cual es mi nivel', 'donde veo mi vip', 'verificar mi nivel', 'mi nivel actual', 'que nivel tengo'] },
+];
+
+const GREETINGS = ['hola', 'holaa', 'buenas', 'buenos dias', 'buenas tardes', 'buenas noches', 'saludos', 'que tal', 'hey', 'ola'];
+const THANKS = ['gracias', 'muchas gracias', 'mil gracias', 'thank', 'ok gracias', 'perfecto gracias', 'excelente gracias'];
+
+/** Frases de enganche que preceden a la respuesta (se sienten humanas). */
+const LEADS = ['¡Claro! 👇', '¡Buena pregunta! 👇', 'Con gusto te ayudo 👇', 'Entiendo, mira 👇', '¡Por supuesto! 👇'];
+
+/** ¿El texto contiene alguna de estas frases como token/subcadena? */
+const hasAny = (qNorm, qTokens, list) =>
+  list.some((w) => (w.includes(' ') ? qNorm.includes(w) : qTokens.includes(w)));
+
+/** Puntúa una lista de keywords contra la pregunta normalizada. */
+const scoreKeywords = (qNorm, qTokens, keywords) => {
+  let score = 0;
+  for (const kw of keywords) {
+    if (kw.includes(' ')) {
+      if (qNorm.includes(kw)) score += 3; // frase específica → peso alto
+    } else if (qTokens.includes(kw)) {
+      score += 2; // token exacto
+    } else if (kw.length >= 5 && qNorm.includes(kw)) {
+      score += 1; // coincidencia parcial (plurales, conjugaciones)
+    }
+  }
+  return score;
+};
+
+/** Devuelve el id del mejor nodo del FAQ, o null si nada supera el umbral. */
+const findBestMatch = (rawText) => {
+  const qNorm = normalize(rawText);
+  if (!qNorm) return null;
+  const qTokens = qNorm.split(' ');
+  let best = null;
+  let bestScore = 0;
+  for (const entry of KB) {
+    const score = scoreKeywords(qNorm, qTokens, entry.kw);
+    if (score > bestScore) {
+      bestScore = score;
+      best = entry.node;
+    }
+  }
+  return bestScore >= 2 ? best : null; // umbral: al menos un token sólido
+};
+
 /* ══════════════════════════════════════════════════════════════════ */
 
 const ICONS = {
@@ -317,8 +418,16 @@ export default function ChatBot() {
   const [isTyping, setIsTyping] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const messagesEndRef = useRef(null);
   const chatWindowRef = useRef(null);
+
+  // Número de WhatsApp oficial (panel admin). Con fallback interno del helper.
+  useEffect(() => {
+    getConfiguracion()
+      .then((res) => setWhatsapp(res.data?.whatsapp_vendedor || ''))
+      .catch(() => {});
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -392,21 +501,69 @@ export default function ChatBot() {
   const handleSendCustom = () => {
     const text = inputValue.trim();
     if (!text) return;
-    setMessages((prev) => [
-      ...prev,
-      { type: 'user', text },
-      {
-        type: 'bot',
-        text: 'Para responderte mejor te conectamos con un agente por WhatsApp 👇',
-        whatsappMsg: `Hola, tengo esta consulta: ${text}`,
-      },
-    ]);
+
+    // 1) Muestra la pregunta del usuario y limpia el input
+    setMessages((prev) => [...prev, { type: 'user', text }]);
     setInputValue('');
     setShowInput(false);
+
+    // 2) Interpreta lo escrito (saludo, agradecimiento o pregunta del FAQ)
+    const qNorm = normalize(text);
+    const qTokens = qNorm.split(' ');
+
+    setIsTyping(true);
+    setTimeout(() => {
+      // Saludo → responde y reabre los temas
+      if (hasAny(qNorm, qTokens, GREETINGS) && qTokens.length <= 4) {
+        setMessages((prev) => [
+          ...prev,
+          { type: 'bot', text: '¡Hola! 👋 ¿Sobre qué tema necesitas ayuda? Puedes escribir tu pregunta o elegir una opción:', node: 'root' },
+        ]);
+        setCurrentNode('root');
+        setIsTyping(false);
+        return;
+      }
+
+      // Agradecimiento → cierre amable y reabre los temas
+      if (hasAny(qNorm, qTokens, THANKS)) {
+        setMessages((prev) => [
+          ...prev,
+          { type: 'bot', text: '¡De nada! 😊 ¿Hay algo más en lo que pueda ayudarte?', node: 'root' },
+        ]);
+        setCurrentNode('root');
+        setIsTyping(false);
+        return;
+      }
+
+      // Pregunta → busca la mejor respuesta del FAQ
+      const match = findBestMatch(text);
+      if (match) {
+        const node = FLOW[match];
+        const lead = LEADS[messages.length % LEADS.length];
+        setMessages((prev) => [
+          ...prev,
+          { type: 'bot', text: `${lead}\n\n${node.text}`, node: match },
+        ]);
+        setCurrentNode(match);
+      } else {
+        // No entendió → ofrece temas + agente (sin fingir que sabe)
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: 'bot',
+            text: 'Mmm, no estoy seguro de haber entendido bien 🤔. Puedes reformular la pregunta, elegir uno de los temas de abajo, o hablar con un agente:',
+            node: 'root',
+            whatsappMsg: `Hola, tengo esta consulta: ${text}`,
+          },
+        ]);
+        setCurrentNode('root');
+      }
+      setIsTyping(false);
+    }, 600);
   };
 
   const openWhatsApp = (text) => {
-    window.open(buildWhatsAppUrl(text), '_blank');
+    window.open(buildWhatsAppUrl(whatsapp, text), '_blank');
   };
 
   // Opciones del nodo actual (último mensaje del bot)
