@@ -173,6 +173,11 @@ export const getAsientosLocal = (viajeId) =>
 export const crearReserva = (data) =>
   api.post('/reservas/', data);
 
+// Compra de un viaje de Aerorutas: aparta los puestos en el sistema de la
+// empresa (TMPPUESTO) y crea las reservas locales. Misma respuesta que /reservas/.
+export const reservarAerorutas = (data) =>
+  api.post('/aerorutas/reservar/', data);
+
 export const subirDocumentosMenor = (reservaId, formData) =>
   api.post(`/reservas/${reservaId}/documentos-menor/`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

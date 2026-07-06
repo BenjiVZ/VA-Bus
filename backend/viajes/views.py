@@ -66,6 +66,7 @@ class ViajeListView(generics.ListAPIView):
         queryset = Viaje.objects.filter(
             activo=True,
             fecha_salida__gte=hoy,
+            aerorutas_codrut='',  # los espejos de Aerorutas no se listan (ya vienen del catálogo en vivo)
         ).select_related(
             'ruta', 'autobus'
         ).prefetch_related(
@@ -682,6 +683,198 @@ class AerorutasApartarView(APIView):
         except aerorutas.AerorutasError as e:
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({'items': items, 'raw': raw})
+
+
+class AerorutasReservarView(APIView):
+    """
+    Compra de un viaje de Aerorutas — orquesta el flujo completo:
+
+      1. Valida que los puestos sigan libres en el sistema de la empresa.
+      2. Los aparta temporalmente allá (TMPPUESTO).
+      3. Crea/reusa un Viaje espejo local y crea las Reservas locales
+         (pendientes, 15 min) → a partir de aquí el circuito existente de
+         pago/comprobantes/R4/documentos/tickets funciona SIN cambios.
+      4. Al aprobarse el pago, confirmar_grupo_pago llama ASIGPASA para
+         marcar los puestos como vendidos en Aerorutas (ver reservas/services).
+
+    Respuesta con el MISMO shape que /reservas/crear/ para reusar el frontend.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        import uuid as uuid_lib
+        from datetime import datetime, timedelta
+        from django.db import IntegrityError, transaction
+        from reservas.models import Reserva
+        from reservas.serializers import ReservaSerializer
+
+        # ── Anti-spam (mismo criterio que CrearReservaView) ──
+        ordenes_pendientes = Reserva.objects.filter(
+            usuario=request.user,
+            estado__in=['pendiente', 'apartado']
+        ).values('grupo_pago').distinct().count()
+        if ordenes_pendientes >= 3:
+            return Response({
+                "error": "Tienes demasiadas órdenes activas. Completa o espera que se procesen antes de crear nuevas.",
+                "bloqueado": True,
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        trip_id = request.data.get('trip_id', '')
+        asientos = request.data.get('asientos') or []
+        nombre = request.data.get('nombre_pasajero', '')
+        cedula = request.data.get('cedula_pasajero', '')
+
+        try:
+            codrut, inicio, fin, fecha_str = aerorutas.parse_viaje_id(trip_id)
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'ID de viaje inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not asientos:
+            return Response({'error': 'Selecciona al menos un asiento.'}, status=status.HTTP_400_BAD_REQUEST)
+        if fecha < timezone.localdate():
+            return Response({'error': 'Este viaje ya pasó.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ── Datos del viaje: catálogo precargado → fallback en vivo ──
+        info = None
+        snap = RutaAerorutasSnapshot.objects.filter(fecha=fecha_str).first()
+        if snap and snap.data:
+            info = next((v for v in snap.data if v.get('id') == trip_id), None)
+        if info is None:
+            try:
+                rutas = aerorutas.consultar_rutas(inicio, fin, fecha_str)
+            except aerorutas.AerorutasError as e:
+                return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+            ruta_ext = next((r for r in rutas if str(r.get('codrut')) == str(codrut)), None)
+            if ruta_ext is None:
+                return Response({'error': 'El viaje ya no está disponible en Aerorutas.'},
+                                status=status.HTTP_404_NOT_FOUND)
+            info = aerorutas.viaje_shape(ruta_ext, inicio, fin, fecha_str, None)
+
+        try:
+            precio = float(info.get('precio_usd') or 0)
+        except (TypeError, ValueError):
+            precio = 0
+        if precio <= 0:
+            return Response({'error': 'Este viaje no tiene precio publicado; no se puede vender.'},
+                            status=status.HTTP_409_CONFLICT)
+
+        # ── 1. Verificar que los puestos sigan libres en Aerorutas ──
+        try:
+            puestos = aerorutas.consultar_puestos(inicio, codrut, fecha_str)
+        except aerorutas.AerorutasError as e:
+            return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+        libres = set()
+        for p in puestos:
+            try:
+                libres.add(int(p.get('puesto')))
+            except (TypeError, ValueError):
+                continue
+        numeros = []
+        for a in asientos:
+            try:
+                numeros.append(int(a.get('numero')))
+            except (TypeError, ValueError):
+                return Response({'error': 'Número de asiento inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        ocupados = [n for n in numeros if n not in libres]
+        if ocupados:
+            return Response({
+                'error': f"Asiento(s) {', '.join(map(str, ocupados))} ya no está(n) disponible(s). "
+                         "Elige otro puesto."
+            }, status=status.HTTP_409_CONFLICT)
+
+        # ── 2. Apartar cada puesto en el sistema de la empresa (TMPPUESTO) ──
+        for n in numeros:
+            try:
+                aerorutas.apartar_puesto(fecha_str, codrut, str(n), inicio, fin)
+            except aerorutas.AerorutasError as e:
+                return Response({
+                    'error': f'No se pudo apartar el asiento {n} en Aerorutas: {e}'
+                }, status=status.HTTP_502_BAD_GATEWAY)
+
+        # ── 3. Viaje espejo local (una sola vez por ruta+tramo+fecha) ──
+        origen = info.get('ruta', {}).get('origen') or inicio
+        destino = info.get('ruta', {}).get('destino') or fin
+        desrut = info.get('autobus', {}).get('nombre') or f'Línea {codrut}'
+        hora = datetime.strptime(info.get('hora_salida') or '00:00:00', '%H:%M:%S').time()
+
+        ruta_local, _ = Ruta.objects.get_or_create(origen=origen, destino=destino)
+        bus_local, _ = Autobus.objects.get_or_create(
+            placa=f'AR-{codrut}'[:20],
+            defaults={'nombre': desrut[:100], 'pisos': 1},
+        )
+        viaje, _ = Viaje.objects.get_or_create(
+            aerorutas_codrut=codrut,
+            aerorutas_ofisal=inicio,
+            aerorutas_ofides=fin,
+            fecha_salida=fecha,
+            defaults={
+                'ruta': ruta_local, 'autobus': bus_local,
+                'hora_salida': hora, 'precio_usd': precio, 'activo': True,
+            },
+        )
+
+        # ── 4. Reservas locales (idéntico contrato que /reservas/crear/) ──
+        grupo_pago = uuid_lib.uuid4()
+        fecha_expiracion = timezone.now() + timedelta(minutes=15)
+        reservas_creadas, errores = [], []
+
+        try:
+            with transaction.atomic():
+                Reserva.limpiar_expiradas(viaje=viaje)
+                for a in asientos:
+                    numero = int(a.get('numero'))
+                    es_menor = a.get('es_menor', False)
+                    tomado = Reserva.objects.select_for_update().filter(
+                        viaje=viaje, numero_asiento=numero, piso_asiento=1,
+                        estado__in=['pendiente', 'apartado', 'confirmado'],
+                    ).exists()
+                    if tomado:
+                        errores.append(f'Asiento {numero} ya está reservado.')
+                        continue
+                    reservas_creadas.append(Reserva.objects.create(
+                        usuario=request.user,
+                        viaje=viaje,
+                        numero_asiento=numero,
+                        piso_asiento=1,
+                        nombre_pasajero=nombre,
+                        cedula_pasajero=cedula,
+                        estado='pendiente',
+                        grupo_pago=grupo_pago,
+                        fecha_expiracion=fecha_expiracion,
+                        es_menor_edad=es_menor,
+                        menor_no_es_hijo=a.get('menor_no_es_hijo', False) if es_menor else False,
+                        para_otra_persona=a.get('para_otra', False),
+                        nombre_asignado=a.get('nombre_asignado', ''),
+                        cedula_asignado=a.get('cedula_asignado', ''),
+                        viaja_con_animal=a.get('viaja_con_animal', False),
+                        tipo_mascota=a.get('tipo_mascota', '') if a.get('viaja_con_animal') else '',
+                        es_discapacitado=a.get('es_discapacitado', False),
+                    ))
+                if not reservas_creadas:
+                    raise IntegrityError('Ningún asiento disponible')
+        except IntegrityError:
+            return Response(
+                {"error": "No se pudo crear ninguna reserva.", "detalles": errores},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        return Response({
+            "mensaje": "Reserva(s) creada(s). Tienes 15 minutos para completar el pago.",
+            "reservas": ReservaSerializer(reservas_creadas, many=True).data,
+            "grupo_pago": str(grupo_pago),
+            "fecha_expiracion": fecha_expiracion.isoformat(),
+            "viaje_info": {
+                "id": viaje.id,
+                "origen": viaje.ruta.origen,
+                "destino": viaje.ruta.destino,
+                "fecha_salida": str(viaje.fecha_salida),
+                "hora_salida": str(viaje.hora_salida),
+                "precio_usd": float(viaje.precio_usd),
+                "autobus": viaje.autobus.nombre,
+            },
+            "errores": errores if errores else None,
+        }, status=status.HTTP_201_CREATED)
 
 
 class _IsSuperuser(permissions.BasePermission):

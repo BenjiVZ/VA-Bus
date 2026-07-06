@@ -321,6 +321,28 @@ def confirmar_grupo_pago(grupo_pago, base_url=''):
             r.estado = 'confirmado'
             r.save()
 
+    # ── Viaje de Aerorutas (espejo): marcar los puestos como VENDIDOS en el
+    # sistema de control de la empresa (ASIGPASA). No debe romper la
+    # confirmación local si el sistema externo falla; se deja rastro en logs
+    # para conciliación manual.
+    primera_ref = reservas.select_related('viaje').first()
+    viaje_ref = primera_ref.viaje if primera_ref else None
+    if viaje_ref is not None and viaje_ref.es_aerorutas:
+        from viajes import aerorutas
+        for r in reservas:
+            try:
+                items, raw = aerorutas.asignar_pasaje(
+                    fecha=str(viaje_ref.fecha_salida),
+                    codrut=viaje_ref.aerorutas_codrut,
+                    nroasi=str(r.numero_asiento),
+                    ofisal=viaje_ref.aerorutas_ofisal,
+                    ofides=viaje_ref.aerorutas_ofides,
+                )
+                print(f"[ASIGPASA] OK asiento {r.numero_asiento} grupo {grupo_pago}: {raw[:200]}")
+            except Exception as e:
+                print(f"[ASIGPASA] ERROR asiento {r.numero_asiento} grupo {grupo_pago}: {e} "
+                      f"— conciliar manualmente en el sistema Aerorutas.")
+
     # Broadcast de asientos (no debe romper la confirmación si falla).
     for r in reservas:
         try:

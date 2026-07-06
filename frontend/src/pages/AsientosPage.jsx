@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAsientos, getAsientosLocal, crearReserva, subirDocumentosMenor, subirDocVacunacion, subirDocDiscapacidad, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
+import { getAsientos, getAsientosLocal, crearReserva, reservarAerorutas, subirDocumentosMenor, subirDocVacunacion, subirDocDiscapacidad, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useAsientosWebSocket } from '../hooks/useAsientosWebSocket';
@@ -385,13 +385,6 @@ export default function AsientosPage() {
 
   // Step 1: Validate and show warnings overlay or Atencion modal
   const handleReservarClick = () => {
-    // Viajes de Aerorutas (id compuesto, ej "001_02_04_2026-06-03"): la reserva/pago
-    // está en integración. Evita romper el flujo hasta definir reserva/pago.
-    if (String(id).includes('_')) {
-      toast.info('🚧 La reserva de viajes de Aerorutas estará disponible muy pronto. Por ahora solo puedes ver la disponibilidad.');
-      return;
-    }
-
     if (!user) {
       navigate('/login');
       return;
@@ -433,29 +426,34 @@ export default function AsientosPage() {
     setError('');
 
     try {
-      const res = await crearReserva({
-        viaje_id: Number(id),
-        asientos: selectedSeats.map((s) => {
-          const key = getSeatKey(s);
-          const opts = seatOptions[key] || {};
-          return {
-            numero: s.numero,
-            piso: s.piso,
-            es_menor: opts.es_menor || false,
-            menor_no_es_hijo: (opts.es_menor && opts.menor_no_es_hijo) || false,
-            para_otra: opts.para_otra || false,
-            viaja_con_animal: opts.viaja_con_animal || false,
-            tipo_mascota: opts.tipo_mascota || '',
-            es_discapacitado: opts.es_discapacitado || false,
-            // Si es "para otra persona", el asignado son los datos escritos en
-            // "Datos del Comprador" (el campo se vacía/recarga según el toggle).
-            nombre_asignado: opts.para_otra ? nombre : '',
-            cedula_asignado: opts.para_otra && cedula ? `${cedulaTipo}-${cedula}` : '',
-          };
-        }),
+      const asientosPayload = selectedSeats.map((s) => {
+        const key = getSeatKey(s);
+        const opts = seatOptions[key] || {};
+        return {
+          numero: s.numero,
+          piso: s.piso,
+          es_menor: opts.es_menor || false,
+          menor_no_es_hijo: (opts.es_menor && opts.menor_no_es_hijo) || false,
+          para_otra: opts.para_otra || false,
+          viaja_con_animal: opts.viaja_con_animal || false,
+          tipo_mascota: opts.tipo_mascota || '',
+          es_discapacitado: opts.es_discapacitado || false,
+          // Si es "para otra persona", el asignado son los datos escritos en
+          // "Datos del Comprador" (el campo se vacía/recarga según el toggle).
+          nombre_asignado: opts.para_otra ? nombre : '',
+          cedula_asignado: opts.para_otra && cedula ? `${cedulaTipo}-${cedula}` : '',
+        };
+      });
+      const datosComunes = {
+        asientos: asientosPayload,
         nombre_pasajero: nombre,
         cedula_pasajero: cedula ? `${cedulaTipo}-${cedula}` : '',
-      });
+      };
+      // Aerorutas: aparta en el sistema de la empresa + crea reservas locales.
+      // Local: flujo normal. Ambos devuelven el mismo shape → el resto no cambia.
+      const res = esAerorutas
+        ? await reservarAerorutas({ trip_id: id, ...datosComunes })
+        : await crearReserva({ viaje_id: Number(id), ...datosComunes });
 
       // Check anti-spam block
       if (res.data.bloqueado) {

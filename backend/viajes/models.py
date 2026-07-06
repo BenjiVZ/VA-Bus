@@ -171,11 +171,41 @@ class Viaje(models.Model):
         verbose_name="Expiración de Compra",
         help_text="Fecha límite para comprar puestos. Vacío = abierto hasta la salida."
     )
+    # ── Espejo de un viaje del sistema externo Aerorutas ──
+    # Cuando alguien compra un viaje de Aerorutas, se crea (una sola vez) este
+    # espejo local para poder reusar TODO el circuito existente de reservas,
+    # pagos, documentos y tickets. Si aerorutas_codrut tiene valor, el viaje es
+    # un espejo: no aparece en el listado local y al aprobarse el pago se llama
+    # ASIGPASA para marcar los puestos como vendidos en el sistema de la empresa.
+    aerorutas_codrut = models.CharField(
+        max_length=20, blank=True, default='', db_index=True,
+        verbose_name="Aerorutas: código de ruta (codrut)"
+    )
+    aerorutas_ofisal = models.CharField(
+        max_length=10, blank=True, default='',
+        verbose_name="Aerorutas: oficina de salida (ofisal)"
+    )
+    aerorutas_ofides = models.CharField(
+        max_length=10, blank=True, default='',
+        verbose_name="Aerorutas: oficina de destino (ofides)"
+    )
+
+    @property
+    def es_aerorutas(self):
+        return bool(self.aerorutas_codrut)
 
     class Meta:
         verbose_name = "Viaje"
         verbose_name_plural = "Viajes"
         ordering = ['fecha_salida', 'hora_salida']
+        constraints = [
+            # Un solo espejo por (ruta Aerorutas + tramo + fecha).
+            models.UniqueConstraint(
+                fields=['aerorutas_codrut', 'aerorutas_ofisal', 'aerorutas_ofides', 'fecha_salida'],
+                condition=~models.Q(aerorutas_codrut=''),
+                name='uniq_viaje_espejo_aerorutas',
+            ),
+        ]
 
     def __str__(self):
         tipo = "↔" if self.tipo_viaje == 'ida_vuelta' else "→"
