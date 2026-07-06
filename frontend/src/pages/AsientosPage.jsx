@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAsientos, getAsientosLocal, crearReserva, subirDocumentosMenor, subirDocVacunacion, subirDocDiscapacidad, getTasaCambio, bloquearAsiento, liberarAsiento } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useAsientosWebSocket } from '../hooks/useAsientosWebSocket';
 import SeatMap from '../components/SeatMap';
 import PriceDisplay from '../components/PriceDisplay';
@@ -12,6 +13,7 @@ export default function AsientosPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
   // Viaje de Aerorutas: id compuesto (ej "001_02_11_2026-06-03"). No soporta
   // bloqueo/WS en el servidor: la selección es solo local.
   const esAerorutas = String(id).includes('_');
@@ -167,7 +169,7 @@ export default function AsientosPage() {
               setSelectionStart(null);
               setRemainingTime(null);
               setMenorToggled({});
-              setError('⏰ Tu tiempo de selección ha expirado (10 minutos). Los asientos fueron liberados.');
+              toast.error('⏰ Tu tiempo de selección ha expirado (10 minutos). Los asientos fueron liberados.');
               cargarAsientos();
             }
           });
@@ -209,7 +211,7 @@ export default function AsientosPage() {
         setSelectionStart(null);
         setRemainingTime(null);
         setMenorToggled({});
-        setError('⏰ Tu tiempo de selección ha expirado (10 minutos). Los asientos fueron liberados. Puedes seleccionar nuevamente.');
+        toast.error('⏰ Tu tiempo de selección ha expirado (10 minutos). Los asientos fueron liberados. Puedes seleccionar nuevamente.');
         cargarAsientos();
         return;
       }
@@ -242,7 +244,7 @@ export default function AsientosPage() {
 
   const handleToggleSeat = async (seat) => {
     if (expirado) {
-      setError('⏰ Este viaje ya salió. No se pueden seleccionar puestos.');
+      toast.error('⏰ Este viaje ya salió. No se pueden seleccionar puestos.');
       return;
     }
     if (!user) {
@@ -269,7 +271,7 @@ export default function AsientosPage() {
       try {
         await bloquearAsiento(Number(id), seat.numero, seat.piso);
       } catch (err) {
-        setError(err.response?.data?.error || 'Este asiento ya fue tomado por otro usuario.');
+        toast.error(err.response?.data?.error || 'Este asiento ya fue tomado por otro usuario.');
         cargarAsientos();
         return;
       }
@@ -386,7 +388,7 @@ export default function AsientosPage() {
     // Viajes de Aerorutas (id compuesto, ej "001_02_04_2026-06-03"): la reserva/pago
     // está en integración. Evita romper el flujo hasta definir reserva/pago.
     if (String(id).includes('_')) {
-      setError('🚧 La reserva de viajes de Aerorutas estará disponible muy pronto. Por ahora solo puedes ver la disponibilidad.');
+      toast.info('🚧 La reserva de viajes de Aerorutas estará disponible muy pronto. Por ahora solo puedes ver la disponibilidad.');
       return;
     }
 
@@ -396,7 +398,7 @@ export default function AsientosPage() {
     }
 
     if (!user.cedula) {
-      setError('⚠️ Debes registrar tu cédula antes de reservar. Ve a tu perfil para completarla.');
+      toast.error('⚠️ Debes registrar tu cédula antes de reservar. Ve a tu perfil para completarla.');
       setTimeout(() => navigate('/perfil'), 2500);
       return;
     }
@@ -407,7 +409,7 @@ export default function AsientosPage() {
     // Comprador) debe tener los datos de esa persona.
     const hayParaOtra = selectedSeats.some((s) => seatOptions[getSeatKey(s)]?.para_otra);
     if (hayParaOtra && !nombre.trim()) {
-      setError('Ingresa el nombre de la persona a la que asignas el asiento (en "Datos del Comprador").');
+      toast.error('Ingresa el nombre de la persona a la que asignas el asiento (en "Datos del Comprador").');
       return;
     }
 
@@ -457,7 +459,7 @@ export default function AsientosPage() {
 
       // Check anti-spam block
       if (res.data.bloqueado) {
-        setError(res.data.error);
+        toast.error(res.data.error);
         return;
       }
 
@@ -524,8 +526,7 @@ export default function AsientosPage() {
         },
       });
     } catch (err) {
-      const msg = err.response?.data?.error || 'Error al crear la reserva.';
-      setError(msg);
+      toast.error(err.response?.data?.error || 'Error al crear la reserva.');
     } finally {
       setSubmitting(false);
     }

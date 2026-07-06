@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CedulaAlert from './components/CedulaAlert';
@@ -36,6 +37,7 @@ const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 function App() {
   const appContent = (
     <AuthProvider>
+      <ToastProvider>
       <BrowserRouter>
         <BackendStatusBanner />
         <ScrollToTop />
@@ -71,6 +73,7 @@ function App() {
         <TickerBar />
         <Footer />
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 
