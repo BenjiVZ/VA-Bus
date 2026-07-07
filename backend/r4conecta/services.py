@@ -98,7 +98,7 @@ def generar_otp(banco, monto, telefono, cedula):
     
     logger.info(f"GenerarOtp: banco={banco}, monto={monto_str}, telefono={_mask(telefono)}, cedula={_mask(cedula)}")
     
-    respuesta = _post("/debito-inmediato/generar-otp", payload, firma)
+    respuesta = _post("/GenerarOtp", payload, firma)
     logger.info(f"GenerarOtp respuesta: code={respuesta.get('code')}, message={respuesta.get('message')}")
     return respuesta
 
@@ -138,7 +138,7 @@ def debito_inmediato(banco, cedula, telefono, monto, otp, nombre, concepto="Bole
     
     logger.info(f"DebitoInmediato: banco={banco}, cedula={_mask(cedula)}, telefono={_mask(telefono)}, monto={monto_str}, otp={_mask(otp)}")
     
-    respuesta = _post("/debito-inmediato/confirmar", payload, firma)
+    respuesta = _post("/DebitoInmediato", payload, firma)
     logger.info(f"DebitoInmediato respuesta: code={respuesta.get('code')}, message={respuesta.get('message')}, id={respuesta.get('id')}")
     return respuesta
 
@@ -163,6 +163,6 @@ def consultar_operacion(operacion_id):
     
     logger.info(f"ConsultarOperacion: id={operacion_id}")
     
-    respuesta = _post("/debito-inmediato/consultar", payload, firma)
+    respuesta = _post("/ConsultarOperaciones", payload, firma)
     logger.info(f"ConsultarOperacion respuesta: code={respuesta.get('code')}, message={respuesta.get('message')}, estado={respuesta.get('estado')}")
     return respuesta
