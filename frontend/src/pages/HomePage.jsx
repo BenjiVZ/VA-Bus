@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRutas, getStats, getConfiguracion } from '../services/api';
+import { getAerorutasOficinas, getStats, getConfiguracion } from '../services/api';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import {
   Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar,
@@ -70,8 +70,9 @@ function useCounter(target, duration = 2000, enabled = true) {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [rutas, setRutas] = useState([]);
-  const [origen, setOrigen] = useState('');
+  // Oficinas reales de Aerorutas (mismo origen que la página de Viajes).
+  const [oficinas, setOficinas] = useState([]);
+  const [origen, setOrigen] = useState('');   // guarda el codofi, no el nombre
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
 
@@ -103,8 +104,8 @@ export default function HomePage() {
   const [whatsapp, setWhatsapp] = useState('');
 
   useEffect(() => {
-    getRutas()
-      .then((res) => setRutas(res.data))
+    getAerorutasOficinas()
+      .then((res) => setOficinas(res.data || []))
       .catch(() => {});
     getStats()
       .then((res) => setDbStats(res.data))
@@ -122,8 +123,11 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
-  const origenes = [...new Set(rutas.map((r) => r.origen))].sort();
-  const destinos = [...new Set(rutas.map((r) => r.destino))].sort();
+  // Destino: todas las oficinas menos la elegida como origen.
+  const oficinasDestino = useMemo(
+    () => oficinas.filter((o) => o.codofi !== origen),
+    [oficinas, origen]
+  );
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -232,11 +236,14 @@ export default function HomePage() {
               <select
                 className="form-control"
                 value={origen}
-                onChange={(e) => setOrigen(e.target.value)}
+                onChange={(e) => {
+                  setOrigen(e.target.value);
+                  if (e.target.value === destino) setDestino('');
+                }}
               >
                 <option value="">Todas las ciudades</option>
-                {origenes.map((o) => (
-                  <option key={o} value={o}>{o}</option>
+                {oficinas.map((o) => (
+                  <option key={o.codofi} value={o.codofi}>{o.desofi}</option>
                 ))}
               </select>
             </div>
@@ -251,8 +258,8 @@ export default function HomePage() {
                 onChange={(e) => setDestino(e.target.value)}
               >
                 <option value="">Todas las ciudades</option>
-                {destinos.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                {oficinasDestino.map((o) => (
+                  <option key={o.codofi} value={o.codofi}>{o.desofi}</option>
                 ))}
               </select>
             </div>
