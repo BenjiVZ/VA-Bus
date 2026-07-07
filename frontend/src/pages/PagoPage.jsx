@@ -577,7 +577,16 @@ export default function PagoPage() {
               <div className="form-group">
                 <label>Banco</label>
                 <input className="form-control" value={bancoFiltro} style={{ marginBottom: 8 }}
-                  onChange={(e) => setBancoFiltro(e.target.value)} placeholder="Buscar por nombre o código…" />
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setBancoFiltro(val);
+                    // Auto-selecciona el primer banco que coincide con el filtro,
+                    // así no hay que abrir el desplegable. Si no hay match, limpia.
+                    const q = val.toLowerCase();
+                    const match = bancos.find(b => `${b.codigo} ${b.nombre}`.toLowerCase().includes(q));
+                    setCiBanco(match ? match.codigo : '');
+                  }}
+                  placeholder="Buscar por nombre o código…" />
                 <select className="form-control" value={ciBanco} onChange={(e) => setCiBanco(e.target.value)}>
                   <option value="">Selecciona tu banco…</option>
                   {bancosFiltrados.map(b => (
