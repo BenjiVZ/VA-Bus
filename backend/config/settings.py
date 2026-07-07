@@ -109,7 +109,15 @@ if os.getenv('DB_HOST'):
             'HOST': os.getenv('DB_HOST'),
             'PORT': os.getenv('DB_PORT', '25060'),
             'OPTIONS': {'sslmode': os.getenv('DB_SSLMODE', 'require')},
-            'CONN_MAX_AGE': 60,  # reusa conexiones (la DB administrada limita el total)
+            # 0 = cerrar la conexión al terminar cada petición. La DB administrada
+            # de DigitalOcean tiene POCAS conexiones (~22); si se retienen (p.ej. 60s)
+            # se agota el cupo y la DB rechaza con "remaining connection slots...".
+            # Con el Connection Pool (PgBouncer, modo transaction) debe quedar en 0
+            # y DB_DISABLE_SS_CURSORS=True.
+            'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '0')),
+            # Requerido cuando se apunta al pooler de DigitalOcean en modo transaction.
+            'DISABLE_SERVER_SIDE_CURSORS':
+                os.getenv('DB_DISABLE_SS_CURSORS', 'False').lower() == 'true',
         }
     }
 else:
