@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { buscarViajes, getViajesLocales, getTasaCambio, getAerorutasOficinas } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { buscarViajes, getTasaCambio, getAerorutasOficinas } from '../services/api';
 import PriceDisplay from '../components/PriceDisplay';
 import { Bus, ArrowRight, Armchair, Search, MapPin, Calendar, X, Clock } from 'lucide-react';
 import Flatpickr from "react-flatpickr";
@@ -11,8 +10,6 @@ import { Spanish } from "flatpickr/dist/l10n/es.js";
 export default function ViajesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const esLogueado = !!user;  // cualquier usuario logueado ve los viajes de prueba locales
   const [viajes, setViajes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorCarga, setErrorCarga] = useState(false); // falla real (no "vacío")
@@ -67,21 +64,14 @@ export default function ViajesPage() {
     const params = { fecha };
     if (origen && destino) { params.origen = origen; params.destino = destino; }
     const norm = (res) => res.data?.results || res.data || [];
-    let huboError = false;  // distingue "falló la consulta" de "no hay viajes"
-    Promise.all([
-      buscarViajes(params).then(norm).catch(() => { huboError = true; return []; }),
-      // Viajes locales (incluye los de PRUEBA). Los ve cualquier usuario logueado,
-      // así todos pueden probar la compra. Sin filtro de fecha para que siempre se vean.
-      esLogueado ? getViajesLocales().then(norm).catch(() => []) : Promise.resolve([]),
-    ])
-      .then(([aero, locales]) => {
-        setViajes([...locales, ...aero]);
-        // Solo marcamos error si la consulta principal falló y no quedó nada que mostrar.
-        setErrorCarga(huboError && aero.length === 0 && locales.length === 0);
-      })
+    // Solo el catálogo real de Aerorutas. Los viajes locales de PRUEBA ya no se
+    // muestran (la compra de Aerorutas ya funciona; eran una ayuda de testing).
+    buscarViajes(params)
+      .then(norm)
+      .then((aero) => setViajes(aero))
       .catch(() => setErrorCarga(true))
       .finally(() => setLoading(false));
-  }, [origen, destino, fecha, busquedaCompleta, esLogueado, reintento]);
+  }, [origen, destino, fecha, busquedaCompleta, reintento]);
 
   const handleBuscar = (e) => {
     e.preventDefault();
