@@ -73,7 +73,7 @@ class TestDebito(_TestBase):
                 banco=d.get('banco', ''), cedula=d.get('cedula', ''),
                 telefono=d.get('telefono', ''), monto=d.get('monto', '0'),
                 otp=d.get('otp', ''), nombre=d.get('nombre', ''),
-                concepto=d.get('concepto', '') or 'Boletos')
+                concepto=d.get('concepto', '') or 'pago')
         except services.R4Error as e:
             return Response({'ok': False, 'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
         return Response({'ok': True, 'response': resp})

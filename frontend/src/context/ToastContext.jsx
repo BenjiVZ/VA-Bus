@@ -42,10 +42,22 @@ export function ToastProvider({ children }) {
   }, []);
 
   const show = useCallback((tipo, mensaje, duracion) => {
-    const id = nextId++;
+    const texto = String(mensaje);
     // Duración proporcional al largo del mensaje (5s a 10s)
-    const dur = duracion ?? Math.min(10000, Math.max(5000, 3000 + String(mensaje).length * 45));
-    setToasts((prev) => [...prev.slice(-2), { id, tipo, mensaje: String(mensaje), dur }]);
+    const dur = duracion ?? Math.min(10000, Math.max(5000, 3000 + texto.length * 45));
+    const id = nextId++;
+
+    setToasts((prev) => {
+      // Si el mismo mensaje ya está visible, no apilar: se reinicia su tiempo.
+      const repetido = prev.find((t) => t.mensaje === texto && t.tipo === tipo && !t.saliendo);
+      if (repetido) {
+        clearTimeout(timers.current[repetido.id]);
+        timers.current[repetido.id] = setTimeout(() => dismiss(repetido.id), dur);
+        // remonta el nodo (key nueva) para que la barra de progreso rearranque
+        return prev.map((t) => (t.id === repetido.id ? { ...t, renderKey: id } : t));
+      }
+      return [...prev.slice(-2), { id, tipo, mensaje: texto, dur, renderKey: id }];
+    });
     timers.current[id] = setTimeout(() => dismiss(id), dur);
     return id;
   }, [dismiss]);

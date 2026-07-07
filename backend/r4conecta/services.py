@@ -103,7 +103,7 @@ def generar_otp(banco, monto, telefono, cedula):
     return respuesta
 
 
-def debito_inmediato(banco, cedula, telefono, monto, otp, nombre, concepto="Boletos"):
+def debito_inmediato(banco, cedula, telefono, monto, otp, nombre, concepto="pago"):
     """
     Realiza el débito inmediato en Mibanco.
     

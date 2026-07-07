@@ -23,7 +23,7 @@ class OperacionDebitoOTP(models.Model):
     telefono = models.CharField(max_length=20)
     nombre = models.CharField(max_length=200)
     monto = models.DecimalField(max_digits=10, decimal_places=2, help_text="Monto en bolívares")
-    concepto = models.CharField(max_length=30, blank=True, default="Boletos Aerorutas")
+    concepto = models.CharField(max_length=30, blank=True, default="pago")
 
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default="otp_generado")
     code = models.CharField(max_length=10, blank=True, help_text="Código de respuesta del banco")

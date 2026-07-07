@@ -77,7 +77,7 @@ class GenerarOtpView(APIView):
 
         nombre = (d.get('nombre') or request.user.get_full_name()
                   or request.user.username)[:40]
-        concepto = (d.get('concepto') or f'Pasaje {grupo_pago.hex[:8]}')[:30]
+        concepto = (d.get('concepto') or 'pago')[:30]
 
         op = OperacionDebitoOTP.objects.create(
             usuario=request.user, grupo_pago=grupo_pago,

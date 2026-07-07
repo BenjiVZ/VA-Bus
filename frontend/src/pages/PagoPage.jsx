@@ -325,7 +325,7 @@ export default function PagoPage() {
         cedula: cedulaLimpia,
         telefono: ciTelefono.trim(),
         nombre: ciNombre.trim(),
-        concepto: ciConcepto.trim(),
+        concepto: ciConcepto.trim() || 'pago',
       });
       if (data.otp_enviado) {
         setCiOperacionId(data.operacion_id);

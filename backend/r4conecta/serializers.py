@@ -8,7 +8,7 @@ class GenerarOtpSerializer(serializers.Serializer):
     banco = serializers.CharField(max_length=4, help_text="Código banco (4 dígitos)")
     cedula = serializers.CharField(max_length=20, help_text="Cédula (ej: V12345678)")
     telefono = serializers.CharField(max_length=20, help_text="Teléfono (11 dígitos)")
-    concepto = serializers.CharField(max_length=30, required=False, default="Boletos Aerorutas")
+    concepto = serializers.CharField(max_length=30, required=False, default="pago")
 
     def validate_banco(self, value):
         if not re.match(r'^\d{4}$', value):
