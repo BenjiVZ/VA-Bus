@@ -626,6 +626,97 @@ class AerorutasViajesView(APIView):
                          'results': results})
 
 
+def obtener_o_crear_viaje_espejo(codrut, inicio, fin, fecha, info):
+    """
+    Devuelve (creando si hace falta) el Viaje espejo local de un viaje de
+    Aerorutas. Idempotente por (codrut, ofisal, ofides, fecha). Se usa al VER
+    los asientos (para poder bloquear internamente antes de reservar) y al
+    RESERVAR. `fecha` puede ser date o 'YYYY-MM-DD'; `info` es el shape del
+    viaje (origen/destino/hora/precio).
+    """
+    from datetime import datetime as _dt
+    if isinstance(fecha, str):
+        fecha = _dt.strptime(fecha, '%Y-%m-%d').date()
+
+    info = info or {}
+    origen = info.get('ruta', {}).get('origen') or inicio
+    destino = info.get('ruta', {}).get('destino') or fin
+    desrut = info.get('autobus', {}).get('nombre') or f'Línea {codrut}'
+    try:
+        hora = _dt.strptime(info.get('hora_salida') or '00:00:00', '%H:%M:%S').time()
+    except (TypeError, ValueError):
+        hora = _dt.strptime('00:00:00', '%H:%M:%S').time()
+    try:
+        precio = float(info.get('precio_usd') or 0)
+    except (TypeError, ValueError):
+        precio = 0
+
+    ruta_local, _ = Ruta.objects.get_or_create(origen=origen, destino=destino)
+    bus_local, _ = Autobus.objects.get_or_create(
+        placa=f'AR-{codrut}'[:20],
+        defaults={'nombre': desrut[:100], 'pisos': 1},
+    )
+    viaje, creado = Viaje.objects.get_or_create(
+        aerorutas_codrut=codrut,
+        aerorutas_ofisal=inicio,
+        aerorutas_ofides=fin,
+        fecha_salida=fecha,
+        defaults={
+            'ruta': ruta_local, 'autobus': bus_local,
+            'hora_salida': hora, 'precio_usd': precio, 'activo': True,
+        },
+    )
+    # Si el espejo se creó antes con precio 0 (p.ej. al ver asientos sin precio)
+    # y ahora tenemos el real, lo completamos para no vender en 0.
+    if not creado and precio > 0 and (not viaje.precio_usd or float(viaje.precio_usd) <= 0):
+        viaje.precio_usd = precio
+        viaje.save(update_fields=['precio_usd'])
+    return viaje
+
+
+def _overlay_bloqueos_aerorutas(pisos, viaje, user):
+    """
+    Superpone sobre el mapa de asientos de Aerorutas (pisos_shape) los que están
+    tomados internamente en NUESTRO sistema: reservas activas y bloqueos de otros
+    usuarios se marcan como no disponibles. Los bloqueos propios del usuario se
+    marcan con `bloqueado_por_mi` y siguen seleccionables (para rehidratar la
+    selección tras un refresh). Aerorutas es de un solo piso, se cruza por número.
+    """
+    from reservas.models import Reserva, BloqueoAsiento
+    Reserva.limpiar_expiradas(viaje=viaje)
+    BloqueoAsiento.limpiar_expirados(viaje=viaje)
+    now = timezone.now()
+
+    ocupados = set()
+    for (numero,) in Reserva.objects.filter(
+        viaje=viaje, estado__in=['pendiente', 'apartado', 'confirmado']
+    ).values_list('numero_asiento'):
+        ocupados.add(numero)
+
+    uid = user.id if getattr(user, 'is_authenticated', False) else None
+    mios = set()
+    for numero, buid in BloqueoAsiento.objects.filter(
+        viaje=viaje, fecha_expiracion__gt=now
+    ).values_list('numero_asiento', 'usuario_id'):
+        if uid and buid == uid:
+            mios.add(numero)
+        else:
+            ocupados.add(numero)
+
+    for piso in pisos:
+        for row in piso.get('layout', []):
+            for cell in row:
+                if cell.get('type') != 'seat' or not cell.get('number'):
+                    continue
+                n = cell['number']
+                if n in ocupados:
+                    cell['disponible'] = False
+                if n in mios:
+                    cell['bloqueado_por_mi'] = True
+                    cell['disponible'] = True
+    return pisos
+
+
 class AerorutasViajeAsientosView(APIView):
     """Asientos de un viaje de Aerorutas con el MISMO formato que /viajes/<id>/asientos/."""
     permission_classes = [permissions.AllowAny]
@@ -660,9 +751,16 @@ class AerorutasViajeAsientosView(APIView):
             # Refrescar el conteo de disponibles con el dato en vivo.
             viaje = {**viaje, 'asientos_disponibles': len(puestos)}
 
+        # Viaje espejo local para poder bloquear internamente (BloqueoAsiento) y
+        # emitir por WebSocket, igual que los viajes locales. Idempotente.
+        pisos = aerorutas.pisos_shape(puestos)
+        viaje_local = obtener_o_crear_viaje_espejo(codrut, inicio, fin, fecha, viaje)
+        _overlay_bloqueos_aerorutas(pisos, viaje_local, request.user)
+
         return Response({
             'viaje': viaje,
-            'pisos_config': aerorutas.pisos_shape(puestos),
+            'viaje_local_id': viaje_local.id,
+            'pisos_config': pisos,
         })
 
 
@@ -793,26 +891,7 @@ class AerorutasReservarView(APIView):
                 }, status=status.HTTP_502_BAD_GATEWAY)
 
         # ── 3. Viaje espejo local (una sola vez por ruta+tramo+fecha) ──
-        origen = info.get('ruta', {}).get('origen') or inicio
-        destino = info.get('ruta', {}).get('destino') or fin
-        desrut = info.get('autobus', {}).get('nombre') or f'Línea {codrut}'
-        hora = datetime.strptime(info.get('hora_salida') or '00:00:00', '%H:%M:%S').time()
-
-        ruta_local, _ = Ruta.objects.get_or_create(origen=origen, destino=destino)
-        bus_local, _ = Autobus.objects.get_or_create(
-            placa=f'AR-{codrut}'[:20],
-            defaults={'nombre': desrut[:100], 'pisos': 1},
-        )
-        viaje, _ = Viaje.objects.get_or_create(
-            aerorutas_codrut=codrut,
-            aerorutas_ofisal=inicio,
-            aerorutas_ofides=fin,
-            fecha_salida=fecha,
-            defaults={
-                'ruta': ruta_local, 'autobus': bus_local,
-                'hora_salida': hora, 'precio_usd': precio, 'activo': True,
-            },
-        )
+        viaje = obtener_o_crear_viaje_espejo(codrut, inicio, fin, fecha, info)
 
         # ── 4. Reservas locales (idéntico contrato que /reservas/crear/) ──
         grupo_pago = uuid_lib.uuid4()

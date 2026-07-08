@@ -27,6 +27,9 @@ export default function AsientosPage() {
   const [cedulaTipo, setCedulaTipo] = useState('V');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // Aerorutas: id entero del viaje-espejo local (lo devuelve el endpoint de
+  // asientos). Con él se bloquea internamente y se emite por WebSocket.
+  const [viajeLocalId, setViajeLocalId] = useState(null);
 
   // Per-seat options: { seatKey: { es_menor, para_otra, nombre_asignado, cedula_asignado, cedula_tipo_asignado } }
   const [seatOptions, setSeatOptions] = useState({});
@@ -61,6 +64,12 @@ export default function AsientosPage() {
     selectedSeatsRef.current = selectedSeats;
   }, [selectedSeats]);
 
+  // ID entero para bloqueo/WS: en Aerorutas es el viaje-espejo local; en local,
+  // el id de la URL. Ref para usarlo dentro de intervals/cleanups sin stale.
+  const lockId = esAerorutas ? viajeLocalId : (Number(id) || null);
+  const lockIdRef = useRef(null);
+  useEffect(() => { lockIdRef.current = lockId; }, [lockId]);
+
   // Iniciar/detener timer cuando se selecciona/deselecciona el primer asiento
   useEffect(() => {
     if (selectedSeats.length > 0 && !selectionStart) {
@@ -78,6 +87,7 @@ export default function AsientosPage() {
       .then((asientosRes) => {
         const newData = asientosRes.data;
         setData(newData);
+        if (esAerorutas) setViajeLocalId(newData?.viaje_local_id ?? null);
 
         // Auto-deseleccionar asientos que otro usuario ya tomó
         if (newData?.pisos_config) {
@@ -160,9 +170,10 @@ export default function AsientosPage() {
     // mantiene 2min, así que 30s sigue siendo cómodo y mucho más liviano.
     const interval = setInterval(() => {
       cargarAsientos();
-      if (!esAerorutas && user && selectedSeatsRef.current.length > 0) {
+      const lid = lockIdRef.current;
+      if (lid && user && selectedSeatsRef.current.length > 0) {
         selectedSeatsRef.current.forEach((s) => {
-          bloquearAsiento(Number(id), s.numero, s.piso).catch((err) => {
+          bloquearAsiento(lid, s.numero, s.piso).catch((err) => {
             if (err.response?.data?.sesion_expirada) {
               setSelectedSeats([]);
               setSeatOptions({});
@@ -184,8 +195,8 @@ export default function AsientosPage() {
   // bloquean/liberan/reservan asientos. Si el cambio fue mío (mismo user.id),
   // lo ignoramos porque el estado local ya está al día.
   useAsientosWebSocket({
-    viajeId: Number(id),
-    enabled: !!id && !esAerorutas,
+    viajeId: lockId,
+    enabled: !!lockId,
     onSeatChanged: useCallback((evt) => {
       if (evt.usuario_id && user && evt.usuario_id === user.id) return;
       // Refrescar el mapa — la fuente de verdad sigue siendo el GET.
@@ -203,8 +214,9 @@ export default function AsientosPage() {
       const remaining = total - elapsed;
 
       if (remaining <= 0) {
-        if (!esAerorutas) selectedSeatsRef.current.forEach(s => {
-          liberarAsiento(Number(id), s.numero, s.piso).catch(() => null);
+        const lid = lockIdRef.current;
+        if (lid) selectedSeatsRef.current.forEach(s => {
+          liberarAsiento(lid, s.numero, s.piso).catch(() => null);
         });
         setSelectedSeats([]);
         setSeatOptions({});
@@ -225,12 +237,14 @@ export default function AsientosPage() {
   }, [selectionStart, id, cargarAsientos]);
 
   useEffect(() => () => {
-    if (!user || esAerorutas) return;
+    if (!user) return;
+    const lid = lockIdRef.current;
+    if (!lid) return;
     const seats = selectedSeatsRef.current;
     seats.forEach((s) => {
-      liberarAsiento(Number(id), s.numero, s.piso).catch(() => null);
+      liberarAsiento(lid, s.numero, s.piso).catch(() => null);
     });
-  }, [id, user, esAerorutas]);
+  }, [id, user]);
 
   const getSeatKey = (seat) => `${seat.piso}-${seat.numero}`;
 
@@ -262,14 +276,15 @@ export default function AsientosPage() {
         delete copy[key];
         return copy;
       });
-      if (!esAerorutas) liberarAsiento(Number(id), seat.numero, seat.piso).catch(() => null);
+      if (lockId) liberarAsiento(lockId, seat.numero, seat.piso).catch(() => null);
       return;
     }
 
-    // Aerorutas: selección solo local (sin bloqueo en servidor).
-    if (!esAerorutas) {
+    // Bloqueo interno (nuestro sistema): que otros usuarios lo vean tomado al
+    // instante. En Aerorutas usa el viaje-espejo local (lockId).
+    if (lockId) {
       try {
-        await bloquearAsiento(Number(id), seat.numero, seat.piso);
+        await bloquearAsiento(lockId, seat.numero, seat.piso);
       } catch (err) {
         toast.error(err.response?.data?.error || 'Este asiento ya fue tomado por otro usuario.');
         cargarAsientos();
