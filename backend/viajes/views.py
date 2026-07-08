@@ -882,9 +882,17 @@ class AerorutasReservarView(APIView):
             }, status=status.HTTP_409_CONFLICT)
 
         # ── 2. Apartar cada puesto en el sistema de la empresa (TMPPUESTO) ──
+        import logging as _logging
+        _log_ar = _logging.getLogger('aerorutas')
         for n in numeros:
             try:
-                aerorutas.apartar_puesto(fecha_str, codrut, str(n), inicio, fin)
+                items, raw = aerorutas.apartar_puesto(fecha_str, codrut, str(n), inicio, fin)
+                # Log del crudo para verificar que Aerorutas realmente aparta el
+                # puesto (el formato de respuesta de TMPPUESTO no está documentado).
+                _log_ar.info(
+                    'TMPPUESTO asiento=%s codrut=%s fecha=%s ofisal=%s ofides=%s -> items=%s raw=%s',
+                    n, codrut, fecha_str, inicio, fin, items, (raw or '')[:500],
+                )
             except aerorutas.AerorutasError as e:
                 return Response({
                     'error': f'No se pudo apartar el asiento {n} en Aerorutas: {e}'
