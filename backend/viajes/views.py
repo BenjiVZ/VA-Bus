@@ -550,6 +550,23 @@ class AerorutasPuestosView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
 
+def _viajes_locales_prueba(fecha):
+    """Viajes LOCALES (no espejos de Aerorutas) activos de `fecha`, con el mismo
+    shape que /viajes/ (ViajeListSerializer). Su `id` es el pk numérico.
+
+    La app solo lista el catálogo de Aerorutas; los viajes creados con
+    `manage.py viajes_prueba` son Viaje locales (aerorutas_codrut='') y no
+    aparecerían. Al inyectarlos con su id numérico, la app los trata como viajes
+    locales normales y el flujo bloqueo→reserva→pago funciona sin tocar el móvil.
+    """
+    from .serializers import ViajeListSerializer
+    qs = (Viaje.objects
+          .filter(activo=True, aerorutas_codrut='', fecha_salida=fecha)
+          .select_related('ruta', 'autobus')
+          .prefetch_related('autobus__pisos_config'))
+    return list(ViajeListSerializer(qs, many=True).data)
+
+
 class AerorutasViajesView(APIView):
     """
     Búsqueda de viajes de Aerorutas devuelta con el MISMO formato que /viajes/
@@ -613,6 +630,11 @@ class AerorutasViajesView(APIView):
                     self._lanzar_precarga_bg()
         except aerorutas.AerorutasError as e:
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        # Inyectar los viajes de PRUEBA locales en la lista general (sin par
+        # origen/destino) para poder testear el flujo completo en la app.
+        if not (inicio and fin):
+            results = list(results) + _viajes_locales_prueba(fecha)
 
         # Ocultar viajes sin precio (precio 0 o vacío).
         def _precio(v):
@@ -722,6 +744,24 @@ class AerorutasViajeAsientosView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, trip_id):
+        # Viaje LOCAL (p.ej. los de PRUEBA): id numérico → asientos locales, con
+        # el MISMO shape que /viajes/<id>/asientos/. La app ya reserva/paga con
+        # este id (lo trata como local porque no tiene '_').
+        if str(trip_id).isdigit():
+            try:
+                viaje = (Viaje.objects.select_related('autobus')
+                         .prefetch_related('autobus__pisos_config')
+                         .get(pk=int(trip_id), activo=True))
+            except Viaje.DoesNotExist:
+                return Response({'error': 'Viaje no encontrado.'},
+                                status=status.HTTP_404_NOT_FOUND)
+            pisos = generar_mapa_desde_layout(viaje, request.user)
+            return Response({
+                'viaje': ViajeDetailSerializer(viaje).data,
+                'viaje_local_id': viaje.id,
+                'pisos_config': pisos,
+            })
+
         try:
             codrut, inicio, fin, fecha = aerorutas.parse_viaje_id(trip_id)
         except ValueError:
