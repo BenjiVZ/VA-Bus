@@ -53,7 +53,10 @@ export default function ViajesPage() {
 
   const busquedaCompleta = !!fecha; // basta la fecha; origen/destino son filtros opcionales
 
-  // Buscar viajes: con solo fecha, el backend barre TODAS las rutas del día.
+  // Carga del backend: depende SOLO de fecha y ORIGEN (no de destino).
+  //   · sin origen → catálogo precargado del día (instantáneo).
+  //   · con origen → barrido EN VIVO de todos sus destinos (no falta ninguna ruta).
+  // El destino NO se manda al backend: filtra en el cliente (abajo), sin recargar.
   useEffect(() => {
     if (!busquedaCompleta) {
       setViajes([]);
@@ -62,22 +65,28 @@ export default function ViajesPage() {
     setLoading(true);
     setErrorCarga(false);
     const params = { fecha };
-    if (origen && destino) { params.origen = origen; params.destino = destino; }
+    if (origen) params.origen = origen;
     const norm = (res) => res.data?.results || res.data || [];
-    // Solo el catálogo real de Aerorutas. Los viajes locales de PRUEBA ya no se
-    // muestran (la compra de Aerorutas ya funciona; eran una ayuda de testing).
     buscarViajes(params)
       .then(norm)
       .then((aero) => setViajes(aero))
       .catch(() => setErrorCarga(true))
       .finally(() => setLoading(false));
-  }, [origen, destino, fecha, busquedaCompleta, reintento]);
+  }, [origen, fecha, busquedaCompleta, reintento]);
+
+  // El destino filtra en el cliente sobre lo YA cargado (instantáneo, sin recarga).
+  // El id de cada viaje codifica el destino: "codrut_inicio_FIN_fecha".
+  const viajesMostrados = useMemo(() => {
+    if (!destino) return viajes;
+    return viajes.filter((v) => String(v.id).split('_')[2] === destino);
+  }, [viajes, destino]);
 
   const handleBuscar = (e) => {
     e.preventDefault();
     if (!filtroFecha) return;
     const params = { fecha: filtroFecha };
-    if (filtroOrigen && filtroDestino) { params.origen = filtroOrigen; params.destino = filtroDestino; }
+    if (filtroOrigen) params.origen = filtroOrigen;
+    if (filtroOrigen && filtroDestino) params.destino = filtroDestino;
     setSearchParams(params);
   };
 
@@ -103,8 +112,13 @@ export default function ViajesPage() {
                 className="form-control"
                 value={filtroOrigen}
                 onChange={(e) => {
-                  setFiltroOrigen(e.target.value);
-                  if (e.target.value === filtroDestino) setFiltroDestino('');
+                  const val = e.target.value;
+                  setFiltroOrigen(val);
+                  setFiltroDestino(''); // el destino se re-elige para el nuevo origen
+                  // Aplica al instante: carga en vivo todos los viajes de ese origen.
+                  const params = { fecha: filtroFecha || hoy };
+                  if (val) params.origen = val;
+                  setSearchParams(params);
                 }}
               >
                 <option value="">Selecciona origen…</option>
@@ -120,7 +134,15 @@ export default function ViajesPage() {
                 id="filtro-destino"
                 className="form-control"
                 value={filtroDestino}
-                onChange={(e) => setFiltroDestino(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFiltroDestino(val);
+                  // Solo filtra en el cliente lo ya cargado: no recarga.
+                  const params = { fecha: filtroFecha || hoy };
+                  if (filtroOrigen) params.origen = filtroOrigen;
+                  if (val) params.destino = val;
+                  setSearchParams(params);
+                }}
               >
                 <option value="">Selecciona destino…</option>
                 {oficinasDestino.map((o) => (
@@ -162,7 +184,7 @@ export default function ViajesPage() {
             </h2>
             {busquedaCompleta && (
               <p className="viajes-header-count">
-                {origen && destino ? `${nombreOficina(origen)} → ${nombreOficina(destino)} · ` : ''}{fecha} — {viajes.length} viaje{viajes.length !== 1 ? 's' : ''}
+                {origen ? `${nombreOficina(origen)}${destino ? ` → ${nombreOficina(destino)}` : ''} · ` : ''}{fecha} — {viajesMostrados.length} viaje{viajesMostrados.length !== 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -198,7 +220,7 @@ export default function ViajesPage() {
               Reintentar
             </button>
           </div>
-        ) : viajes.length === 0 ? (
+        ) : viajesMostrados.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon"><Bus size={48} strokeWidth={1.5} /></div>
             <h3>No hay viajes para esa ruta y fecha</h3>
@@ -206,7 +228,7 @@ export default function ViajesPage() {
           </div>
         ) : (
           <div className="trips-grid">
-            {viajes.map((viaje) => (
+            {viajesMostrados.map((viaje) => (
               <div key={viaje.id} className="trip-card">
                 <div className="trip-main">
                   <div className="trip-route-section">

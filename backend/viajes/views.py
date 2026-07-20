@@ -621,6 +621,14 @@ class AerorutasViajesView(APIView):
                     except aerorutas.AerorutasError:
                         disp = None
                     results.append(aerorutas.viaje_shape(r, inicio, fin, fecha, disp))
+            elif inicio:
+                # Solo origen: barre EN VIVO todos los destinos desde ese origen.
+                # Así no dependemos del snapshot (que puede quedar incompleto) y
+                # NO se queda ninguna ruta por fuera para ese origen.
+                codigos = [o.get('codofi') for o in aerorutas.consultar_oficinas_cacheado()
+                           if o.get('codofi') and o.get('codofi') != inicio]
+                encontrados = aerorutas.barrer_rutas(fecha, [(inicio, f) for f in codigos])
+                results = aerorutas.construir_viajes(encontrados, fecha)
             else:
                 # Sin origen/destino: servir el catálogo PRECARGADO (instantáneo).
                 snap = RutaAerorutasSnapshot.objects.filter(fecha=fecha).first()
@@ -631,9 +639,9 @@ class AerorutasViajesView(APIView):
         except aerorutas.AerorutasError as e:
             return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
-        # Inyectar los viajes de PRUEBA locales en la lista general (sin par
-        # origen/destino) para poder testear el flujo completo en la app.
-        if not (inicio and fin):
+        # Inyectar los viajes de PRUEBA locales solo en la lista general (sin
+        # origen) para poder testear el flujo completo en la app.
+        if not inicio:
             results = list(results) + _viajes_locales_prueba(fecha)
 
         # Ocultar viajes sin precio (precio 0 o vacío).
