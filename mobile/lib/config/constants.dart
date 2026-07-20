@@ -29,9 +29,10 @@ class AppConfig {
         // Desarrollo local: mismo host, puerto 5002 (sin HTTPS).
         return 'http://$host:5002/api';
       }
-      // Producción: backend en el MISMO dominio bajo /api (evita CORS y el
-      // puerto 5002, que no está expuesto detrás de Cloudflare Tunnel).
-      return 'https://$host/api';
+      // Web de PRUEBA (se sirve por un túnel aparte, no desde el dominio del
+      // backend): apunta siempre al backend real. Requiere que ese origen esté
+      // en CORS_ALLOWED_ORIGINS del backend.
+      return kProdApiBaseUrl;
     }
 
     // App nativa (APK/iOS): usa el dominio público del backend.
