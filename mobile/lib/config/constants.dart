@@ -2,11 +2,15 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Configuración global de la app.
 ///
-/// Resuelve la URL del backend (Django/daphne, puerto 5002) según el entorno:
+/// Dominio público del backend en producción (DigitalOcean + Cloudflare Tunnel).
+/// El backend se sirve en el MISMO dominio bajo /api (y /ws para WebSockets).
+const String kProdApiBaseUrl = 'https://aerorutasdevenezuela.net/api';
+
+/// Resuelve la URL del backend (Django/daphne) según el entorno:
 ///   1. --dart-define=API_BASE_URL=...  (override explícito)
-///   2. Web en *.masterslogic.com  -> https://5002.masterslogic.com/api
-///   3. Web local (p.ej. localhost:5003) -> http://<host>:5002/api
-///   4. App nativa (APK/iOS) -> dominio público 5002.masterslogic.com
+///   2. Web local (localhost / IP) -> http://HOST:5002/api
+///   3. Web en producción -> https://HOST/api (mismo dominio, Cloudflare Tunnel)
+///   4. App nativa (APK/iOS) -> https://aerorutasdevenezuela.net/api
 ///
 /// Para desarrollo local en emulador Android usa --dart-define:
 ///   flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5002/api
@@ -17,16 +21,21 @@ class AppConfig {
     if (fromDefine.isNotEmpty) return fromDefine;
 
     if (kIsWeb) {
-      final host = Uri.base.host; // p.ej. 5003.masterslogic.com o localhost
-      if (host.endsWith('.masterslogic.com')) {
-        return 'https://5002.masterslogic.com/api';
+      final host = Uri.base.host; // p.ej. aerorutasdevenezuela.net o localhost
+      final esLocal = host == 'localhost' ||
+          host == '127.0.0.1' ||
+          RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host);
+      if (esLocal) {
+        // Desarrollo local: mismo host, puerto 5002 (sin HTTPS).
+        return 'http://$host:5002/api';
       }
-      // Web local / IP de red: mismo host, puerto 5002.
-      return 'http://$host:5002/api';
+      // Producción: backend en el MISMO dominio bajo /api (evita CORS y el
+      // puerto 5002, que no está expuesto detrás de Cloudflare Tunnel).
+      return 'https://$host/api';
     }
 
-    // App nativa: usa el dominio público del backend.
-    return 'https://5002.masterslogic.com/api';
+    // App nativa (APK/iOS): usa el dominio público del backend.
+    return kProdApiBaseUrl;
   }
 
   /// Origen del backend (sin /api) para resolver URLs de archivos /media/*.
