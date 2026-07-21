@@ -62,7 +62,7 @@ export default function NosotrosPage() {
         <div className="nosotros-hero-bg" />
         <div className="container nosotros-hero-content">
           <span className="nosotros-overline">Acerca de</span>
-          <h1 className="nosotros-hero-title">Quienes Somos</h1>
+          <h1 className="nosotros-hero-title">¿Quiénes Somos?</h1>
           <p className="nosotros-hero-subtitle">Aerorutas de Venezuela, C.A.</p>
         </div>
       </section>

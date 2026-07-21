@@ -53,7 +53,7 @@ export default function Navbar() {
   ];
 
   const nosotrosLinks = [
-    { hash: '#quienes-somos', label: 'Quienes Somos' },
+    { hash: '#quienes-somos', label: 'Quiénes Somos' },
     { hash: '#mision-vision', label: 'Misión y Visión' },
     { hash: '#objetivos', label: 'Objetivos' },
     { hash: '#flota', label: 'Nuestra Flota' },
