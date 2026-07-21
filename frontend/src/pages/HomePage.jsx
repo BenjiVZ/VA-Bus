@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAerorutasOficinas, getStats, getConfiguracion } from '../services/api';
+import { getAerorutasOficinas, getStats, getConfiguracion, buscarViajes } from '../services/api';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import {
   Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar,
@@ -75,6 +75,8 @@ export default function HomePage() {
   const [origen, setOrigen] = useState('');   // guarda el codofi, no el nombre
   const [destino, setDestino] = useState('');
   const [fecha, setFecha] = useState('');
+  const [catalogoDia, setCatalogoDia] = useState([]);   // catálogo del día → orígenes disponibles
+  const [viajesOrigen, setViajesOrigen] = useState([]); // viajes del origen elegido → destinos disponibles
 
   const flatpickrOptions = useMemo(() => ({
     locale: Spanish,
@@ -123,11 +125,40 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Destino: todas las oficinas menos la elegida como origen.
-  const oficinasDestino = useMemo(
-    () => oficinas.filter((o) => o.codofi !== origen),
-    [oficinas, origen]
-  );
+  // Fecha de referencia para la disponibilidad: la elegida, o HOY por defecto.
+  const hoy = new Date().toLocaleDateString('en-CA');
+  const fechaRef = fecha || hoy;
+
+  // Catálogo del día (sin filtro) para saber qué orígenes tienen viajes.
+  useEffect(() => {
+    buscarViajes({ fecha: fechaRef })
+      .then((res) => setCatalogoDia(res.data?.results || res.data || []))
+      .catch(() => setCatalogoDia([]));
+  }, [fechaRef]);
+
+  // Al elegir origen, traer sus destinos disponibles (en vivo).
+  useEffect(() => {
+    if (!origen) { setViajesOrigen([]); return; }
+    buscarViajes({ fecha: fechaRef, origen })
+      .then((res) => setViajesOrigen(res.data?.results || res.data || []))
+      .catch(() => setViajesOrigen([]));
+  }, [origen, fechaRef]);
+
+  // Orígenes DISPONIBLES = oficinas con al menos un viaje en el catálogo del día.
+  // El id del viaje es "codrut_inicio_fin_fecha".
+  const origenesDisponibles = useMemo(() => {
+    const cods = new Set();
+    catalogoDia.forEach((v) => { const i = String(v.id).split('_')[1]; if (i) cods.add(i); });
+    return oficinas.filter((o) => cods.has(o.codofi));
+  }, [catalogoDia, oficinas]);
+
+  // Destinos DISPONIBLES desde el origen elegido (vacío hasta elegir origen).
+  const destinosDisponibles = useMemo(() => {
+    if (!origen) return [];
+    const cods = new Set();
+    viajesOrigen.forEach((v) => { const p = String(v.id).split('_'); if (p[1] === origen && p[2]) cods.add(p[2]); });
+    return oficinas.filter((o) => cods.has(o.codofi));
+  }, [viajesOrigen, origen, oficinas]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -242,7 +273,7 @@ export default function HomePage() {
                 }}
               >
                 <option value="">Todas las ciudades</option>
-                {oficinas.map((o) => (
+                {origenesDisponibles.map((o) => (
                   <option key={o.codofi} value={o.codofi}>{o.desofi}</option>
                 ))}
               </select>
@@ -255,10 +286,13 @@ export default function HomePage() {
               <select
                 className="form-control"
                 value={destino}
+                disabled={!origen}
                 onChange={(e) => setDestino(e.target.value)}
               >
-                <option value="">Todas las ciudades</option>
-                {oficinasDestino.map((o) => (
+                <option value="">
+                  {!origen ? 'Elige primero el origen…' : 'Todas las ciudades'}
+                </option>
+                {destinosDisponibles.map((o) => (
                   <option key={o.codofi} value={o.codofi}>{o.desofi}</option>
                 ))}
               </select>
