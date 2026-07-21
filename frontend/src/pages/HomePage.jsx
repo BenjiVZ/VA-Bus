@@ -6,7 +6,7 @@ import {
   Search, Armchair, MessageCircle, CheckCircle, MapPin, Calendar,
   ShieldCheck, Clock, Users, Star, Bus, Route, CreditCard,
   ChevronRight, Phone, Mail, ArrowRight, Zap, Award, Heart,
-  MapPinned, Headphones, Wifi, Umbrella,
+  MapPinned, Headphones, Wifi, Umbrella, Loader2,
 } from 'lucide-react';
 import FleetGallery from '../components/FleetGallery';
 import PromoPopup from '../components/PromoPopup';
@@ -77,6 +77,7 @@ export default function HomePage() {
   const [fecha, setFecha] = useState('');
   const [catalogoDia, setCatalogoDia] = useState([]);   // catálogo del día → orígenes disponibles
   const [viajesOrigen, setViajesOrigen] = useState([]); // viajes del origen elegido → destinos disponibles
+  const [cargandoDestinos, setCargandoDestinos] = useState(false); // barrido en vivo de destinos
 
   const flatpickrOptions = useMemo(() => ({
     locale: Spanish,
@@ -138,10 +139,12 @@ export default function HomePage() {
 
   // Al elegir origen, traer sus destinos disponibles (en vivo).
   useEffect(() => {
-    if (!origen) { setViajesOrigen([]); return; }
+    if (!origen) { setViajesOrigen([]); setCargandoDestinos(false); return; }
+    setCargandoDestinos(true);
     buscarViajes({ fecha: fechaRef, origen })
       .then((res) => setViajesOrigen(res.data?.results || res.data || []))
-      .catch(() => setViajesOrigen([]));
+      .catch(() => setViajesOrigen([]))
+      .finally(() => setCargandoDestinos(false));
   }, [origen, fechaRef]);
 
   // Orígenes DISPONIBLES = oficinas con al menos un viaje en el catálogo del día.
@@ -282,15 +285,22 @@ export default function HomePage() {
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <MapPinned size={14} /> Destino
+                {cargandoDestinos && (
+                  <Loader2 size={13} style={{ marginLeft: 'auto', animation: 'spin 0.8s linear infinite' }} />
+                )}
               </label>
               <select
                 className="form-control"
                 value={destino}
-                disabled={!origen}
+                disabled={!origen || cargandoDestinos}
                 onChange={(e) => setDestino(e.target.value)}
               >
                 <option value="">
-                  {!origen ? 'Elige primero el origen…' : 'Todas las ciudades'}
+                  {!origen
+                    ? 'Elige primero el origen…'
+                    : cargandoDestinos
+                      ? 'Buscando destinos…'
+                      : 'Todas las ciudades'}
                 </option>
                 {destinosDisponibles.map((o) => (
                   <option key={o.codofi} value={o.codofi}>{o.desofi}</option>

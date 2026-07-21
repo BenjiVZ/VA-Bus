@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { buscarViajes, getTasaCambio, getAerorutasOficinas } from '../services/api';
 import PriceDisplay from '../components/PriceDisplay';
-import { Bus, ArrowRight, Armchair, Search, MapPin, Calendar, X, Clock } from 'lucide-react';
+import { Bus, ArrowRight, Armchair, Search, MapPin, Calendar, X, Clock, Loader2 } from 'lucide-react';
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/themes/material_blue.css";
 import { Spanish } from "flatpickr/dist/l10n/es.js";
@@ -126,6 +126,10 @@ export default function ViajesPage() {
 
   const nombreOficina = (codofi) => oficinas.find((o) => o.codofi === codofi)?.desofi || codofi;
 
+  // Con origen elegido, el barrido en vivo tarda: mientras carga, los destinos
+  // aún no están. Mostramos animación en el desplegable de destino.
+  const cargandoDestinos = !!filtroOrigen && loading;
+
   return (
     <div className="page">
       <div className="container">
@@ -156,12 +160,17 @@ export default function ViajesPage() {
             </div>
 
             <div className="viajes-filter-field">
-              <label htmlFor="filtro-destino"><MapPin size={14} /> Destino</label>
+              <label htmlFor="filtro-destino" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <MapPin size={14} /> Destino
+                {cargandoDestinos && (
+                  <Loader2 size={13} style={{ marginLeft: 'auto', animation: 'spin 0.8s linear infinite' }} />
+                )}
+              </label>
               <select
                 id="filtro-destino"
                 className="form-control"
                 value={filtroDestino}
-                disabled={!filtroOrigen}
+                disabled={!filtroOrigen || cargandoDestinos}
                 onChange={(e) => {
                   const val = e.target.value;
                   setFiltroDestino(val);
@@ -173,7 +182,11 @@ export default function ViajesPage() {
                 }}
               >
                 <option value="">
-                  {!filtroOrigen ? 'Elige primero el origen…' : 'Todos los destinos…'}
+                  {!filtroOrigen
+                    ? 'Elige primero el origen…'
+                    : cargandoDestinos
+                      ? 'Buscando destinos…'
+                      : 'Todos los destinos…'}
                 </option>
                 {destinosDisponibles.map((o) => (
                   <option key={o.codofi} value={o.codofi}>{o.desofi}</option>

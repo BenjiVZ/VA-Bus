@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Viaje> _catalogoDia = [];   // catálogo del día → orígenes disponibles
   List<Viaje> _viajesOrigen = [];  // viajes del origen elegido → destinos disponibles
   bool _loadingRutas = true;
+  bool _cargandoDestinos = false;  // barrido en vivo de destinos del origen
   String? _errorMsg;
 
   @override
@@ -129,9 +130,13 @@ class _HomeScreenState extends State<HomeScreen> {
   // Trae los destinos disponibles desde el origen elegido (barrido en vivo).
   Future<void> _cargarDestinosOrigen() async {
     if (_origenCod == null || _origenCod!.isEmpty) {
-      setState(() => _viajesOrigen = []);
+      setState(() {
+        _viajesOrigen = [];
+        _cargandoDestinos = false;
+      });
       return;
     }
+    setState(() => _cargandoDestinos = true);
     final svc = context.read<ViajesService>();
     try {
       final v = await svc.buscarViajes(fecha: _fechaRef, origen: _origenCod);
@@ -142,10 +147,14 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_destinoCod != null && !disp.contains(_destinoCod)) {
           _destinoCod = null;
         }
+        _cargandoDestinos = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _viajesOrigen = []);
+      setState(() {
+        _viajesOrigen = [];
+        _cargandoDestinos = false;
+      });
     }
   }
 
@@ -232,6 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         origenes: _origenesDisponibles,
                         destinos: _destinosDisponibles,
                         destinoHabilitado: _origenCod != null && _origenCod!.isNotEmpty,
+                        cargandoDestinos: _cargandoDestinos,
                         origenCod: _origenCod,
                         destinoCod: _destinoCod,
                         onOrigen: (v) {
@@ -565,6 +575,7 @@ class _SearchCard extends StatelessWidget {
   final List<Map<String, dynamic>> origenes;
   final List<Map<String, dynamic>> destinos;
   final bool destinoHabilitado;
+  final bool cargandoDestinos;
   final String? origenCod;
   final String? destinoCod;
   final ValueChanged<String?> onOrigen;
@@ -581,6 +592,7 @@ class _SearchCard extends StatelessWidget {
     required this.origenes,
     required this.destinos,
     required this.destinoHabilitado,
+    required this.cargandoDestinos,
     required this.origenCod,
     required this.destinoCod,
     required this.onOrigen,
@@ -628,8 +640,13 @@ class _SearchCard extends StatelessWidget {
             onChanged: onDestino,
             icon: Icons.location_on_rounded,
             iconColor: AppColors.red500,
-            hint: destinoHabilitado ? 'Destino' : 'Elige primero el origen',
-            enabled: destinoHabilitado,
+            hint: !destinoHabilitado
+                ? 'Elige primero el origen'
+                : cargandoDestinos
+                    ? 'Buscando destinos…'
+                    : 'Destino',
+            enabled: destinoHabilitado && !cargandoDestinos,
+            cargando: cargandoDestinos,
           ),
           const SizedBox(height: 16),
           // Chips fecha rápida
@@ -741,6 +758,7 @@ class _OficinaDropdown extends StatelessWidget {
   final Color iconColor;
   final String hint;
   final bool enabled;
+  final bool cargando;
 
   const _OficinaDropdown({
     required this.oficinas,
@@ -750,6 +768,7 @@ class _OficinaDropdown extends StatelessWidget {
     required this.iconColor,
     required this.hint,
     this.enabled = true,
+    this.cargando = false,
   });
 
   @override
@@ -776,7 +795,16 @@ class _OficinaDropdown extends StatelessWidget {
             Text(hint, style: const TextStyle(
                 color: AppColors.textMuted, fontWeight: FontWeight.w500)),
           ]),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          icon: cargando
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.blue500,
+                  ),
+                )
+              : const Icon(Icons.keyboard_arrow_down_rounded),
           items: oficinas.map((o) {
             return DropdownMenuItem<String>(
               value: (o['codofi'] ?? '') as String,
