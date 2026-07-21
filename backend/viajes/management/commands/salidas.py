@@ -23,11 +23,16 @@ Acciones (se usan desde validar_salidas.bat, o a mano):
 `--fecha` por defecto es HOY (hora de Venezuela).
 `--raw` (en origen/destino/diagnostico) imprime la respuesta cruda de la API.
 """
+import requests
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from viajes import aerorutas
 from viajes.models import RutaAerorutasSnapshot
+
+# Endpoint público que consume la web (default: producción). Se puede cambiar
+# con --url para comparar contra un backend local (http://localhost:5002/api/...).
+URL_PAGINA_DEFAULT = 'https://aerorutasdevenezuela.net/api/aerorutas/viajes/'
 
 
 def _precio(v) -> float:
@@ -42,13 +47,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('accion', choices=[
-            'oficinas', 'buscar', 'origen', 'destino', 'snapshot', 'diagnostico'])
+            'oficinas', 'buscar', 'origen', 'destino', 'snapshot', 'diagnostico', 'mapa'])
         parser.add_argument('termino', nargs='?', default='',
                             help='codofi o texto de la oficina (según la acción)')
         parser.add_argument('--fecha', default=None, help='YYYY-MM-DD (por defecto HOY)')
         parser.add_argument('--raw', action='store_true', help='Imprime la respuesta cruda de la API')
         parser.add_argument('--asientos', action='store_true',
                             help='En origen/destino: también consulta asientos libres (más lento en hubs)')
+        parser.add_argument('--url', default=URL_PAGINA_DEFAULT,
+                            help='En mapa: endpoint de la web a comparar (default: producción)')
 
     # ── helpers ──
     def _fecha(self, o) -> str:
@@ -215,6 +222,93 @@ class Command(BaseCommand):
         for cod, n in sorted(origenes.items(), key=lambda x: -x[1]):
             self.stdout.write(f'    {self._nombre(cod, ofis)[:30].ljust(30)} ({cod})  {n} salidas')
 
+    def _fetch_pagina(self, url, fecha):
+        """Trae lo que muestra la PÁGINA (endpoint público) para esa fecha.
+
+        El backend ya filtra precio<=0, así que esto es exactamente lo que ve el
+        cliente. Devuelve la lista de viajes o None si no se pudo leer.
+        """
+        try:
+            r = requests.get(url, params={'fecha': fecha}, timeout=30)
+            r.raise_for_status()
+            d = r.json()
+            return d.get('results', d) if isinstance(d, dict) else d
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'  No se pudo leer la página ({url}): {e}'))
+            return None
+
+    @staticmethod
+    def _por_origen(viajes):
+        """{codofi_origen: set(codofi_destino)} de una lista de viajes."""
+        o = {}
+        for v in viajes or []:
+            p = str(v.get('id', '')).split('_')
+            if len(p) >= 3 and p[1] and p[2]:
+                o.setdefault(p[1], set()).add(p[2])
+        return o
+
+    def _accion_mapa(self, fecha, ofis, url):
+        """Barrido EN VIVO del día completo vs lo que muestra la PÁGINA."""
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            f'\n== MAPEO DEL DÍA {fecha}: barrido EN VIVO (.bat) vs la PÁGINA =='))
+        self.stdout.write('  Barriendo todos los pares en vivo (tarda ~1 min)…')
+        encontrados = aerorutas.barrer_rutas(fecha, aerorutas.pares_oficinas())
+        vivo = aerorutas.construir_viajes(encontrados, fecha, con_asientos=False)
+        vivo_p = [v for v in vivo if _precio(v.get('precio_usd')) > 0]
+        ov = self._por_origen(vivo_p)
+        self.stdout.write(
+            f'  EN VIVO (.bat): {len(vivo)} viajes | {len(vivo_p)} con precio | {len(ov)} orígenes')
+
+        pagina = self._fetch_pagina(url, fecha)
+        if pagina is None:
+            self.stdout.write(self.style.WARNING(
+                '  Sin comparación con la página; muestro solo el mapa en vivo.'))
+            self._imprimir_mapa_origen(ov, {}, ofis)
+            return
+        op = self._por_origen(pagina)
+        self.stdout.write(f'  EN LA PÁGINA:   {len(pagina)} viajes con precio | {len(op)} orígenes')
+        self.stdout.write(f'  (página: {url})')
+
+        # Viajes que el .bat ve con precio pero la página NO muestra.
+        ids_pag = {v.get('id') for v in pagina}
+        faltan = [v for v in vivo_p if v.get('id') not in ids_pag]
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            f'  FALTAN en la página (con precio pero no salen): {len(faltan)}'))
+        for v in sorted(faltan, key=lambda x: str(x.get('id'))):
+            p = str(v.get('id')).split('_')
+            self.stdout.write(
+                f'    {self._nombre(p[1], ofis)[:22].ljust(22)} -> '
+                f'{self._nombre(p[2], ofis)[:22].ljust(22)} '
+                f'${str(v.get("precio_usd")).rjust(4)}   ({v.get("id")})')
+        if not faltan:
+            self.stdout.write(self.style.SUCCESS(
+                '    (ninguno: la página está mostrando todo lo que hay en vivo)'))
+
+        # Lo que la página muestra y el barrido no trajo (viajes de prueba locales, etc.)
+        ids_vivo = {v.get('id') for v in vivo_p}
+        extra = [v for v in pagina if v.get('id') not in ids_vivo]
+        if extra:
+            self.stdout.write(self.style.WARNING(
+                f'  La página muestra {len(extra)} que el barrido no trajo '
+                f'(probable viajes de prueba locales).'))
+
+        # Tabla por origen.
+        self._imprimir_mapa_origen(ov, op, ofis)
+
+    def _imprimir_mapa_origen(self, ov, op, ofis):
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            '  Destinos por origen (vivo vs página):'))
+        for cod in sorted(ov, key=lambda c: -len(ov[c])):
+            v_d = ov.get(cod, set())
+            s_d = op.get(cod, set())
+            faltan = v_d - s_d
+            extra = ' ' + self.style.ERROR(
+                'FALTAN: ' + ', '.join(self._nombre(m, ofis) for m in sorted(faltan))
+            ) if faltan else ''
+            self.stdout.write(
+                f'    {self._nombre(cod, ofis)[:24].ljust(24)} '
+                f'vivo={len(v_d):>2}  pág={len(s_d):>2}{extra}')
+
     def _accion_diagnostico(self, termino, fecha, ofis, raw=False):
         objetivos = self._resolver(termino, ofis)
         if not objetivos:
@@ -324,6 +418,9 @@ class Command(BaseCommand):
             return
         if accion == 'snapshot':
             self._accion_snapshot(fecha, self._oficinas())
+            return
+        if accion == 'mapa':
+            self._accion_mapa(fecha, self._oficinas(), o['url'])
             return
         if accion == 'origen':
             self._accion_origen(o['termino'], fecha, self._oficinas(), o['raw'], o['asientos'])

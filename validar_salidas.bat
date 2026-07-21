@@ -37,6 +37,7 @@ echo    5. Diagnostico de CUALQUIER oficina
 echo    6. Salidas EN VIVO desde una oficina (origen)
 echo    7. Llegadas EN VIVO hacia una oficina (destino)
 echo    8. Ver catalogo precargado (lo que ve la web)
+echo    9. Mapear un dia: comparar VIVO vs la PAGINA
 echo.
 echo    0. Salir
 echo.
@@ -50,6 +51,7 @@ if "%op%"=="5" goto diagnostico
 if "%op%"=="6" goto origen
 if "%op%"=="7" goto destino
 if "%op%"=="8" goto snapshot
+if "%op%"=="9" goto mapa
 if "%op%"=="0" exit /b 0
 goto menu
 
@@ -134,6 +136,18 @@ cls
 call :pedir_fecha
 echo.
 "%PY%" "%MANAGE%" salidas snapshot %FARG%
+echo.
+pause
+goto menu
+
+:mapa
+cls
+call :pedir_fecha
+echo.
+echo  Barriendo TODO el dia en vivo y comparando con la pagina...
+echo  (tarda ~1 minuto, no cierres la ventana)
+echo.
+"%PY%" "%MANAGE%" salidas mapa %FARG%
 echo.
 pause
 goto menu
