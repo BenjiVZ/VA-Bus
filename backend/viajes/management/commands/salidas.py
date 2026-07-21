@@ -285,6 +285,25 @@ class Command(BaseCommand):
                 self.stdout.write(
                     '     Todo correcto: tiene salidas con precio y sale en el catálogo.')
 
+            # 5. Cómo encontrarla EN LA WEB como DESTINO (si tiene llegadas con precio).
+            # Aunque no salga como origen, el cliente SÍ puede filtrar hacia ella:
+            # elige uno de estos orígenes y aparece en el desplegable de destino.
+            por_origen = {}
+            for i, _f, r in hacia:
+                p = _precio(r.get('precio'))
+                if p > 0:
+                    por_origen[i] = min(por_origen.get(i, p), p)
+            if por_origen:
+                self.stdout.write(self.style.MIGRATE_HEADING(
+                    f'  -> EN LA WEB, para ver {nom} como DESTINO:'))
+                self.stdout.write(
+                    '     Elige en ORIGEN una de estas ciudades y luego se habilita en DESTINO:')
+                for i, p in sorted(por_origen.items(), key=lambda x: x[1]):
+                    self.stdout.write(f'       - {self._nombre(i, ofis)}  (desde ${p:g})')
+            elif en_snap == 0:
+                self.stdout.write(self.style.MIGRATE_HEADING(
+                    f'  -> EN LA WEB: {nom} NO se puede filtrar (ni origen ni destino con precio).'))
+
     def handle(self, *args, **o):
         # La consola de Windows suele ser cp1252 y revienta con acentos/símbolos.
         # Forzamos utf-8 en la salida para que nunca falle (el .bat hace chcp 65001
