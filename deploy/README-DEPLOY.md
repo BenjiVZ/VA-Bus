@@ -78,8 +78,12 @@ Cloudflare crea el DNS automáticamente.
 crontab -e
 ```
 ```
-0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --solo-si-falta >> /opt/va-bus/backend/precargar_rutas.log 2>&1
+0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 ```
+Sin `--solo-si-falta`: refresca el catálogo cada 6 h (antes se congelaba tras la
+primera corrida del día y no tomaba rutas/precios agregados después). El barrido
+reintenta ante fallos de red y conserva el snapshot anterior si el nuevo trae
+< 60 % de viajes (protege contra barridos parciales).
 
 ---
 

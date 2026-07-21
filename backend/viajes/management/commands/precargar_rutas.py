@@ -35,6 +35,9 @@ class Command(BaseCommand):
                             help='Segundos de espera entre reintentos del barrido inicial')
         parser.add_argument('--solo-si-falta', action='store_true',
                             help='Solo barre si HOY no tiene catálogo; si ya hay data, sale al instante.')
+        parser.add_argument('--forzar', action='store_true',
+                            help='Sobrescribe el snapshot aunque el barrido nuevo traiga muchos menos '
+                                 'viajes que el anterior (por defecto se conserva el anterior si parece parcial).')
 
     def _hay_data_hoy(self):
         """True si ya existe un snapshot con viajes para HOY (chequeo barato de BD)."""
@@ -71,7 +74,7 @@ class Command(BaseCommand):
                 time.sleep(espera)
         return encontrados0, activos
 
-    def _precargar(self, dias, intentos, espera):
+    def _precargar(self, dias, intentos, espera, forzar=False):
         hoy = timezone.localdate()  # hora de Venezuela, no el reloj del SO
         fechas = [hoy + timedelta(days=i) for i in range(dias)]
 
@@ -89,14 +92,17 @@ class Command(BaseCommand):
             fstr = f.isoformat()
             encontrados = encontrados0 if idx == 0 else aerorutas.barrer_rutas(fstr, activos)
             viajes = aerorutas.construir_viajes(encontrados, fstr)
-            if not viajes:
-                # No sobrescribir un snapshot bueno con uno vacío (probable fallo de red puntual).
-                existente = RutaAerorutasSnapshot.objects.filter(fecha=f).first()
-                if existente and existente.data:
-                    self.stdout.write(
-                        f'  {fstr}: 0 viajes nuevos — conservo snapshot anterior ({len(existente.data)}).')
-                    total += len(existente.data)
-                    continue
+            existente = RutaAerorutasSnapshot.objects.filter(fecha=f).first()
+            prev = len(existente.data) if (existente and existente.data) else 0
+            # No sobrescribir un snapshot bueno con uno vacío o claramente parcial
+            # (probable fallo de red durante el barrido). Umbral: si el nuevo trae
+            # menos del 60% del anterior, se conserva el anterior. --forzar lo salta.
+            if prev and not forzar and (not viajes or len(viajes) < prev * 0.6):
+                self.stdout.write(self.style.WARNING(
+                    f'  {fstr}: {len(viajes)} viajes (< 60% de {prev}) — parece barrido '
+                    f'parcial, conservo el anterior. (usa --forzar para sobrescribir)'))
+                total += prev
+                continue
             RutaAerorutasSnapshot.objects.update_or_create(
                 fecha=f, defaults={'data': viajes})
             total += len(viajes)
@@ -108,7 +114,7 @@ class Command(BaseCommand):
             if o['solo_si_falta'] and self._hay_data_hoy():
                 self.stdout.write('Ya hay catálogo para hoy; nada que hacer.')
                 return
-            self._precargar(o['dias'], o['intentos'], o['espera_red'])
+            self._precargar(o['dias'], o['intentos'], o['espera_red'], o['forzar'])
             return
         self.stdout.write(self.style.SUCCESS(
             f'Precargando cada {o["cada"]}s (Ctrl+C para salir)…'))
@@ -116,7 +122,7 @@ class Command(BaseCommand):
             while True:
                 try:
                     if not (o['solo_si_falta'] and self._hay_data_hoy()):
-                        self._precargar(o['dias'], o['intentos'], o['espera_red'])
+                        self._precargar(o['dias'], o['intentos'], o['espera_red'], o['forzar'])
                 except CommandError as e:
                     self.stderr.write(self.style.ERROR(str(e)))
                 time.sleep(o['cada'])

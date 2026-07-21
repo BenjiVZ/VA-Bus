@@ -60,18 +60,32 @@ def _token() -> str:
 
 
 def _get_raw(consul: str, **params) -> str:
-    """GET a la API. Devuelve el texto crudo o lanza AerorutasError."""
+    """GET a la API. Devuelve el texto crudo o lanza AerorutasError.
+
+    Reintenta ante fallos transitorios (timeout, 5xx, corte de red). Sin esto,
+    un fallo puntual durante el barrido de precarga hacía que ese par (par de
+    oficinas) se guardara VACÍO, dejando rutas reales fuera del catálogo. El
+    reintento evita que un hipo de red borre un corredor entero del snapshot.
+    """
     query = {'token': _token(), 'consul': consul}
     query.update({k: v for k, v in params.items() if v is not None})
     url = getattr(settings, 'AERORUTAS_API_URL', 'https://aerorutasdevenezuela.com/server/request.php')
     timeout = int(getattr(settings, 'AERORUTAS_TIMEOUT', 20))
-    try:
-        resp = requests.get(url, params=query, timeout=timeout)
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        logger.error('Aerorutas %s: error de conexión: %s', consul, e)
-        raise AerorutasError(f'No se pudo consultar Aerorutas: {e}')
-    return resp.text
+    intentos = int(getattr(settings, 'AERORUTAS_REINTENTOS', 3))
+
+    ultimo_error = None
+    for intento in range(1, intentos + 1):
+        try:
+            resp = requests.get(url, params=query, timeout=timeout)
+            resp.raise_for_status()
+            return resp.text
+        except requests.exceptions.RequestException as e:
+            ultimo_error = e
+            if intento < intentos:
+                time.sleep(0.4 * intento)  # backoff corto (0.4s, 0.8s, …)
+    logger.error('Aerorutas %s: error de conexión tras %d intentos: %s',
+                 consul, intentos, ultimo_error)
+    raise AerorutasError(f'No se pudo consultar Aerorutas: {ultimo_error}')
 
 
 def _consultar(consul: str, **params) -> list:

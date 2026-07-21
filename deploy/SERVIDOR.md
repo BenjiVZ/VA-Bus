@@ -126,13 +126,20 @@ crontab -l    # ver el cron
 ```
 Cron actual (cada 6 h, hora de Venezuela):
 ```
-0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --solo-si-falta >> /opt/va-bus/backend/precargar_rutas.log 2>&1
+0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 ```
-- `--solo-si-falta`: si HOY ya tiene catálogo, no hace nada (chequeo barato).
-- Forzar carga manual de hoy:
+- **SIN `--solo-si-falta`**: refresca el catálogo cada 6 h. Antes, con
+  `--solo-si-falta`, el snapshot de HOY se congelaba tras la primera corrida y
+  NO tomaba precios/rutas que Aerorutas agregaba después (ej. corredor de los
+  Andes / línea 005 hacia Mérida y El Vigía quedaba fuera todo el día).
+- El barrido reintenta pares que fallan por red y **conserva el snapshot
+  anterior si el nuevo trae < 60 % de viajes** (evita pisar un catálogo bueno
+  con uno parcial). Para sobrescribir igual: `--forzar`.
+- Forzar carga/refresco manual de hoy:
   ```bash
   cd /opt/va-bus/backend && source venv/bin/activate
-  python manage.py precargar_rutas --dias 1
+  python manage.py precargar_rutas --dias 1          # refresca hoy
+  python manage.py precargar_rutas --dias 1 --forzar # ignora el guardado parcial
   ```
 - Log: `/opt/va-bus/backend/precargar_rutas.log`
 
