@@ -16,7 +16,9 @@ cd /d "%~dp0mobile"
 echo  [1/2] Compilando build web (release)...
 echo  (tarda un par de minutos)
 echo.
-call flutter build web --release
+REM Apunta al backend de PRODUCCION para ver datos reales aunque la web corra
+REM local. Si prefieres tu backend local (puerto 5002), quita el --dart-define.
+call flutter build web --release --dart-define=API_BASE_URL=https://aerorutasdevenezuela.net/api
 if errorlevel 1 (
     echo.
     echo  ERROR al compilar. Revisa los mensajes de arriba.
