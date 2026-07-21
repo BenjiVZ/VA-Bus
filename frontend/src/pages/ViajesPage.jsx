@@ -16,6 +16,7 @@ export default function ViajesPage() {
   const [reintento, setReintento] = useState(0);        // fuerza recarga
   const [tasa, setTasa] = useState(null);
   const [oficinas, setOficinas] = useState([]);
+  const [catalogoDia, setCatalogoDia] = useState([]); // catálogo completo del día → orígenes disponibles
 
   // Rango permitido: HOY hasta HOY+15 días (lo precargado). Se recalcula en cada carga.
   const hoy = new Date().toLocaleDateString('en-CA');
@@ -46,10 +47,28 @@ export default function ViajesPage() {
     getTasaCambio().then((res) => setTasa(res.data.tasa_bcv)).catch(() => null);
   }, []);
 
-  const oficinasDestino = useMemo(
-    () => oficinas.filter((o) => o.codofi !== filtroOrigen),
-    [oficinas, filtroOrigen]
-  );
+  // Orígenes DISPONIBLES = oficinas que aparecen como origen en el catálogo del
+  // día (tienen al menos un viaje). El id del viaje es "codrut_inicio_fin_fecha".
+  const origenesDisponibles = useMemo(() => {
+    const cods = new Set();
+    catalogoDia.forEach((v) => {
+      const inicio = String(v.id).split('_')[1];
+      if (inicio) cods.add(inicio);
+    });
+    return oficinas.filter((o) => cods.has(o.codofi));
+  }, [catalogoDia, oficinas]);
+
+  // Destinos DISPONIBLES desde el origen elegido (de la carga en vivo de ese
+  // origen). Vacío hasta que se elige un origen.
+  const destinosDisponibles = useMemo(() => {
+    if (!filtroOrigen) return [];
+    const cods = new Set();
+    viajes.forEach((v) => {
+      const p = String(v.id).split('_');
+      if (p[1] === filtroOrigen && p[2]) cods.add(p[2]);
+    });
+    return oficinas.filter((o) => cods.has(o.codofi));
+  }, [viajes, filtroOrigen, oficinas]);
 
   const busquedaCompleta = !!fecha; // basta la fecha; origen/destino son filtros opcionales
 
@@ -73,6 +92,14 @@ export default function ViajesPage() {
       .catch(() => setErrorCarga(true))
       .finally(() => setLoading(false));
   }, [origen, fecha, busquedaCompleta, reintento]);
+
+  // Catálogo COMPLETO del día (sin origen) para saber qué orígenes tienen viajes.
+  // Se recarga solo al cambiar la fecha, no al filtrar por origen/destino.
+  useEffect(() => {
+    if (!fecha) { setCatalogoDia([]); return; }
+    const norm = (res) => res.data?.results || res.data || [];
+    buscarViajes({ fecha }).then(norm).then(setCatalogoDia).catch(() => setCatalogoDia([]));
+  }, [fecha, reintento]);
 
   // El destino filtra en el cliente sobre lo YA cargado (instantáneo, sin recarga).
   // El id de cada viaje codifica el destino: "codrut_inicio_FIN_fecha".
@@ -121,8 +148,8 @@ export default function ViajesPage() {
                   setSearchParams(params);
                 }}
               >
-                <option value="">Selecciona origen…</option>
-                {oficinas.map((o) => (
+                <option value="">Todos los orígenes…</option>
+                {origenesDisponibles.map((o) => (
                   <option key={o.codofi} value={o.codofi}>{o.desofi}</option>
                 ))}
               </select>
@@ -134,6 +161,7 @@ export default function ViajesPage() {
                 id="filtro-destino"
                 className="form-control"
                 value={filtroDestino}
+                disabled={!filtroOrigen}
                 onChange={(e) => {
                   const val = e.target.value;
                   setFiltroDestino(val);
@@ -144,8 +172,10 @@ export default function ViajesPage() {
                   setSearchParams(params);
                 }}
               >
-                <option value="">Selecciona destino…</option>
-                {oficinasDestino.map((o) => (
+                <option value="">
+                  {!filtroOrigen ? 'Elige primero el origen…' : 'Todos los destinos…'}
+                </option>
+                {destinosDisponibles.map((o) => (
                   <option key={o.codofi} value={o.codofi}>{o.desofi}</option>
                 ))}
               </select>
