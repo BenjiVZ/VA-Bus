@@ -362,7 +362,7 @@ export default function HomePage() {
               <Award size={14} />
               NUESTROS SERVICIOS
             </span>
-            <h2 className="section-title">Más que solo pasajes</h2>
+            <h2 className="section-title">Más que sólo pasajes</h2>
             <p className="section-desc">Ofrecemos soluciones de transporte para cada necesidad</p>
           </div>
           <div className="services-grid">
