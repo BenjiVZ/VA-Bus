@@ -27,6 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _destinoCod;
   List<Viaje> _viajesHoy = [];
   List<Viaje> _proximas = [];
+  List<Viaje> _catalogoDia = [];   // catálogo del día → orígenes disponibles
+  List<Viaje> _viajesOrigen = [];  // viajes del origen elegido → destinos disponibles
   bool _loadingRutas = true;
   String? _errorMsg;
 
@@ -55,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _oficinas = results[0] as List<Map<String, dynamic>>;
         _viajesHoy = viajesHoy;
+        _catalogoDia = viajesHoy; // por defecto la referencia es HOY
         _proximas = viajesHoy.take(4).toList();
         _loadingRutas = false;
       });
@@ -67,6 +70,82 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadingRutas = false;
         _errorMsg = e.toString();
       });
+    }
+  }
+
+  // Fecha de referencia para la disponibilidad: la elegida, o HOY por defecto.
+  String get _fechaRef =>
+      DateFormat('yyyy-MM-dd').format(_fecha ?? DateTime.now());
+
+  // Orígenes DISPONIBLES = oficinas con al menos un viaje en el catálogo del día.
+  // El id del viaje de Aerorutas es "codrut_inicio_fin_fecha".
+  List<Map<String, dynamic>> get _origenesDisponibles {
+    final cods = <String>{};
+    for (final v in _catalogoDia) {
+      final p = v.id.split('_');
+      if (p.length >= 2 && p[1].isNotEmpty) cods.add(p[1]);
+    }
+    return _oficinas
+        .where((o) => cods.contains((o['codofi'] ?? '') as String))
+        .toList();
+  }
+
+  // Destinos DISPONIBLES desde el origen elegido (vacío hasta elegir origen).
+  List<Map<String, dynamic>> get _destinosDisponibles {
+    if (_origenCod == null || _origenCod!.isEmpty) return [];
+    final cods = <String>{};
+    for (final v in _viajesOrigen) {
+      final p = v.id.split('_');
+      if (p.length >= 3 && p[1] == _origenCod && p[2].isNotEmpty) cods.add(p[2]);
+    }
+    return _oficinas
+        .where((o) => cods.contains((o['codofi'] ?? '') as String))
+        .toList();
+  }
+
+  // Recarga el catálogo del día (para los orígenes) al cambiar de fecha.
+  Future<void> _cargarCatalogoDia() async {
+    final svc = context.read<ViajesService>();
+    try {
+      final cat = await svc.buscarViajes(fecha: _fechaRef);
+      if (!mounted) return;
+      setState(() {
+        _catalogoDia = cat;
+        // Si el origen elegido ya no tiene viajes en esta fecha, límpialo
+        // (DropdownButton exige que el value exista entre los items).
+        final disp = _origenesDisponibles.map((o) => o['codofi']).toSet();
+        if (_origenCod != null && !disp.contains(_origenCod)) {
+          _origenCod = null;
+          _destinoCod = null;
+          _viajesOrigen = [];
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _catalogoDia = []);
+    }
+  }
+
+  // Trae los destinos disponibles desde el origen elegido (barrido en vivo).
+  Future<void> _cargarDestinosOrigen() async {
+    if (_origenCod == null || _origenCod!.isEmpty) {
+      setState(() => _viajesOrigen = []);
+      return;
+    }
+    final svc = context.read<ViajesService>();
+    try {
+      final v = await svc.buscarViajes(fecha: _fechaRef, origen: _origenCod);
+      if (!mounted) return;
+      setState(() {
+        _viajesOrigen = v;
+        final disp = _destinosDisponibles.map((o) => o['codofi']).toSet();
+        if (_destinoCod != null && !disp.contains(_destinoCod)) {
+          _destinoCod = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _viajesOrigen = []);
     }
   }
 
@@ -88,10 +167,18 @@ class _HomeScreenState extends State<HomeScreen> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _fecha = picked);
+    if (picked != null) {
+      setState(() => _fecha = picked);
+      _cargarCatalogoDia();
+      _cargarDestinosOrigen();
+    }
   }
 
-  void _setFechaRapida(DateTime f) => setState(() => _fecha = f);
+  void _setFechaRapida(DateTime f) {
+    setState(() => _fecha = f);
+    _cargarCatalogoDia();
+    _cargarDestinosOrigen();
+  }
 
   void _swapOriginDestino() {
     setState(() {
@@ -100,6 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _destinoCod = tmp;
     });
     HapticFeedback.selectionClick();
+    _cargarDestinosOrigen();
   }
 
   void _buscar() {
@@ -141,10 +229,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _SearchCard(
-                        oficinas: _oficinas,
+                        origenes: _origenesDisponibles,
+                        destinos: _destinosDisponibles,
+                        destinoHabilitado: _origenCod != null && _origenCod!.isNotEmpty,
                         origenCod: _origenCod,
                         destinoCod: _destinoCod,
-                        onOrigen: (v) => setState(() => _origenCod = v),
+                        onOrigen: (v) {
+                          setState(() {
+                            _origenCod = v;
+                            _destinoCod = null;
+                            _viajesOrigen = [];
+                          });
+                          _cargarDestinosOrigen();
+                        },
                         onDestino: (v) => setState(() => _destinoCod = v),
                         fecha: _fecha,
                         onPickFecha: _pickFecha,
@@ -465,7 +562,9 @@ class _HeroSection extends StatelessWidget {
 
 /* ── Search card ── */
 class _SearchCard extends StatelessWidget {
-  final List<Map<String, dynamic>> oficinas;
+  final List<Map<String, dynamic>> origenes;
+  final List<Map<String, dynamic>> destinos;
+  final bool destinoHabilitado;
   final String? origenCod;
   final String? destinoCod;
   final ValueChanged<String?> onOrigen;
@@ -479,7 +578,9 @@ class _SearchCard extends StatelessWidget {
   final DateTime manana;
 
   const _SearchCard({
-    required this.oficinas,
+    required this.origenes,
+    required this.destinos,
+    required this.destinoHabilitado,
     required this.origenCod,
     required this.destinoCod,
     required this.onOrigen,
@@ -506,7 +607,7 @@ class _SearchCard extends StatelessWidget {
       child: Column(
         children: [
           _OficinaDropdown(
-            oficinas: oficinas,
+            oficinas: origenes,
             value: origenCod,
             onChanged: onOrigen,
             icon: Icons.radio_button_checked_rounded,
@@ -522,12 +623,13 @@ class _SearchCard extends StatelessWidget {
             ),
           ),
           _OficinaDropdown(
-            oficinas: oficinas,
+            oficinas: destinos,
             value: destinoCod,
             onChanged: onDestino,
             icon: Icons.location_on_rounded,
             iconColor: AppColors.red500,
-            hint: 'Destino',
+            hint: destinoHabilitado ? 'Destino' : 'Elige primero el origen',
+            enabled: destinoHabilitado,
           ),
           const SizedBox(height: 16),
           // Chips fecha rápida
@@ -638,6 +740,7 @@ class _OficinaDropdown extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String hint;
+  final bool enabled;
 
   const _OficinaDropdown({
     required this.oficinas,
@@ -646,11 +749,17 @@ class _OficinaDropdown extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.hint,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    // DropdownButton exige que el value exista entre los items (o sea null).
+    final validValue =
+        oficinas.any((o) => (o['codofi'] ?? '') == value) ? value : null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
@@ -659,7 +768,7 @@ class _OficinaDropdown extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: value,
+          value: validValue,
           isExpanded: true,
           hint: Row(children: [
             Icon(icon, color: iconColor, size: 18),
@@ -682,8 +791,9 @@ class _OficinaDropdown extends StatelessWidget {
               ]),
             );
           }).toList(),
-          onChanged: onChanged,
+          onChanged: enabled ? onChanged : null,
         ),
+      ),
       ),
     );
   }
