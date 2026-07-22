@@ -38,6 +38,7 @@ echo    6. Salidas EN VIVO desde una oficina (origen)
 echo    7. Llegadas EN VIVO hacia una oficina (destino)
 echo    8. Ver catalogo precargado (lo que ve la web)
 echo    9. Mapear un dia: comparar VIVO vs la PAGINA
+echo   10. Resumen: que origenes salen y cuales NO (y por que)
 echo.
 echo    0. Salir
 echo.
@@ -52,6 +53,7 @@ if "%op%"=="6" goto origen
 if "%op%"=="7" goto destino
 if "%op%"=="8" goto snapshot
 if "%op%"=="9" goto mapa
+if "%op%"=="10" goto resumen
 if "%op%"=="0" exit /b 0
 goto menu
 
@@ -148,6 +150,18 @@ echo  Barriendo TODO el dia en vivo y comparando con la pagina...
 echo  (tarda ~1 minuto, no cierres la ventana)
 echo.
 "%PY%" "%MANAGE%" salidas mapa %FARG%
+echo.
+pause
+goto menu
+
+:resumen
+cls
+call :pedir_fecha
+echo.
+echo  Clasificando TODAS las oficinas del dia en vivo...
+echo  (tarda ~1 minuto, no cierres la ventana)
+echo.
+"%PY%" "%MANAGE%" salidas resumen %FARG%
 echo.
 pause
 goto menu

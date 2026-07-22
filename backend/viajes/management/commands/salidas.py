@@ -47,7 +47,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('accion', choices=[
-            'oficinas', 'buscar', 'origen', 'destino', 'snapshot', 'diagnostico', 'mapa'])
+            'oficinas', 'buscar', 'origen', 'destino', 'snapshot', 'diagnostico',
+            'mapa', 'resumen'])
         parser.add_argument('termino', nargs='?', default='',
                             help='codofi o texto de la oficina (según la acción)')
         parser.add_argument('--fecha', default=None, help='YYYY-MM-DD (por defecto HOY)')
@@ -309,6 +310,59 @@ class Command(BaseCommand):
                 f'    {self._nombre(cod, ofis)[:24].ljust(24)} '
                 f'vivo={len(v_d):>2}  pág={len(s_d):>2}{extra}')
 
+    def _accion_resumen(self, fecha, ofis):
+        """Clasifica TODAS las oficinas del día: origen visible / oculta por
+        precio 0 / sin salidas. Responde 'qué orígenes faltan y por qué'."""
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            f'\n== RESUMEN DE OFICINAS — {fecha} =='))
+        self.stdout.write('  Barriendo todo el día en vivo (tarda ~1 min)…')
+        enc = aerorutas.barrer_rutas(fecha, aerorutas.pares_oficinas())
+        stats = {}
+        for i, _f, r in enc:
+            s = stats.setdefault(i, {'con': 0, 'sin': 0})
+            if _precio(r.get('precio')) > 0:
+                s['con'] += 1
+            else:
+                s['sin'] += 1
+
+        visibles, ocultas, sin = [], [], []
+        for o in ofis:
+            s = stats.get(o.get('codofi'))
+            if s and s['con'] > 0:
+                visibles.append((o, s))
+            elif s and s['sin'] > 0:
+                ocultas.append((o, s))
+            else:
+                sin.append(o)
+
+        self.stdout.write(self.style.SUCCESS(
+            f'\n  [A] ORÍGENES VISIBLES (salen en la web): {len(visibles)}'))
+        for o, s in sorted(visibles, key=lambda x: -x[1]['con']):
+            self.stdout.write(
+                f"      {o.get('desofi','')[:24].ljust(24)} ({o.get('codofi')})  "
+                f"{s['con']} salidas con precio")
+
+        self.stdout.write(self.style.ERROR(
+            f'\n  [B] OCULTAS — tienen salidas pero TODAS con precio 0: {len(ocultas)}'))
+        self.stdout.write(
+            '      (la web las oculta; para que salgan hay que cargarles PRECIO en Aerorutas)')
+        for o, s in sorted(ocultas, key=lambda x: -x[1]['sin']):
+            self.stdout.write(
+                f"      {o.get('desofi','')[:24].ljust(24)} ({o.get('codofi')})  "
+                f"{s['sin']} salidas SIN precio")
+
+        self.stdout.write(self.style.WARNING(
+            f'\n  [C] SIN SALIDAS (solo destino o sin uso): {len(sin)}'))
+        for o in sorted(sin, key=lambda x: str(x.get('desofi', ''))):
+            self.stdout.write(
+                f"      {o.get('desofi','')[:24].ljust(24)} ({o.get('codofi')})")
+
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            '\n  -> Para el proveedor (Aerorutas): las de [B] tienen buses saliendo '
+            'pero sin precio.'))
+        self.stdout.write(
+            '     Cargándoles precio de salida, aparecen solas como origen en la web.')
+
     def _accion_diagnostico(self, termino, fecha, ofis, raw=False):
         objetivos = self._resolver(termino, ofis)
         if not objetivos:
@@ -421,6 +475,9 @@ class Command(BaseCommand):
             return
         if accion == 'mapa':
             self._accion_mapa(fecha, self._oficinas(), o['url'])
+            return
+        if accion == 'resumen':
+            self._accion_resumen(fecha, self._oficinas())
             return
         if accion == 'origen':
             self._accion_origen(o['termino'], fecha, self._oficinas(), o['raw'], o['asientos'])
