@@ -78,7 +78,7 @@ export default function NosotrosPage() {
                 Empresa de transporte terrestre que opera en las principales rutas del territorio venezolano.
                 <strong> Aerorutas de Venezuela, C.A.</strong> (RIF: J-50079785-0) se encarga de ofrecer
                 servicios de transporte de pasajeros a nivel nacional, con una moderna flota de
-                <strong> 39 unidades</strong> — incluyendo 7 autobuses de un piso (42-46 puestos) y
+                <strong> 30 unidades</strong> — incluyendo 7 autobuses de un piso (42-46 puestos) y
                 21 autobuses doble piso (60 puestos) — desde su domicilio fiscal en la Carretera
                 Panamericana, Sector Sabana Grande, Trujillo.
               </p>
@@ -141,7 +141,7 @@ export default function NosotrosPage() {
         <div className="container">
           <div className="nosotros-obj-divider" />
           <h2 className="nosotros-obj-title">Nuestra Flota</h2>
-          <p className="nosotros-fleet-sub">39 unidades equipadas con la mejor tecnología y confort</p>
+          <p className="nosotros-fleet-sub">30 unidades equipadas con la mejor tecnología y confort</p>
           <div className="nosotros-fleet-grid">
             {FLEET_FEATURES.map((f, i) => (
               <div key={i} className="nosotros-fleet-card">

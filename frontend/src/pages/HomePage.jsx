@@ -198,7 +198,7 @@ export default function HomePage() {
   const stats = [
     { target: (dbStats.pasajeros || 0) + 15000, label: 'Pasajeros transportados', suffix: '+' },
     { target: dbStats.rutas || 0, label: 'Rutas nacionales', suffix: '' },
-    { target: 39, label: 'Autobuses operativos', suffix: '' },
+    { target: 30, label: 'Autobuses operativos', suffix: '' },
     { target: 99.5, label: 'Satisfacción', suffix: '%' },
   ];
 
