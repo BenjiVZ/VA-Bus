@@ -57,6 +57,8 @@ class Command(BaseCommand):
                             help='En origen/destino: también consulta asientos libres (más lento en hubs)')
         parser.add_argument('--url', default=URL_PAGINA_DEFAULT,
                             help='En mapa: endpoint de la web a comparar (default: producción)')
+        parser.add_argument('--detalle', action='store_true',
+                            help='En mapa: lista cada viaje (hora, destino, línea, precio) por origen')
 
     # ── helpers ──
     def _fecha(self, o) -> str:
@@ -248,7 +250,7 @@ class Command(BaseCommand):
                 o.setdefault(p[1], set()).add(p[2])
         return o
 
-    def _accion_mapa(self, fecha, ofis, url):
+    def _accion_mapa(self, fecha, ofis, url, detalle=False, asientos=False):
         """Barrido EN VIVO del día completo vs lo que muestra la PÁGINA."""
         self.stdout.write(self.style.MIGRATE_HEADING(
             f'\n== MAPEO DEL DÍA {fecha}: barrido EN VIVO (.bat) vs la PÁGINA =='))
@@ -265,6 +267,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(
                 '  Sin comparación con la página; muestro solo el mapa en vivo.'))
             self._imprimir_mapa_origen(ov, {}, ofis)
+            if detalle:
+                self._detalle_mapa(vivo_p, set(), ofis, fecha, asientos)
             return
         op = self._por_origen(pagina)
         self.stdout.write(f'  EN LA PÁGINA:   {len(pagina)} viajes con precio | {len(op)} orígenes')
@@ -293,8 +297,45 @@ class Command(BaseCommand):
                 f'  La página muestra {len(extra)} que el barrido no trajo '
                 f'(probable viajes de prueba locales).'))
 
-        # Tabla por origen.
+        # Tabla por origen (resumen).
         self._imprimir_mapa_origen(ov, op, ofis)
+
+        # Detalle viaje por viaje (para comparar tarjeta por tarjeta con la web).
+        if detalle:
+            self._detalle_mapa(vivo_p, ids_pag, ofis, fecha, asientos)
+
+    def _detalle_mapa(self, vivo_p, ids_pag, ofis, fecha, asientos=False):
+        """Lista cada viaje agrupado por origen (hora, destino, línea, precio),
+        con marca de si está o no en la página. Espeja las tarjetas de la web."""
+        self.stdout.write(self.style.MIGRATE_HEADING(
+            '\n  DETALLE viaje por viaje (para comparar con las tarjetas de la web):'))
+        por_o = {}
+        for v in vivo_p:
+            cod = str(v.get('id', '')).split('_')[1]
+            por_o.setdefault(cod, []).append(v)
+        for cod in sorted(por_o, key=lambda c: -len(por_o[c])):
+            trips = por_o[cod]
+            self.stdout.write(self.style.MIGRATE_HEADING(
+                f'\n  ===== {self._nombre(cod, ofis)} ({cod}) — {len(trips)} salidas ====='))
+            self.stdout.write(
+                '     hora   destino                 precio  asientos  linea / estado'
+                if asientos else
+                '     hora   destino                 precio  linea / estado')
+            for v in sorted(trips, key=lambda x: (str(x.get('hora_salida') or ''), str(x.get('id')))):
+                hora = str(v.get('hora_salida') or '')[:5]
+                dest = v.get('ruta', {}).get('destino') \
+                    or self._nombre(str(v.get('id')).split('_')[2], ofis)
+                desrut = str(v.get('autobus', {}).get('nombre') or '')
+                precio = str(v.get('precio_usd'))
+                marca = self.style.SUCCESS('en pág') if v.get('id') in ids_pag \
+                    else self.style.ERROR('FALTA en pág')
+                asi = ''
+                if asientos:
+                    n = self._asientos(cod, v.get('codrut', ''), fecha)
+                    asi = f"  {('?' if n is None else n)!s:>3} asi  "
+                self.stdout.write(
+                    f"     {hora}  {str(dest)[:22].ljust(22)}  ${precio.rjust(4)}{asi}  "
+                    f"{desrut[:24].ljust(24)} [{marca}]")
 
     def _imprimir_mapa_origen(self, ov, op, ofis):
         self.stdout.write(self.style.MIGRATE_HEADING(
@@ -474,7 +515,7 @@ class Command(BaseCommand):
             self._accion_snapshot(fecha, self._oficinas())
             return
         if accion == 'mapa':
-            self._accion_mapa(fecha, self._oficinas(), o['url'])
+            self._accion_mapa(fecha, self._oficinas(), o['url'], o['detalle'], o['asientos'])
             return
         if accion == 'resumen':
             self._accion_resumen(fecha, self._oficinas())

@@ -37,7 +37,7 @@ echo    5. Diagnostico de CUALQUIER oficina
 echo    6. Salidas EN VIVO desde una oficina (origen)
 echo    7. Llegadas EN VIVO hacia una oficina (destino)
 echo    8. Ver catalogo precargado (lo que ve la web)
-echo    9. Mapear un dia: comparar VIVO vs la PAGINA
+echo    9. Mapear un dia: comparar VIVO vs la PAGINA (detallado)
 echo   10. Resumen: que origenes salen y cuales NO (y por que)
 echo.
 echo    0. Salir
@@ -149,7 +149,7 @@ echo.
 echo  Barriendo TODO el dia en vivo y comparando con la pagina...
 echo  (tarda ~1 minuto, no cierres la ventana)
 echo.
-"%PY%" "%MANAGE%" salidas mapa %FARG%
+"%PY%" "%MANAGE%" salidas mapa --detalle %FARG%
 echo.
 pause
 goto menu
