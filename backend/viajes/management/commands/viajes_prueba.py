@@ -118,7 +118,10 @@ class Command(BaseCommand):
         # Empezar limpio: borra los viajes de prueba anteriores (no la ruta).
         Viaje.objects.filter(ruta=ruta).delete()
 
-        fecha = timezone.now().date() + timedelta(days=opts['dias'])
+        # localdate(): fecha en hora de Venezuela, no la UTC del servidor. Con
+        # --dias 0 (probar HOY en la app), now().date() en UTC crearía el viaje
+        # con fecha de mañana después de las ~8 PM y no saldría en la lista.
+        fecha = timezone.localdate() + timedelta(days=opts['dias'])
         cent = Decimal('0.01')
         hora = 6
         creados = []
