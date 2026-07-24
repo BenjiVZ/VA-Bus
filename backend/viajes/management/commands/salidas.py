@@ -59,6 +59,8 @@ class Command(BaseCommand):
                             help='En mapa: endpoint de la web a comparar (default: producción)')
         parser.add_argument('--detalle', action='store_true',
                             help='En mapa: lista cada viaje (hora, destino, línea, precio) por origen')
+        parser.add_argument('--todo', action='store_true',
+                            help='En mapa: incluye también los viajes OCULTOS (precio 0) en el detalle')
 
     # ── helpers ──
     def _fecha(self, o) -> str:
@@ -250,17 +252,59 @@ class Command(BaseCommand):
                 o.setdefault(p[1], set()).add(p[2])
         return o
 
-    def _accion_mapa(self, fecha, ofis, url, detalle=False, asientos=False):
+    def _barrer_con_errores(self, fecha, pares, max_workers=12):
+        """Como aerorutas.barrer_rutas, pero SIN tragarse los fallos: devuelve
+        (encontrados, errores) donde errores = [(inicio, fin, mensaje), ...] de
+        los pares que no respondieron ni con los reintentos."""
+        import concurrent.futures
+        encontrados, errores = [], []
+
+        def _rutas_de(par):
+            i, f = par
+            try:
+                return ('ok', [(i, f, r) for r in aerorutas.consultar_rutas(i, f, fecha)])
+            except aerorutas.AerorutasError as e:
+                return ('err', (i, f, str(e)))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            for estado, res in ex.map(_rutas_de, pares):
+                if estado == 'ok':
+                    encontrados.extend(res)
+                else:
+                    errores.append(res)
+        return encontrados, errores
+
+    def _accion_mapa(self, fecha, ofis, url, detalle=False, asientos=False, todo=False):
         """Barrido EN VIVO del día completo vs lo que muestra la PÁGINA."""
         self.stdout.write(self.style.MIGRATE_HEADING(
             f'\n== MAPEO DEL DÍA {fecha}: barrido EN VIVO (.bat) vs la PÁGINA =='))
         self.stdout.write('  Barriendo todos los pares en vivo (tarda ~1 min)…')
-        encontrados = aerorutas.barrer_rutas(fecha, aerorutas.pares_oficinas())
+        pares = aerorutas.pares_oficinas()
+        encontrados, errores = self._barrer_con_errores(fecha, pares)
         vivo = aerorutas.construir_viajes(encontrados, fecha, con_asientos=False)
         vivo_p = [v for v in vivo if _precio(v.get('precio_usd')) > 0]
+        ocultos = len(vivo) - len(vivo_p)
         ov = self._por_origen(vivo_p)
         self.stdout.write(
-            f'  EN VIVO (.bat): {len(vivo)} viajes | {len(vivo_p)} con precio | {len(ov)} orígenes')
+            f'  EN VIVO (.bat): {len(vivo)} viajes | {len(vivo_p)} con precio | '
+            f'{ocultos} ocultos (precio 0) | {len(ov)} orígenes | '
+            f'{len(pares)} pares consultados')
+
+        # Pares que NO respondieron (fallo real tras los reintentos del cliente).
+        if errores:
+            self.stdout.write(self.style.ERROR(
+                f'  PARES SIN RESPUESTA (error tras reintentos): {len(errores)}'))
+            for i, f, msg in errores[:30]:
+                self.stdout.write(
+                    f'    {self._nombre(i, ofis)[:20].ljust(20)} -> '
+                    f'{self._nombre(f, ofis)[:20].ljust(20)} {msg[:70]}')
+            if len(errores) > 30:
+                self.stdout.write(f'    … y {len(errores) - 30} pares más.')
+            self.stdout.write(self.style.WARNING(
+                '    OJO: lo de estos pares NO está en el conteo de arriba (repetir el mapeo).'))
+        else:
+            self.stdout.write(self.style.SUCCESS(
+                '  Todos los pares respondieron (0 sin respuesta).'))
 
         pagina = self._fetch_pagina(url, fecha)
         if pagina is None:
@@ -268,7 +312,7 @@ class Command(BaseCommand):
                 '  Sin comparación con la página; muestro solo el mapa en vivo.'))
             self._imprimir_mapa_origen(ov, {}, ofis)
             if detalle:
-                self._detalle_mapa(vivo_p, set(), ofis, fecha, asientos)
+                self._detalle_mapa(vivo if todo else vivo_p, set(), ofis, fecha, asientos)
             return
         op = self._por_origen(pagina)
         self.stdout.write(f'  EN LA PÁGINA:   {len(pagina)} viajes con precio | {len(op)} orígenes')
@@ -302,21 +346,26 @@ class Command(BaseCommand):
 
         # Detalle viaje por viaje (para comparar tarjeta por tarjeta con la web).
         if detalle:
-            self._detalle_mapa(vivo_p, ids_pag, ofis, fecha, asientos)
+            self._detalle_mapa(vivo if todo else vivo_p, ids_pag, ofis, fecha, asientos)
 
-    def _detalle_mapa(self, vivo_p, ids_pag, ofis, fecha, asientos=False):
+    def _detalle_mapa(self, viajes, ids_pag, ofis, fecha, asientos=False):
         """Lista cada viaje agrupado por origen (hora, destino, línea, precio),
-        con marca de si está o no en la página. Espeja las tarjetas de la web."""
+        con marca de si está o no en la página. Espeja las tarjetas de la web.
+        Si la lista incluye viajes con precio 0, se marcan OCULTA (la web no
+        los muestra a propósito)."""
         self.stdout.write(self.style.MIGRATE_HEADING(
             '\n  DETALLE viaje por viaje (para comparar con las tarjetas de la web):'))
         por_o = {}
-        for v in vivo_p:
+        for v in viajes:
             cod = str(v.get('id', '')).split('_')[1]
             por_o.setdefault(cod, []).append(v)
         for cod in sorted(por_o, key=lambda c: -len(por_o[c])):
             trips = por_o[cod]
+            visibles = sum(1 for v in trips if _precio(v.get('precio_usd')) > 0)
+            ocultas = len(trips) - visibles
+            extra = f' ({visibles} visibles, {ocultas} ocultas precio 0)' if ocultas else ''
             self.stdout.write(self.style.MIGRATE_HEADING(
-                f'\n  ===== {self._nombre(cod, ofis)} ({cod}) — {len(trips)} salidas ====='))
+                f'\n  ===== {self._nombre(cod, ofis)} ({cod}) — {len(trips)} salidas{extra} ====='))
             self.stdout.write(
                 '     hora   destino                 precio  asientos  linea / estado'
                 if asientos else
@@ -327,8 +376,12 @@ class Command(BaseCommand):
                     or self._nombre(str(v.get('id')).split('_')[2], ofis)
                 desrut = str(v.get('autobus', {}).get('nombre') or '')
                 precio = str(v.get('precio_usd'))
-                marca = self.style.SUCCESS('en pág') if v.get('id') in ids_pag \
-                    else self.style.ERROR('FALTA en pág')
+                if _precio(v.get('precio_usd')) <= 0:
+                    marca = self.style.WARNING('OCULTA precio 0')
+                elif v.get('id') in ids_pag:
+                    marca = self.style.SUCCESS('en pág')
+                else:
+                    marca = self.style.ERROR('FALTA en pág')
                 asi = ''
                 if asientos:
                     n = self._asientos(cod, v.get('codrut', ''), fecha)
@@ -515,7 +568,8 @@ class Command(BaseCommand):
             self._accion_snapshot(fecha, self._oficinas())
             return
         if accion == 'mapa':
-            self._accion_mapa(fecha, self._oficinas(), o['url'], o['detalle'], o['asientos'])
+            self._accion_mapa(fecha, self._oficinas(), o['url'], o['detalle'],
+                              o['asientos'], o['todo'])
             return
         if accion == 'resumen':
             self._accion_resumen(fecha, self._oficinas())
