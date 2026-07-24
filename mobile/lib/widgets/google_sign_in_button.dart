@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -6,6 +8,11 @@ import 'package:provider/provider.dart';
 import '../config/constants.dart';
 import '../config/theme.dart';
 import '../providers/auth_provider.dart';
+// En Web se usa el botón OFICIAL de Google (renderButton); en Android/iOS un
+// stub vacío. El import condicional evita romper la compilación nativa.
+import 'google_button_platform_stub.dart'
+    if (dart.library.js_interop) 'google_button_platform_web.dart'
+    as platform_btn;
 
 /// Botón "Continuar con Google" que abre el flujo nativo de Google Sign-In,
 /// obtiene el ID token y lo intercambia por JWT en el backend.
@@ -33,6 +40,7 @@ class GoogleSignInButton extends StatefulWidget {
 class _GoogleSignInButtonState extends State<GoogleSignInButton> {
   bool _loading = false;
   GoogleSignIn? _signIn;
+  StreamSubscription<GoogleSignInAccount?>? _webSub;
 
   @override
   void initState() {
@@ -47,6 +55,53 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
       serverClientId: kIsWeb ? null : clientId,
       scopes: const ['email', 'profile'],
     );
+    if (kIsWeb) {
+      // En Web el botón lo renderiza Google (GIS). Cuando el usuario completa
+      // el flujo, el plugin emite la cuenta por este stream (con idToken).
+      _webSub = _signIn!.onCurrentUserChanged.listen(_onCuentaWeb);
+    }
+  }
+
+  @override
+  void dispose() {
+    _webSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onCuentaWeb(GoogleSignInAccount? account) async {
+    if (account == null) return;
+    setState(() => _loading = true);
+    try {
+      final auth = await account.authentication;
+      await _canjearIdToken(auth.idToken);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Intercambia el ID token de Google por el JWT del backend y notifica.
+  Future<void> _canjearIdToken(String? idToken) async {
+    if (idToken == null || idToken.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se obtuvo el ID token de Google. '
+            'Revisá la configuración de OAuth.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final ok = await context.read<AuthProvider>().loginConGoogle(idToken);
+    if (!mounted) return;
+    widget.onComplete(ok);
+    if (!ok) {
+      final err = context.read<AuthProvider>().lastError ??
+          'No se pudo iniciar con Google.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    }
   }
 
   Future<void> _onPressed() async {
@@ -60,28 +115,7 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
         return;
       }
       final auth = await account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No se obtuvo el ID token de Google. '
-              'Revisá la configuración de OAuth.',
-            ),
-          ),
-        );
-        return;
-      }
-      if (!mounted) return;
-      final ok = await context.read<AuthProvider>().loginConGoogle(idToken);
-      if (!mounted) return;
-      widget.onComplete(ok);
-      if (!ok) {
-        final err = context.read<AuthProvider>().lastError ??
-            'No se pudo iniciar con Google.';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-      }
+      await _canjearIdToken(auth.idToken);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,6 +130,25 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
   Widget build(BuildContext context) {
     // Si no hay client ID configurado, no mostramos el botón.
     if (_signIn == null) return const SizedBox.shrink();
+
+    // Web: botón oficial de Google (único flujo que entrega idToken en GIS).
+    if (kIsWeb) {
+      return SizedBox(
+        height: 44,
+        child: Center(
+          child: _loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.blue500,
+                  ),
+                )
+              : platform_btn.renderGoogleWebButton(),
+        ),
+      );
+    }
 
     return OutlinedButton(
       onPressed: _loading ? null : _onPressed,

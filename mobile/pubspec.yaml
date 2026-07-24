@@ -49,6 +49,9 @@ dependencies:
 
   # Auth con Google (Android/iOS/Web)
   google_sign_in: ^6.2.1
+  # En Web el flujo signIn() no entrega idToken (GIS): hay que renderizar el
+  # botón oficial de Google con este paquete (import condicional en el widget).
+  google_sign_in_web: ^0.12.4
 
 dev_dependencies:
   flutter_test:

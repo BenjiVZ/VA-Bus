@@ -52,7 +52,8 @@ class AppConfig {
   /// ⚠️ Pegá aquí el Web Client ID (termina en `.apps.googleusercontent.com`).
   /// Es público (va embebido en la app), no es un secreto. Vacío = Google
   /// Sign-In deshabilitado (el botón se oculta).
-  static const String _googleClientIdDefault = '';
+  static const String _googleClientIdDefault =
+      '941001553573-u64s6mjms1jtlk0v5agsrk5qq6bbvoat.apps.googleusercontent.com';
 
   /// Override opcional al compilar: --dart-define=GOOGLE_CLIENT_ID=xxx
   static const String _googleClientIdEnv =
