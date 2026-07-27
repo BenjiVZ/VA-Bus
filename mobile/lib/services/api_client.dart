@@ -106,8 +106,13 @@ class ApiClient {
       if (e.type == DioExceptionType.connectionError) {
         return 'No se pudo conectar al servidor.';
       }
+      // Sin cuerpo JSON reconocible: al menos decir el código HTTP, si no el
+      // usuario solo ve un mensaje genérico y no se puede diagnosticar nada.
+      final code = e.response?.statusCode;
+      if (code != null) return '$fallback (HTTP $code)';
       return e.message ?? fallback;
     }
-    return fallback;
+    // Excepción que no es de red (parseo, cast, etc.): mostrarla, no ocultarla.
+    return '$fallback ($e)';
   }
 }

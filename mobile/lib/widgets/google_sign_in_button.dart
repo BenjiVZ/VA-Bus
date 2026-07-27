@@ -1,6 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
@@ -100,7 +101,11 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
     if (!ok) {
       final err = context.read<AuthProvider>().lastError ??
           'No se pudo iniciar con Google.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      debugPrint('[google] canje de idToken fallido: $err');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(err),
+        duration: const Duration(seconds: 8), // da tiempo a leer la causa
+      ));
     }
   }
 
@@ -117,9 +122,13 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
       final auth = await account.authentication;
       await _canjearIdToken(auth.idToken);
     } catch (e) {
+      debugPrint('[google] signIn() falló: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de Google Sign-In: $e')),
+        SnackBar(
+          content: Text('Error de Google Sign-In: $e'),
+          duration: const Duration(seconds: 8),
+        ),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -206,35 +215,48 @@ class _GoogleGlyph extends StatelessWidget {
 }
 
 class _GoogleGlyphPainter extends CustomPainter {
+  static const _azul = Color(0xFF4285F4);
+  static const _verde = Color(0xFF34A853);
+  static const _amarillo = Color(0xFFFBBC05);
+  static const _rojo = Color(0xFFEA4335);
+
+  static double _rad(double grados) => grados * math.pi / 180;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    final grosor = s * 0.26;              // ancho del trazo de la "G"
+    final r = (s - grosor) / 2;           // radio al centro del trazo
     final c = Offset(size.width / 2, size.height / 2);
-    final r = size.width / 2;
-    final paint = Paint()..style = PaintingStyle.fill;
+    final rect = Rect.fromCircle(center: c, radius: r);
 
-    // Cuadrantes coloreados aproximando la "G" de Google.
-    // Top-right: rojo
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(Rect.fromCircle(center: c, radius: r), -1.5708, 1.5708, true, paint);
-    // Bottom-right: amarillo
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(Rect.fromCircle(center: c, radius: r), 0, 1.5708, true, paint);
-    // Bottom-left: verde
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(Rect.fromCircle(center: c, radius: r), 1.5708, 1.5708, true, paint);
-    // Top-left: azul
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(Rect.fromCircle(center: c, radius: r), 3.1416, 1.5708, true, paint);
+    // La "G" es un anillo de 4 tramos de color (0° = derecha, positivo = horario).
+    final trazo = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = grosor
+      ..strokeCap = StrokeCap.butt;
 
-    // Círculo blanco interno (hueco de la G)
-    paint.color = Colors.white;
-    canvas.drawCircle(c, r * 0.42, paint);
+    trazo.color = _azul;                                   // derecha (con la barra)
+    canvas.drawArc(rect, _rad(-40), _rad(60), false, trazo);
+    trazo.color = _verde;                                  // abajo
+    canvas.drawArc(rect, _rad(20), _rad(90), false, trazo);
+    trazo.color = _amarillo;                               // izquierda
+    canvas.drawArc(rect, _rad(110), _rad(90), false, trazo);
+    trazo.color = _rojo;                                   // arriba
+    canvas.drawArc(rect, _rad(200), _rad(112), false, trazo);
 
-    // "Barra" derecha que forma la G — rectángulo blanco a la derecha
-    paint.color = Colors.white;
+    // Barra horizontal azul: del centro hacia la derecha (el "brazo" de la G).
+    final barra = Paint()
+      ..style = PaintingStyle.fill
+      ..color = _azul;
     canvas.drawRect(
-      Rect.fromLTWH(c.dx, c.dy - r * 0.12, r, r * 0.24),
-      paint,
+      Rect.fromLTRB(
+        c.dx - grosor * 0.05,
+        c.dy - grosor / 2,
+        c.dx + r + grosor / 2,
+        c.dy + grosor / 2,
+      ),
+      barra,
     );
   }
 
