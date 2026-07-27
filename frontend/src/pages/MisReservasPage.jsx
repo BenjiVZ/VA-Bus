@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMisReservas, getTasaCambio } from '../services/api';
+import { getMisReservas, getTasaCambio, getConfiguracion } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, Clock, Armchair, Bus, Ticket, CreditCard } from 'lucide-react';
+import { Calendar, Clock, Armchair, Bus, Ticket, CreditCard, Info } from 'lucide-react';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 
 export default function MisReservasPage() {
   const { user } = useAuth();
@@ -10,6 +11,7 @@ export default function MisReservasPage() {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tasa, setTasa] = useState(null);
+  const [whatsapp, setWhatsapp] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -20,10 +22,12 @@ export default function MisReservasPage() {
     Promise.all([
       getMisReservas(),
       getTasaCambio().catch(() => ({ data: { tasa_bcv: null } })),
+      getConfiguracion().catch(() => ({ data: {} })),
     ])
-      .then(([reservasRes, tasaRes]) => {
+      .then(([reservasRes, tasaRes, configRes]) => {
         setReservas(reservasRes.data);
         setTasa(tasaRes.data.tasa_bcv);
+        setWhatsapp(configRes.data?.whatsapp_vendedor || '');
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -59,6 +63,31 @@ export default function MisReservasPage() {
             </button>
           </div>
         ) : (
+          <>
+          <div
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              borderLeft: '4px solid #f59e0b', borderRadius: '10px',
+              padding: '0.85rem 1rem', marginBottom: '1.25rem',
+              fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5,
+            }}
+          >
+            <Info size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} />
+            <span>
+              Los boletos comprados <strong>no admiten cancelación ni devolución</strong>.
+              Si necesitas cambiar o resolver algo de tu reserva, escríbenos a{' '}
+              <a
+                href={buildWhatsAppUrl(whatsapp, 'Hola, necesito ayuda con mi reserva.')}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontWeight: 600 }}
+              >
+                soporte por WhatsApp
+              </a>{' '}
+              y con gusto te atendemos.
+            </span>
+          </div>
           <div className="reservas-list">
             {reservas.map((reserva) => (
               <div key={reserva.id} className={`reserva-ticket estado-borde-${reserva.estado}`}>
@@ -156,6 +185,7 @@ export default function MisReservasPage() {
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
     </div>
