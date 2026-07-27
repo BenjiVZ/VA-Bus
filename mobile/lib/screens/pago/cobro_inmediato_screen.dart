@@ -180,12 +180,16 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
 
   // ── Acciones ──
   Future<void> _generarOtp() async {
-    final ced = _cedula.text.trim().toUpperCase();
+    // El banco/validador esperan la cédula como letra + dígitos, SIN guion ni
+    // espacios (ej: "V30719983"). El perfil la guarda como "V-30719983", así
+    // que hay que limpiarla antes de validar y enviar (igual que la web).
+    final ced = _cedula.text.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (!RegExp(r'^[VEJP]\d{6,9}$').hasMatch(ced)) {
       setState(() => _error = 'Cédula inválida. Formato: V/E/J/P + 6 a 9 dígitos.');
       return;
     }
-    if (!RegExp(r'^\d{11}$').hasMatch(_telefono.text.trim())) {
+    final tel = _telefono.text.trim().replaceAll(RegExp(r'\D'), '');
+    if (!RegExp(r'^\d{11}$').hasMatch(tel)) {
       setState(() => _error = 'El teléfono debe tener 11 dígitos (ej: 04141234567).');
       return;
     }
@@ -199,7 +203,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
             grupoPago: widget.grupoPago,
             banco: _banco!.codigo,
             cedula: ced,
-            telefono: _telefono.text.trim(),
+            telefono: tel,
             nombre: _nombre.text.trim(),
             concepto: _concepto.text.trim(),
           );
