@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _catalogoDia = cat;
         // Si el origen elegido ya no tiene viajes en esta fecha, límpialo
-        // (DropdownButton exige que el value exista entre los items).
+        // (no dejar seleccionada una ciudad que ya no está disponible).
         final disp = _origenesDisponibles.map((o) => o['codofi']).toSet();
         if (_origenCod != null && !disp.contains(_origenCod)) {
           _origenCod = null;
@@ -749,7 +749,10 @@ class _SearchCard extends StatelessWidget {
       a != null && a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
-/* ── Desplegable de oficina (origen/destino) ── */
+/* ── Selector de oficina (origen/destino) ──
+   Antes era un DropdownButton, pero con ~25 oficinas el menú se salía de la
+   pantalla y no se podía hacer scroll. Ahora abre una hoja inferior con
+   buscador y lista desplazable. */
 class _OficinaDropdown extends StatelessWidget {
   final List<Map<String, dynamic>> oficinas;
   final String? value;
@@ -771,57 +774,213 @@ class _OficinaDropdown extends StatelessWidget {
     this.cargando = false,
   });
 
+  Future<void> _abrir(BuildContext context) async {
+    final elegido = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true, // permite ocupar más de la mitad de la pantalla
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OficinaPicker(
+        oficinas: oficinas,
+        seleccionado: value,
+        icon: icon,
+        iconColor: iconColor,
+        titulo: hint,
+      ),
+    );
+    if (elegido != null) onChanged(elegido);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // DropdownButton exige que el value exista entre los items (o sea null).
-    final validValue =
-        oficinas.any((o) => (o['codofi'] ?? '') == value) ? value : null;
+    // Nombre de la oficina elegida (vacío => se muestra el hint).
+    final sel = oficinas.firstWhere(
+      (o) => (o['codofi'] ?? '') == value,
+      orElse: () => const <String, dynamic>{},
+    );
+    final nombre = (sel['desofi'] ?? '') as String;
+    final activo = enabled && !cargando;
+
     return Opacity(
       opacity: enabled ? 1 : 0.5,
-      child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: validValue,
-          isExpanded: true,
-          hint: Row(children: [
-            Icon(icon, color: iconColor, size: 18),
-            const SizedBox(width: 10),
-            Text(hint, style: const TextStyle(
-                color: AppColors.textMuted, fontWeight: FontWeight.w500)),
-          ]),
-          icon: cargando
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.blue500,
-                  ),
-                )
-              : const Icon(Icons.keyboard_arrow_down_rounded),
-          items: oficinas.map((o) {
-            return DropdownMenuItem<String>(
-              value: (o['codofi'] ?? '') as String,
-              child: Row(children: [
-                Icon(icon, color: iconColor, size: 18),
-                const SizedBox(width: 10),
-                Expanded(child: Text(
-                  (o['desofi'] ?? '') as String,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: activo ? () => _abrir(context) : null,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(children: [
+              Icon(icon, color: iconColor, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  nombre.isNotEmpty ? nombre : hint,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                )),
-              ]),
-            );
-          }).toList(),
-          onChanged: enabled ? onChanged : null,
+                  style: nombre.isNotEmpty
+                      ? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)
+                      : const TextStyle(
+                          color: AppColors.textMuted, fontWeight: FontWeight.w500),
+                ),
+              ),
+              cargando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.blue500,
+                      ),
+                    )
+                  : const Icon(Icons.keyboard_arrow_down_rounded),
+            ]),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/* ── Hoja inferior para elegir la oficina (con buscador y scroll) ── */
+class _OficinaPicker extends StatefulWidget {
+  final List<Map<String, dynamic>> oficinas;
+  final String? seleccionado;
+  final IconData icon;
+  final Color iconColor;
+  final String titulo;
+
+  const _OficinaPicker({
+    required this.oficinas,
+    required this.seleccionado,
+    required this.icon,
+    required this.iconColor,
+    required this.titulo,
+  });
+
+  @override
+  State<_OficinaPicker> createState() => _OficinaPickerState();
+}
+
+class _OficinaPickerState extends State<_OficinaPicker> {
+  String _q = '';
+
+  List<Map<String, dynamic>> get _filtradas {
+    final q = _q.trim().toLowerCase();
+    if (q.isEmpty) return widget.oficinas;
+    return widget.oficinas
+        .where((o) => '${o['desofi'] ?? ''} ${o['siglas'] ?? ''}'
+            .toLowerCase()
+            .contains(q))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lista = _filtradas;
+    final maxH = MediaQuery.of(context).size.height * 0.75;
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxH),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Agarradera
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            child: Row(children: [
+              Icon(widget.icon, color: widget.iconColor, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                widget.titulo,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              Text('${lista.length}',
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+          // Buscador (útil con ~25 oficinas)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              autofocus: false,
+              onChanged: (v) => setState(() => _q = v),
+              decoration: InputDecoration(
+                hintText: 'Buscar ciudad…',
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                isDense: true,
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Lista DESPLAZABLE (el problema que tenía el DropdownButton)
+          Flexible(
+            child: lista.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(28),
+                    child: Text('Sin resultados',
+                        style: TextStyle(color: AppColors.textMuted)),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: lista.length,
+                    itemBuilder: (_, i) {
+                      final o = lista[i];
+                      final cod = (o['codofi'] ?? '') as String;
+                      final activa = cod == widget.seleccionado;
+                      return ListTile(
+                        leading: Icon(widget.icon,
+                            color: widget.iconColor, size: 20),
+                        title: Text(
+                          (o['desofi'] ?? '') as String,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                                activa ? FontWeight.w800 : FontWeight.w600,
+                            color: activa
+                                ? AppColors.blue500
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                        trailing: activa
+                            ? const Icon(Icons.check_rounded,
+                                color: AppColors.blue500)
+                            : null,
+                        onTap: () => Navigator.of(context).pop(cod),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
