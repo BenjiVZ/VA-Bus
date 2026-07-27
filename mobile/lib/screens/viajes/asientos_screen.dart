@@ -102,8 +102,10 @@ class _AsientosScreenState extends State<AsientosScreen> {
     if (mounted) setState(() {});
   }
 
-  // Viaje de Aerorutas: id compuesto (ej "001_02_04_2026-06-03"). No soporta
-  // bloqueo en tiempo real ni reserva local (eso usa el flujo R4/Aerorutas).
+  // Viaje de Aerorutas: id compuesto (ej "001_02_04_2026-06-03"). La selección
+  // es solo local (sin bloqueo en tiempo real); al continuar, la reserva va por
+  // /aerorutas/reservar/, que aparta los puestos allá (TMPPUESTO) y crea el
+  // viaje espejo local para seguir con el pago normal.
   bool get _esAerorutas => widget.viajeId.contains('_');
 
   void _conectarWs() {
@@ -339,12 +341,6 @@ class _AsientosScreenState extends State<AsientosScreen> {
       return;
     }
 
-    if (_esAerorutas) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('La reserva de viajes de Aerorutas estará disponible muy pronto.')));
-      return;
-    }
-
     final err = _validar();
     if (err != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
@@ -388,12 +384,21 @@ class _AsientosScreenState extends State<AsientosScreen> {
         };
       }).toList();
 
-      final res = await svc.crearReserva(
-        viajeId: widget.viajeId,
-        asientos: asientosPayload,
-        nombrePasajero: _nombreCtrl.text.trim(),
-        cedulaPasajero: '$_cedulaTipo-${_cedulaCtrl.text.trim()}',
-      );
+      // Aerorutas usa su propio endpoint (valida y aparta los puestos allá,
+      // TMPPUESTO) pero devuelve el mismo shape; el resto del flujo es igual.
+      final res = _esAerorutas
+          ? await svc.reservarAerorutas(
+              tripId: widget.viajeId,
+              asientos: asientosPayload,
+              nombrePasajero: _nombreCtrl.text.trim(),
+              cedulaPasajero: '$_cedulaTipo-${_cedulaCtrl.text.trim()}',
+            )
+          : await svc.crearReserva(
+              viajeId: widget.viajeId,
+              asientos: asientosPayload,
+              nombrePasajero: _nombreCtrl.text.trim(),
+              cedulaPasajero: '$_cedulaTipo-${_cedulaCtrl.text.trim()}',
+            );
 
       // Subir docs (matchea por número+piso de asiento)
       final reservasCreadas = (res['reservas'] as List?) ?? const [];
@@ -401,7 +406,13 @@ class _AsientosScreenState extends State<AsientosScreen> {
 
       if (!mounted) return;
       final grupoPago = res['grupo_pago'] as String;
-      context.go('/pago?grupo=$grupoPago&viaje=${widget.viajeId}');
+      // La pantalla de pago espera un id NUMÉRICO. En Aerorutas el id del viaje
+      // es compuesto ("codrut_inicio_fin_fecha"), así que usamos el id del
+      // viaje espejo local que devuelve el backend.
+      final viajeParaPago = _esAerorutas
+          ? '${(res['viaje_info'] as Map?)?['id'] ?? 0}'
+          : widget.viajeId;
+      context.go('/pago?grupo=$grupoPago&viaje=$viajeParaPago');
     } catch (e) {
       if (!mounted) return;
       setState(() => _creando = false);

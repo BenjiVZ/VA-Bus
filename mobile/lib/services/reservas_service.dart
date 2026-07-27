@@ -56,6 +56,30 @@ class ReservasService {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Compra de un viaje de AERORUTAS (id compuesto "codrut_inicio_fin_fecha").
+  ///
+  /// El backend valida los puestos, los aparta allá (TMPPUESTO), crea el viaje
+  /// espejo local y devuelve el MISMO shape que /reservas/ (reservas +
+  /// grupo_pago), más `viaje_info.id` con el id local del espejo — que es el
+  /// que necesita la pantalla de pago (espera un entero).
+  Future<Map<String, dynamic>> reservarAerorutas({
+    required String tripId,
+    required List<Map<String, dynamic>> asientos,
+    String nombrePasajero = '',
+    String cedulaPasajero = '',
+  }) async {
+    final res = await client.dio.post('/aerorutas/reservar/', data: {
+      'trip_id': tripId,
+      'asientos': asientos,
+      'nombre_pasajero': nombrePasajero,
+      'cedula_pasajero': cedulaPasajero,
+    });
+    if (res.statusCode == null || res.statusCode! >= 400) {
+      throw DioException(requestOptions: res.requestOptions, response: res);
+    }
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<List<Reserva>> getMisReservas() async {
     final res = await client.dio.get('/mis-reservas/');
     final body = res.data;
