@@ -44,10 +44,20 @@ class AuthService {
       );
     }
     final data = res.data as Map<String, dynamic>;
-    return (
-      access: data['access'] as String,
-      refresh: data['refresh'] as String,
-    );
+    // OJO: este endpoint devuelve los JWT ANIDADOS en "tokens"
+    // ({tokens: {access, refresh}, usuario, nuevo_usuario}), a diferencia de
+    // /auth/login/ que los manda planos. Aceptamos ambas formas.
+    final tokens = (data['tokens'] is Map ? data['tokens'] : data) as Map;
+    final access = tokens['access'];
+    final refresh = tokens['refresh'];
+    if (access is! String || refresh is! String) {
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        message: 'La respuesta de Google login no trajo los tokens.',
+      );
+    }
+    return (access: access, refresh: refresh);
   }
 
   Future<Usuario> registro({
