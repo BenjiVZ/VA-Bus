@@ -778,6 +778,10 @@ class _OficinaDropdown extends StatelessWidget {
     final elegido = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true, // permite ocupar más de la mitad de la pantalla
+      // El nav flotante es el bottomNavigationBar del shell: si la hoja se abre
+      // en el navegador interno queda POR DEBAJO y tapa la lista. Con el
+      // navegador raíz la hoja cubre toda la pantalla, nav incluido.
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _OficinaPicker(
         oficinas: oficinas,
