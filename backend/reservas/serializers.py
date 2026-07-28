@@ -14,11 +14,11 @@ class ReservaSerializer(serializers.ModelSerializer):
             'estado', 'estado_display', 'nombre_pasajero', 'cedula_pasajero',
             'es_menor_edad', 'menor_no_es_hijo', 'para_otra_persona', 'nombre_asignado', 'cedula_asignado',
             'viaja_con_animal', 'es_discapacitado',
-            'fecha_creacion', 'fecha_actualizacion', 'viaje_info', 'grupo_pago',
-            'codigo_ticket', 'referencia_pago',
+            'fecha_creacion', 'fecha_actualizacion', 'fecha_expiracion',
+            'viaje_info', 'grupo_pago', 'codigo_ticket', 'referencia_pago',
         )
         read_only_fields = ('id', 'estado', 'fecha_creacion', 'fecha_actualizacion',
-                            'codigo_ticket')
+                            'fecha_expiracion', 'codigo_ticket')
 
     def get_referencia_pago(self, obj):
         """Referencia/Id de la operación R4 (Débito Inmediato) que pagó este grupo."""

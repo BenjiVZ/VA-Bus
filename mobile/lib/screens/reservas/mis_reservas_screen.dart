@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -186,6 +188,87 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
   }
 }
 
+/// Cuenta regresiva hasta que VENCE el pago de una reserva pendiente.
+/// (Distinto de _CountdownBanner, que cuenta hacia la salida del viaje.)
+/// Al llegar a cero el backend la cancela y libera el asiento.
+class _ExpiraPagoBanner extends StatefulWidget {
+  final String fechaExpiracionIso;
+  const _ExpiraPagoBanner({required this.fechaExpiracionIso});
+
+  @override
+  State<_ExpiraPagoBanner> createState() => _ExpiraPagoBannerState();
+}
+
+class _ExpiraPagoBannerState extends State<_ExpiraPagoBanner> {
+  Timer? _timer;
+  Duration _restante = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _recalcular();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(_recalcular);
+    });
+  }
+
+  void _recalcular() {
+    // El backend manda la fecha en UTC/ISO; toLocal() la lleva a la hora del
+    // teléfono para que el conteo coincida con lo que ve el usuario.
+    final exp = DateTime.tryParse(widget.fechaExpiracionIso)?.toLocal();
+    _restante = exp == null ? Duration.zero : exp.difference(DateTime.now());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final expirado = _restante.inSeconds <= 0;
+    final urgente = !expirado && _restante.inMinutes < 5;
+    final rojo = expirado || urgente;
+    final mm = _restante.inMinutes.toString().padLeft(2, '0');
+    final ss = (_restante.inSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: rojo ? AppColors.red50 : AppColors.yellow50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: (rojo ? AppColors.red500 : AppColors.yellow600)
+              .withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            expirado ? Icons.timer_off_rounded : Icons.timer_rounded,
+            size: 18,
+            color: rojo ? AppColors.red500 : AppColors.yellow600,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              expirado
+                  ? 'Reserva vencida — el asiento fue liberado'
+                  : 'Paga antes de $mm:$ss o se cancela la reserva',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: rojo ? AppColors.red500 : AppColors.yellow600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GrupoCard extends StatelessWidget {
   final String grupoPago;
   final List<Reserva> reservas;
@@ -273,6 +356,12 @@ class _GrupoCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Cuenta regresiva del PAGO: si no se paga a tiempo la reserva
+                // se cancela sola y el asiento se libera.
+                if (estado == 'pendiente' && first.fechaExpiracion != null) ...[
+                  const SizedBox(height: 10),
+                  _ExpiraPagoBanner(fechaExpiracionIso: first.fechaExpiracion!),
+                ],
                 if (first.esConfirmada && isGroup) ...[
                   const SizedBox(height: 12),
                   Container(
