@@ -199,6 +199,9 @@ class CrearReservaView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        # Vencer primero las caducadas: si no, las que quedaron sin pagar cuentan
+        # como "activas" y bloquean al usuario para siempre.
+        Reserva.limpiar_expiradas()
         # ── Anti-spam check ──
         ordenes_pendientes = Reserva.objects.filter(
             usuario=request.user,
@@ -360,6 +363,11 @@ class MisReservasView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # La limpieza de vencidas es perezosa (no hay cron) y solo vivía en el
+        # listado de viajes LOCALES, que la app casi no usa (consume el catálogo
+        # de Aerorutas). Sin esto, una reserva sin pagar se quedaba "pendiente"
+        # para siempre y el asiento nunca se liberaba.
+        Reserva.limpiar_expiradas()
         return Reserva.objects.filter(
             usuario=self.request.user
         ).select_related('viaje', 'viaje__ruta', 'viaje__autobus')

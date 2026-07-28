@@ -854,6 +854,9 @@ class AerorutasReservarView(APIView):
         from reservas.models import Reserva
         from reservas.serializers import ReservaSerializer
 
+        # Vencer primero las caducadas (mismo motivo que en CrearReservaView:
+        # si no, las no pagadas cuentan como activas y bloquean al usuario).
+        Reserva.limpiar_expiradas()
         # ── Anti-spam (mismo criterio que CrearReservaView) ──
         ordenes_pendientes = Reserva.objects.filter(
             usuario=request.user,

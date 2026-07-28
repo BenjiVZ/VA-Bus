@@ -54,6 +54,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   int? _operacionId;
   XFile? _comprobante;
   Timer? _pollTimer;
+  bool _esperaAgotada = false; // el banco no resolvió dentro del tiempo de sondeo
 
   @override
   void initState() {
@@ -250,7 +251,9 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   void _aplicarEstado(String estado) {
     if (estado == 'aceptada') {
       _irAConfirmacion();
-    } else if (estado == 'en_espera') {
+      // 'procesando' NO es un rechazo: el débito sigue en curso, hay que
+      // esperar igual que con 'en_espera'.
+    } else if (estado == 'en_espera' || estado == 'procesando') {
       setState(() { _paso = 3; _enviando = false; });
       _startPolling();
     } else {
@@ -261,8 +264,16 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
     }
   }
 
+  /// Nº de sondeos antes de rendirse (~3 min a 8 s). Sin este tope, un estado
+  /// que nunca es aceptada/rechazada (ej. 'error') dejaba la pantalla girando
+  /// indefinidamente y el usuario no sabía qué pasó.
+  static const _maxSondeos = 22;
+  int _sondeos = 0;
+
   void _startPolling() {
     _pollTimer?.cancel();
+    _sondeos = 0;
+    _esperaAgotada = false;
     _pollTimer = Timer.periodic(const Duration(seconds: 8), (t) async {
       if (_operacionId == null) return;
       try {
@@ -271,12 +282,49 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
         if (estado == 'aceptada') {
           t.cancel();
           _irAConfirmacion();
-        } else if (estado == 'rechazada') {
+          return;
+        }
+        if (estado == 'rechazada') {
           t.cancel();
           if (mounted) setState(() { _paso = 2; _error = 'El pago fue rechazado por el banco.'; });
+          return;
         }
-      } catch (_) {/* reintentar */}
+        if (estado == 'error') {
+          // También es terminal: el banco no va a cambiarlo solo.
+          t.cancel();
+          if (mounted) {
+            setState(() {
+              _paso = 2;
+              _error = (data['mensaje']?.toString().isNotEmpty ?? false)
+                  ? data['mensaje'].toString()
+                  : 'El banco reportó un error con la operación.';
+            });
+          }
+          return;
+        }
+      } catch (_) {/* reintentar en el próximo tick */}
+
+      // Sigue 'en_espera'/'procesando': cortar al llegar al tope.
+      if (++_sondeos >= _maxSondeos) {
+        t.cancel();
+        if (mounted) setState(() => _esperaAgotada = true);
+      }
     });
+  }
+
+  /// Reintenta la consulta manualmente tras agotarse la espera.
+  Future<void> _verificarDeNuevo() async {
+    if (_operacionId == null) return;
+    setState(() { _esperaAgotada = false; _enviando = true; });
+    try {
+      final data = await context.read<PagosService>().r4EstadoOperacion(_operacionId!);
+      if (!mounted) return;
+      setState(() => _enviando = false);
+      _aplicarEstado(data['estado']?.toString() ?? '');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _enviando = false; _esperaAgotada = true; });
+    }
   }
 
   void _irAConfirmacion() {
@@ -456,11 +504,46 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   }
 
   Widget _pasoEspera() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+    // Se agotó el tiempo de sondeo: no dejar la rueda girando para siempre.
+    if (_esperaAgotada) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.hourglass_bottom_rounded,
+                size: 48, color: AppColors.yellow600),
+            const SizedBox(height: 20),
+            const Text('El banco aún no responde',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            const Text(
+              'La operación sigue en proceso. Tu reserva no se pierde: si el banco '
+              'aprueba, el pago se confirma solo y lo verás en "Mis viajes".',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Verificar de nuevo'),
+              onPressed: _enviando ? null : _verificarDeNuevo,
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => context.go('/mis-reservas'),
+              child: const Text('Ir a Mis viajes'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const Padding(
+      padding: EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           SizedBox(width: 48, height: 48, child: CircularProgressIndicator()),
           SizedBox(height: 20),
           Text('Validando tu pago…',
