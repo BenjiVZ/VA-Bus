@@ -8,7 +8,11 @@ class GenerarOtpSerializer(serializers.Serializer):
     banco = serializers.CharField(max_length=4, help_text="Código banco (4 dígitos)")
     cedula = serializers.CharField(max_length=20, help_text="Cédula (ej: V12345678)")
     telefono = serializers.CharField(max_length=20, help_text="Teléfono (11 dígitos)")
-    concepto = serializers.CharField(max_length=30, required=False, default="pago")
+    # allow_blank: el concepto es opcional en los formularios, así que puede
+    # llegar como "". Sin esto DRF lo rechaza y el cobro falla con "Datos
+    # inválidos"; la vista ya normaliza el vacío a "pago".
+    concepto = serializers.CharField(max_length=30, required=False,
+                                     allow_blank=True, default="pago")
 
     def validate_banco(self, value):
         if not re.match(r'^\d{4}$', value):

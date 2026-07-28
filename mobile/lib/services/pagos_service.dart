@@ -79,7 +79,10 @@ class PagosService {
       'cedula': cedula,
       'telefono': telefono,
       'nombre': nombre,
-      'concepto': concepto,
+      // El concepto es OPCIONAL: si va vacío hay que omitirlo para que el
+      // backend aplique su default ("pago"). Mandar "" lo rechaza como dato
+      // inválido (el campo no admite blanco).
+      if (concepto.trim().isNotEmpty) 'concepto': concepto.trim(),
     });
     return res.data as Map<String, dynamic>;
   }
