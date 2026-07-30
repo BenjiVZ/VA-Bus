@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{# Copia del base_site.html de Django (esta plantilla lo reemplaza, así que hay
+   que conservar sus bloques) + nuestra hoja de estilos.
+   `extrastyle` se renderiza DESPUÉS del CSS del admin, por eso nuestras
+   variables ganan; las plantillas hijas llaman a block.super, así que el tema
+   se mantiene en todas las pantallas. #}
+{% block extrastyle %}{{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/vabus_admin.css' %}">
+{% endblock %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

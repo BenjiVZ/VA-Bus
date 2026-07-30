@@ -1,0 +1,413 @@
+/* ==========================================================================
+   Aerorutas de Venezuela — tema del panel de administración.
+
+   Se carga DESPUÉS del CSS de Django (bloque `extrastyle` de base_site.html),
+   así que aquí sobre todo se redefinen sus variables de color y se afinan
+   algunos detalles visuales. No se pisan estructuras del admin para que siga
+   funcionando igual tras actualizar Django.
+
+   Colores de marca: azul marino #1a3a6b + dorado #f5c842 (los del logo).
+   Django 5.2 soporta claro/oscuro con `prefers-color-scheme` y el selector
+   manual `html[data-theme=...]`, por eso se definen los dos.
+   ========================================================================== */
+
+/* ── Paleta clara ── */
+:root,
+html[data-theme="light"] {
+  --va-navy: #1a3a6b;
+  --va-navy-dark: #12294d;
+  --va-navy-soft: #2d5aa0;
+  --va-gold: #f5c842;
+  --va-gold-dark: #b8860b;
+
+  --primary: var(--va-navy);
+  --secondary: var(--va-navy-dark);
+  --accent: var(--va-gold);
+  --primary-fg: #fff;
+
+  --header-bg: var(--va-navy-dark);
+  --header-color: rgba(255, 255, 255, 0.85);
+  --header-branding-color: var(--va-gold);
+  --header-link-color: #fff;
+
+  --breadcrumbs-bg: var(--va-navy);
+  --breadcrumbs-fg: rgba(255, 255, 255, 0.75);
+  --breadcrumbs-link-fg: #fff;
+
+  --link-fg: #1c4f80;
+  --link-hover-color: var(--va-navy-dark);
+  --link-selected-fg: var(--va-navy);
+
+  --button-bg: var(--va-navy);
+  --button-hover-bg: var(--va-navy-dark);
+  /* El botón principal (Guardar) va dorado: es la acción que se busca. */
+  --default-button-bg: var(--va-gold-dark);
+  --default-button-hover-bg: #9a7009;
+  --object-tools-bg: var(--va-navy);
+  --object-tools-hover-bg: var(--va-navy-dark);
+
+  --darkened-bg: #f5f8fc;
+  --selected-bg: #eaf1f9;
+  --selected-row: #fff6da;
+  --hairline-color: #e5ecf4;
+  --border-color: #d5dfeb;
+
+  --va-card-bg: #fff;
+  --va-shadow: 0 1px 2px rgba(16, 34, 61, 0.06), 0 4px 12px rgba(16, 34, 61, 0.06);
+}
+
+/* ── Paleta oscura (automática) ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --va-navy: #2d5aa0;
+    --va-navy-dark: #14294d;
+    --va-gold: #f5c842;
+    --va-gold-dark: #d9a916;
+
+    --primary: var(--va-navy);
+    --secondary: var(--va-navy-dark);
+    --accent: var(--va-gold);
+
+    --header-bg: #101c33;
+    --header-branding-color: var(--va-gold);
+
+    --breadcrumbs-bg: #16294a;
+    --breadcrumbs-fg: rgba(255, 255, 255, 0.65);
+    --breadcrumbs-link-fg: #e8eefb;
+
+    --link-fg: #8ab4f8;
+    --link-hover-color: #b9d3fb;
+    --link-selected-fg: var(--va-gold);
+
+    --button-bg: var(--va-navy);
+    --button-hover-bg: #3a6cbb;
+    --default-button-bg: var(--va-gold-dark);
+    --default-button-hover-bg: #f0bb2e;
+    --object-tools-bg: var(--va-navy);
+    --object-tools-hover-bg: #3a6cbb;
+
+    --darkened-bg: #1b2331;
+    --selected-bg: #22304a;
+    --selected-row: #2f3a22;
+    --hairline-color: #2b3547;
+    --border-color: #35415a;
+
+    --va-card-bg: #1a2130;
+    --va-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* ── Paleta oscura (interruptor manual del admin) ── */
+html[data-theme="dark"] {
+  --va-navy: #2d5aa0;
+  --va-navy-dark: #14294d;
+  --va-gold: #f5c842;
+  --va-gold-dark: #d9a916;
+
+  --primary: var(--va-navy);
+  --secondary: var(--va-navy-dark);
+  --accent: var(--va-gold);
+
+  --header-bg: #101c33;
+  --header-branding-color: var(--va-gold);
+
+  --breadcrumbs-bg: #16294a;
+  --breadcrumbs-fg: rgba(255, 255, 255, 0.65);
+  --breadcrumbs-link-fg: #e8eefb;
+
+  --link-fg: #8ab4f8;
+  --link-hover-color: #b9d3fb;
+  --link-selected-fg: var(--va-gold);
+
+  --button-bg: var(--va-navy);
+  --button-hover-bg: #3a6cbb;
+  --default-button-bg: var(--va-gold-dark);
+  --default-button-hover-bg: #f0bb2e;
+  --object-tools-bg: var(--va-navy);
+  --object-tools-hover-bg: #3a6cbb;
+
+  --darkened-bg: #1b2331;
+  --selected-bg: #22304a;
+  --selected-row: #2f3a22;
+  --hairline-color: #2b3547;
+  --border-color: #35415a;
+
+  --va-card-bg: #1a2130;
+  --va-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Encabezado ── */
+#header {
+  background: linear-gradient(135deg, var(--va-navy-dark) 0%, var(--va-navy) 100%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  padding: 12px 24px;
+}
+
+#site-name,
+#site-name a:link,
+#site-name a:visited {
+  color: var(--va-gold);
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+#user-tools {
+  font-size: 0.72rem;
+  letter-spacing: 0.4px;
+}
+
+#user-tools a {
+  border-bottom: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+#user-tools a:hover {
+  color: var(--va-gold);
+}
+
+/* ── Migas de pan ── */
+div.breadcrumbs {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 10px 24px;
+  font-size: 0.78rem;
+}
+
+/* ── Módulos / tarjetas ── */
+.module {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--hairline-color);
+  box-shadow: var(--va-shadow);
+  background: var(--va-card-bg);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: var(--darkened-bg);
+  color: var(--body-loud-color);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hairline-color);
+}
+
+/* Dashboard: filas de apps con más aire y separación clara. */
+.dashboard .module table th,
+.dashboard .module table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hairline-color);
+}
+
+.dashboard .module table tr:last-child th,
+.dashboard .module table tr:last-child td {
+  border-bottom: none;
+}
+
+.dashboard .module table tbody tr:hover {
+  background: var(--selected-bg);
+}
+
+.dashboard .module table th a {
+  font-weight: 700;
+}
+
+/* ── Botones ── */
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+a.button {
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.button:hover,
+input[type="submit"]:hover,
+.submit-row input:hover,
+a.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+.submit-row {
+  border-radius: 12px;
+  border: 1px solid var(--hairline-color);
+  background: var(--darkened-bg);
+}
+
+/* Herramientas de objeto (Añadir, Historial) */
+.object-tools a {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+/* ── Formularios ── */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select,
+.vTextField {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 7px 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+select:focus,
+.vTextField:focus {
+  outline: none;
+  border-color: var(--va-navy-soft, var(--primary));
+  box-shadow: 0 0 0 3px rgba(45, 90, 160, 0.22);
+}
+
+/* ── Listados ── */
+#changelist table thead th {
+  background: var(--darkened-bg);
+  font-size: 0.72rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+#changelist-filter h2 {
+  border-radius: 0;
+}
+
+#changelist table tbody tr:hover {
+  background: var(--selected-bg);
+}
+
+/* Paginación y acciones con bordes suaves */
+.paginator,
+#changelist .actions {
+  border-radius: 10px;
+}
+
+/* ── Mensajes ── */
+ul.messagelist li {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* ── Login ── */
+.login #header {
+  border-radius: 12px 12px 0 0;
+}
+
+.login #content-main {
+  box-shadow: var(--va-shadow);
+  border-radius: 0 0 12px 12px;
+}
+
+/* ==========================================================================
+   Tarjetas de accesos directos del dashboard (portal de viajes, pagos R4).
+   El marcado vive en templates/admin/index.html.
+   ========================================================================== */
+.va-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.va-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: var(--va-shadow);
+}
+
+.va-card--viajes {
+  background: linear-gradient(135deg, #1a3a6b 0%, #2d5aa0 100%);
+}
+
+.va-card--pagos {
+  background: linear-gradient(135deg, #14532d 0%, #15803d 100%);
+}
+
+.va-card h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  background: none;
+  border: none;
+  padding: 0;
+  letter-spacing: 0;
+}
+
+.va-card--viajes h2 {
+  color: var(--va-gold);
+}
+
+.va-card--pagos h2 {
+  color: #bbf7d0;
+}
+
+.va-card p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.va-card__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 0.86rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.va-card--viajes .va-card__btn {
+  background: var(--va-gold);
+  color: #1a3a6b;
+}
+
+.va-card--pagos .va-card__btn {
+  background: #bbf7d0;
+  color: #14532d;
+}
+
+.va-card__btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* En pantallas chicas la tarjeta se apila y el botón ocupa el ancho. */
+@media (max-width: 560px) {
+  .va-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .va-card__btn {
+    justify-content: center;
+  }
+}
