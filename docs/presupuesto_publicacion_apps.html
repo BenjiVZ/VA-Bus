@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presupuesto — Publicación de la App en Android e iOS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @page { size: letter; margin: 18mm 16mm; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      font-size: 10.5pt;
+      color: #1e293b;
+      line-height: 1.5;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .no-break { page-break-inside: avoid; break-inside: avoid; }
+    h1, h2, h3, h4 { page-break-after: avoid; break-after: avoid; }
+    table { page-break-inside: avoid; break-inside: avoid; }
+
+    /* ── Cabecera ── */
+    .cover-header {
+      text-align: center;
+      padding: 2rem 0 1.5rem;
+      border-bottom: 3px solid #1a3a6b;
+      margin-bottom: 1.5rem;
+    }
+    .cover-header .company-name {
+      font-size: 22pt; font-weight: 800; color: #1a3a6b;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .cover-header .doc-title {
+      font-size: 13pt; font-weight: 600; color: #475569; margin-top: 0.4rem;
+    }
+    .cover-header .doc-date { font-size: 9pt; color: #94a3b8; margin-top: 0.5rem; }
+
+    .cover-meta {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 1rem 1.25rem; font-size: 9.5pt; margin-bottom: 1.5rem;
+    }
+    .cover-meta span { color: #64748b; }
+    .cover-meta strong { color: #1e293b; }
+
+    /* ── Títulos ── */
+    .section-title {
+      font-size: 13pt; font-weight: 700; color: #1a3a6b;
+      border-bottom: 2px solid #f5c842; padding-bottom: 0.4rem;
+      margin: 1.8rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-title .emoji { font-size: 14pt; }
+
+    /* ── Resumen ejecutivo ── */
+    .exec {
+      background: #f8fafc; border-left: 4px solid #1a3a6b;
+      border-radius: 6px; padding: 1rem 1.2rem; font-size: 10pt; margin-bottom: 0.5rem;
+    }
+    .exec p + p { margin-top: 0.6rem; }
+
+    /* ── Tablas ── */
+    table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 1rem; font-size: 9.8pt; }
+    table th {
+      background: #1a3a6b; color: #fff; text-align: left;
+      padding: 0.55rem 0.7rem; font-weight: 600; font-size: 9pt;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    table th.right, table td.right { text-align: right; }
+    table th.center, table td.center { text-align: center; }
+    table td { padding: 0.5rem 0.7rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    table tr:nth-child(even) td { background: #f8fafc; }
+    table td.detail { color: #64748b; font-size: 9pt; }
+    table tr.total-row td {
+      background: #1a3a6b !important; color: #fff; font-weight: 700; font-size: 10.5pt;
+      border-bottom: none;
+    }
+    table tr.subtotal-row td {
+      background: #eef3fa !important; font-weight: 700; color: #1a3a6b;
+    }
+
+    /* ── Estado / checklist ── */
+    .features { list-style: none; margin: 0.5rem 0 1rem; }
+    .feature-item {
+      display: flex; gap: 0.55rem; padding: 0.32rem 0; font-size: 9.8pt;
+      align-items: flex-start;
+    }
+    .icon-ok { color: #16a34a; font-weight: 800; }
+    .icon-no { color: #dc2626; font-weight: 800; }
+    .icon-dot { color: #f5c842; font-weight: 800; }
+
+    /* ── Aviso ── */
+    .callout {
+      border-radius: 8px; padding: 0.85rem 1.1rem; font-size: 9.7pt;
+      margin: 0.8rem 0 1rem;
+    }
+    .callout strong { display: block; margin-bottom: 0.25rem; }
+    .callout-warn { background: #fef7e7; border-left: 4px solid #f5c842; }
+    .callout-good { background: #eefaf1; border-left: 4px solid #16a34a; }
+    .callout-info { background: #eef3fa; border-left: 4px solid #1a3a6b; }
+
+    /* ── Resumen inversión ── */
+    .summary-box {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 0.9rem 1.1rem; margin: 0.8rem 0 1rem;
+    }
+    .summary-box .row {
+      display: flex; justify-content: space-between; padding: 0.35rem 0;
+      border-bottom: 1px dashed #e2e8f0; font-size: 10pt;
+    }
+    .summary-box .row:last-child { border-bottom: none; }
+    .summary-box .row.highlight {
+      background: #1a3a6b; color: #fff; font-weight: 700; border-radius: 6px;
+      padding: 0.55rem 0.8rem; margin-top: 0.5rem; border-bottom: none;
+    }
+
+    .notes-list { margin: 0.5rem 0 1rem 1.2rem; font-size: 9.5pt; color: #475569; }
+    .notes-list li { margin-bottom: 0.35rem; }
+
+    .doc-footer {
+      margin-top: 2rem; padding-top: 0.9rem; border-top: 2px solid #1a3a6b;
+      text-align: center; font-size: 8.8pt; color: #64748b;
+    }
+    .doc-footer strong { color: #1a3a6b; }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- ═══════════ CABECERA ═══════════ -->
+  <div class="cover-header">
+    <div class="company-name">Aerorutas de Venezuela</div>
+    <div class="doc-title">Presupuesto — Publicación de la App en Android e iOS</div>
+    <div class="doc-date">Documento preparado el 05 de agosto de 2026</div>
+  </div>
+
+  <div class="cover-meta">
+    <div><span>Proyecto:</span> <strong>App móvil Aerorutas</strong></div>
+    <div><span>Tiendas:</span> <strong>Google Play y App Store</strong></div>
+    <div><span>Tecnología:</span> <strong>Flutter (Android + iOS)</strong></div>
+    <div><span>Estado actual:</span> <strong>App funcional, distribuida vía web</strong></div>
+    <div><span>Moneda:</span> <strong>Dólares (US$)</strong></div>
+    <div><span>Validez:</span> <strong>30 días</strong></div>
+  </div>
+
+  <!-- ═══════════ RESUMEN EJECUTIVO ═══════════ -->
+  <div class="section-title"><span class="emoji">📋</span> Resumen Ejecutivo</div>
+
+  <div class="exec">
+    <p>La aplicación móvil de Aerorutas <strong>ya está desarrollada y en funcionamiento</strong>: permite
+    consultar rutas, seleccionar asiento, reservar y pagar por débito inmediato. Hoy se distribuye como
+    aplicación web, lo que funciona pero no permite instalarla desde las tiendas oficiales.</p>
+
+    <p>Este documento detalla <strong>qué se necesita para publicarla en Google Play y App Store</strong>:
+    las cuentas de desarrollador, el equipo requerido, los requisitos de cada tienda y los ajustes
+    técnicos pendientes.</p>
+
+    <p>La inversión en licencias es baja: <strong>US$ 124 el primer año</strong> (US$ 25 pago único de
+    Google + US$ 99 anuales de Apple). El punto que requiere decisión de la gerencia es el
+    <strong>equipo Mac</strong> que Apple exige para compilar la versión de iOS, con dos alternativas de
+    costo muy distinto que se comparan más adelante.</p>
+  </div>
+
+  <!-- ═══════════ 1. CUENTAS ═══════════ -->
+  <div class="section-title"><span class="emoji">🔑</span> 1. Cuentas de Desarrollador (obligatorias)</div>
+
+  <table class="no-break">
+    <thead>
+      <tr>
+        <th>Concepto</th>
+        <th>Detalle</th>
+        <th class="right">Costo</th>
+        <th class="center">Frecuencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Google Play Console</strong></td>
+        <td class="detail">Cuenta para publicar en Android. Se recomienda abrirla como <strong>organización</strong> (ver nota 2).</td>
+        <td class="right"><strong>US$ 25</strong></td>
+        <td class="center">Pago único</td>
+      </tr>
+      <tr>
+        <td><strong>Apple Developer Program</strong></td>
+        <td class="detail">Cuenta para publicar en iOS. Como empresa requiere número D-U-N-S (gratuito, se tramita ante Dun&nbsp;&amp;&nbsp;Bradstreet).</td>
+        <td class="right"><strong>US$ 99</strong></td>
+        <td class="center">Anual</td>
+      </tr>
+      <tr class="subtotal-row">
+        <td colspan="2">Subtotal licencias — primer año</td>
+        <td class="right">US$ 124</td>
+        <td class="center">—</td>
+      </tr>
+      <tr class="subtotal-row">
+        <td colspan="2">Renovación — años siguientes</td>
+        <td class="right">US$ 99</td>
+        <td class="center">Anual</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ 2. EQUIPO ═══════════ -->
+  <div class="section-title"><span class="emoji">💻</span> 2. Equipo requerido para iOS</div>
+
+  <p style="font-size:9.8pt; color:#475569; margin-bottom:0.4rem;">
+    Apple <strong>solo permite compilar y firmar aplicaciones iOS desde una computadora Mac</strong>.
+    Android no tiene esta restricción: se compila con los equipos actuales. Existen dos caminos:
+  </p>
+
+  <table class="no-break">
+    <thead>
+      <tr>
+        <th>Opción</th>
+        <th>Descripción</th>
+        <th class="right">Costo aprox.</th>
+        <th class="center">Modalidad</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>A. Mac en la nube</strong><br><span class="detail">(recomendada para iniciar)</span></td>
+        <td class="detail">Servicios que alquilan una Mac para compilar (Codemagic, Xcode&nbsp;Cloud, MacinCloud).
+          Suficiente para generar y subir la app. Varios ofrecen un plan gratuito limitado.</td>
+        <td class="right"><strong>US$ 0 – 30</strong></td>
+        <td class="center">Mensual</td>
+      </tr>
+      <tr>
+        <td><strong>B. Mac propia</strong></td>
+        <td class="detail">Mac mini (modelo base) — equipo permanente de la empresa, sin pagos recurrentes
+          y con autonomía total para compilar y probar.</td>
+        <td class="right"><strong>US$ 600 – 700</strong></td>
+        <td class="center">Pago único</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info no-break">
+    <strong>Recomendación</strong>
+    Iniciar con la <strong>opción A</strong> para la primera publicación (inversión mínima) y evaluar la
+    compra de una Mac cuando el ritmo de actualizaciones lo justifique. Publicar solo en
+    <strong>Android</strong> primero es también una alternativa válida: no requiere Mac y cubre a la
+    mayoría de los usuarios en Venezuela.
+  </div>
+
+  <!-- ═══════════ 3. ESTADO TÉCNICO ═══════════ -->
+  <div class="section-title"><span class="emoji">✅</span> 3. Estado técnico actual de la app</div>
+
+  <p style="font-size:9.8pt; color:#475569;">Trabajo ya realizado, sin costo adicional:</p>
+
+  <ul class="features">
+    <li class="feature-item"><span class="icon-ok">✔</span>
+      <span>Aplicación desarrollada y funcionando: búsqueda de rutas, selección de asiento, reserva y pago.</span></li>
+    <li class="feature-item"><span class="icon-ok">✔</span>
+      <span>Identificadores de la app definidos para ambas tiendas.</span></li>
+    <li class="feature-item"><span class="icon-ok">✔</span>
+      <span>Nombre visible <strong>“Aerorutas”</strong> e ícono de la aplicación configurados.</span></li>
+    <li class="feature-item"><span class="icon-ok">✔</span>
+      <span>Permisos declarados correctamente (internet, cámara y galería para el comprobante de pago).</span></li>
+    <li class="feature-item"><span class="icon-ok">✔</span>
+      <span>Textos de justificación de cámara y fotos que <strong>Apple exige</strong> — motivo frecuente de
+      rechazo, ya resuelto.</span></li>
+    <li class="feature-item"><span class="icon-ok">✔</span>
+      <span>Inicio de sesión con Google operativo en Android.</span></li>
+  </ul>
+
+  <!-- ═══════════ 4. PENDIENTES TÉCNICOS ═══════════ -->
+  <div class="section-title"><span class="emoji">🔧</span> 4. Ajustes técnicos pendientes</div>
+
+  <table class="no-break">
+    <thead>
+      <tr>
+        <th>Pendiente</th>
+        <th>Por qué es necesario</th>
+        <th class="center">Dedicación</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Llave de firma digital</strong><br><span class="detail">(Android)</span></td>
+        <td class="detail">Hoy la app se firma con una llave de prueba. Google Play <strong>rechaza</strong>
+          aplicaciones firmadas así. Se debe generar la llave definitiva de la empresa y configurarla.</td>
+        <td class="center">½ día</td>
+      </tr>
+      <tr>
+        <td><strong>Login con Google en iOS</strong></td>
+        <td class="detail">Falta registrar la aplicación iOS ante Google. Sin esto, el botón
+          “Continuar con Google” no funcionaría en iPhone.</td>
+        <td class="center">½ día</td>
+      </tr>
+      <tr>
+        <td><strong>Registro de la firma ante Google</strong></td>
+        <td class="detail">Al firmar con la llave definitiva cambia la identidad de la app; hay que
+          registrarla nuevamente o el login con Google fallaría en la versión publicada.</td>
+        <td class="center">½ día</td>
+      </tr>
+      <tr>
+        <td><strong>Política de privacidad</strong></td>
+        <td class="detail">Ambas tiendas la exigen publicada en una dirección web. La app maneja nombre,
+          cédula, teléfono y pagos. Se publicaría en el sitio actual.</td>
+        <td class="center">1 día</td>
+      </tr>
+      <tr>
+        <td><strong>Material gráfico de las fichas</strong></td>
+        <td class="detail">Capturas de pantalla en varios tamaños, ícono en alta resolución, imagen de
+          cabecera y textos descriptivos de la app.</td>
+        <td class="center">1 – 2 días</td>
+      </tr>
+      <tr>
+        <td><strong>Publicación y revisión</strong></td>
+        <td class="detail">Carga en ambas tiendas, formularios de privacidad y datos, cuenta de prueba
+          para el revisor y atención de observaciones.</td>
+        <td class="center">1 – 2 días</td>
+      </tr>
+      <tr class="subtotal-row">
+        <td colspan="2">Dedicación técnica estimada</td>
+        <td class="center">5 – 7 días</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-warn no-break">
+    <strong>⚠ Advertencia importante sobre la llave de firma</strong>
+    La llave de firma de Android es <strong>irremplazable</strong>: si se pierde el archivo o su contraseña,
+    <strong>no se pueden publicar actualizaciones</strong> de la app y habría que publicarla de cero como
+    una aplicación nueva, perdiendo instalaciones y valoraciones. Debe resguardarse como un activo
+    crítico de la empresa (respaldo seguro y custodia de la contraseña).
+  </div>
+
+  <!-- ═══════════ 5. REQUISITOS DE LAS TIENDAS ═══════════ -->
+  <div class="section-title"><span class="emoji">🏬</span> 5. Requisitos de las tiendas</div>
+
+  <ul class="features">
+    <li class="feature-item"><span class="icon-dot">●</span>
+      <span><strong>Política de privacidad publicada</strong> — obligatoria en ambas tiendas.</span></li>
+    <li class="feature-item"><span class="icon-dot">●</span>
+      <span><strong>Declaración de datos</strong> — informar qué datos recolecta la app
+      (“Seguridad de los datos” en Google, “Etiquetas de privacidad” en Apple).</span></li>
+    <li class="feature-item"><span class="icon-dot">●</span>
+      <span><strong>Cuenta de prueba</strong> — Apple exige un usuario y contraseña para que su revisor
+      pueda entrar y probar la compra.</span></li>
+    <li class="feature-item"><span class="icon-dot">●</span>
+      <span><strong>Ficha de la tienda</strong> — nombre, descripción, capturas, ícono, categoría y
+      clasificación por edades.</span></li>
+    <li class="feature-item"><span class="icon-dot">●</span>
+      <span><strong>Verificación de identidad</strong> — ambas tiendas verifican al titular de la cuenta
+      antes de permitir publicar.</span></li>
+  </ul>
+
+  <div class="callout callout-good no-break">
+    <strong>✔ Sin comisiones de las tiendas sobre las ventas</strong>
+    Google y Apple cobran entre 15% y 30% únicamente sobre productos digitales. La venta de boletos de
+    autobús es un <strong>servicio del mundo real</strong>, por lo que está expresamente permitido cobrar
+    con nuestro propio sistema (Mibanco / débito inmediato) <strong>sin pagar comisión a las tiendas</strong>.
+    Los ingresos por venta de boletos no se ven afectados.
+  </div>
+
+  <!-- ═══════════ 6. TIEMPOS ═══════════ -->
+  <div class="section-title"><span class="emoji">🗓</span> 6. Tiempos estimados</div>
+
+  <table class="no-break">
+    <thead>
+      <tr>
+        <th>Etapa</th>
+        <th class="center">Duración</th>
+        <th>Observación</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Apertura y verificación de cuentas</td>
+        <td class="center">3 – 10 días</td>
+        <td class="detail">Depende de la verificación de identidad y del trámite D-U-N-S para Apple.</td>
+      </tr>
+      <tr>
+        <td>Ajustes técnicos y material gráfico</td>
+        <td class="center">5 – 7 días</td>
+        <td class="detail">Puede avanzar en paralelo a la apertura de cuentas.</td>
+      </tr>
+      <tr>
+        <td>Revisión de Apple</td>
+        <td class="center">1 – 3 días</td>
+        <td class="detail">Si hay observaciones, se corrige y se reenvía.</td>
+      </tr>
+      <tr>
+        <td>Revisión de Google</td>
+        <td class="center">1 – 7 días</td>
+        <td class="detail">Ver nota 2: las cuentas personales requieren una prueba previa de 14 días.</td>
+      </tr>
+      <tr class="subtotal-row">
+        <td>Tiempo total estimado</td>
+        <td class="center">2 – 4 semanas</td>
+        <td class="detail">Con cuenta de organización y sin observaciones mayores.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ 7. RESUMEN DE INVERSIÓN ═══════════ -->
+  <div class="section-title"><span class="emoji">💰</span> 7. Resumen de inversión</div>
+
+  <div class="summary-box no-break">
+    <div class="row"><span>Google Play Console (pago único)</span><strong>US$ 25</strong></div>
+    <div class="row"><span>Apple Developer Program (anual)</span><strong>US$ 99</strong></div>
+    <div class="row"><span>Mac en la nube para compilar iOS (opción A, mensual)</span><strong>US$ 0 – 30</strong></div>
+    <div class="row"><span>Desarrollo y gestión de publicación (5 – 7 días)</span><strong>A convenir</strong></div>
+    <div class="row highlight"><span>Licencias — primer año</span><span>US$ 124</span></div>
+    <div class="row highlight" style="background:#475569;"><span>Licencias — años siguientes</span><span>US$ 99 / año</span></div>
+  </div>
+
+  <div class="callout callout-info no-break">
+    <strong>Alternativa de menor costo</strong>
+    Publicar <strong>solo en Android</strong>: la inversión en licencias baja a <strong>US$ 25 pago único</strong>,
+    no se requiere Mac ni renovación anual, y el tiempo se reduce aproximadamente a la mitad.
+    iOS puede incorporarse después sin rehacer trabajo, ya que la app está construida para ambas plataformas.
+  </div>
+
+  <!-- ═══════════ NOTAS ═══════════ -->
+  <div class="section-title"><span class="emoji">📌</span> Notas Importantes</div>
+
+  <ol class="notes-list no-break">
+    <li>Todos los montos están expresados en dólares americanos (US$) y corresponden a las tarifas
+      oficiales publicadas por Google y Apple a la fecha de este documento.</li>
+    <li><strong>Se recomienda abrir las cuentas a nombre de la empresa (organización), no personales.</strong>
+      Google exige a las cuentas personales nuevas realizar una prueba cerrada con 12 usuarios durante
+      14 días continuos antes de poder publicar; las cuentas de organización están exentas de ese requisito.</li>
+    <li>Los costos de Mac en la nube son referenciales y varían según el proveedor y el volumen de
+      compilaciones; se confirmarán al elegir el servicio.</li>
+    <li>La cuenta de Apple debe renovarse cada año: <strong>si se vence, la app deja de estar disponible</strong>
+      en la App Store hasta regularizar el pago.</li>
+    <li>Las tiendas pueden solicitar cambios durante la revisión. Los tiempos indicados no incluyen
+      demoras por observaciones extensas.</li>
+    <li>La app seguirá funcionando como aplicación web durante todo el proceso; la publicación en tiendas
+      es un canal adicional, no un reemplazo.</li>
+    <li>Impuestos no incluidos. El costo de desarrollo y gestión se define según la tarifa acordada.</li>
+  </ol>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <div class="doc-footer">
+    <strong>Aerorutas de Venezuela</strong> · Presupuesto de Publicación en Tiendas de Aplicaciones<br>
+    Preparado por: Equipo de Desarrollo · Fecha: 05 de agosto de 2026
+  </div>
+
+</div>
+
+</body>
+</html>
