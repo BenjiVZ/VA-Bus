@@ -126,6 +126,31 @@ class ViajeDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
 
 
+def grupos_pagados_con_cashea(viaje):
+    """`grupo_pago` de las reservas de ese viaje que se pagaron con Cashea.
+
+    Cashea se cobra en taquilla, pero se mira también en los comprobantes por
+    si algún día se habilita en la web. Un comprobante rechazado no cuenta.
+    """
+    from pagos.models import ComprobantePago, PagoCaja
+    from reservas.models import Reserva
+
+    grupos = list(Reserva.objects.filter(viaje=viaje)
+                  .exclude(grupo_pago=None)
+                  .values_list('grupo_pago', flat=True).distinct())
+    if not grupos:
+        return set()
+
+    cashea = set(PagoCaja.objects
+                 .filter(grupo_pago__in=grupos, metodo_pago__tipo='cashea')
+                 .values_list('grupo_pago', flat=True))
+    cashea |= set(ComprobantePago.objects
+                  .filter(grupo_pago__in=grupos, metodo_pago__tipo='cashea')
+                  .exclude(estado='rechazado')
+                  .values_list('grupo_pago', flat=True))
+    return cashea
+
+
 def generar_mapa_desde_layout(viaje, user=None):
     """Lee el layout JSON de cada piso y cruza con las reservas activas."""
     from reservas.models import Reserva, BloqueoAsiento
@@ -137,7 +162,7 @@ def generar_mapa_desde_layout(viaje, user=None):
     reservas_activas = Reserva.objects.filter(
         viaje=viaje,
         estado__in=['pendiente', 'apartado', 'confirmado']
-    ).values_list('numero_asiento', 'piso_asiento', flat=False)
+    ).values_list('numero_asiento', 'piso_asiento', 'grupo_pago')
 
     now = timezone.now()
     bloqueos_activos = BloqueoAsiento.objects.filter(
@@ -145,9 +170,16 @@ def generar_mapa_desde_layout(viaje, user=None):
         fecha_expiracion__gt=now,
     ).values_list('numero_asiento', 'piso_asiento', 'usuario_id')
 
+    # De dónde viene cada ocupación, para pintarla distinto en el mapa.
+    # En un viaje propio todo sale de nuestro sistema; solo se separa Cashea.
+    cashea = grupos_pagados_con_cashea(viaje)
+    origen_ocupacion = {}
+
     asientos_ocupados = set()
-    for numero, piso in reservas_activas:
-        asientos_ocupados.add((piso, numero))
+    for numero, piso, grupo in reservas_activas:
+        asiento_key = (piso, numero)
+        asientos_ocupados.add(asiento_key)
+        origen_ocupacion[asiento_key] = 'cashea' if grupo in cashea else 'sistema'
 
     user_id = user.id if user and user.is_authenticated else None
     asientos_bloqueados_mios = set()
@@ -157,6 +189,7 @@ def generar_mapa_desde_layout(viaje, user=None):
             asientos_bloqueados_mios.add(asiento_key)
             continue
         asientos_ocupados.add(asiento_key)
+        origen_ocupacion.setdefault(asiento_key, 'sistema')
 
     resultado = []
 
@@ -174,6 +207,8 @@ def generar_mapa_desde_layout(viaje, user=None):
                     num = cell_copy['number']
                     seat_key = (piso_num, num)
                     cell_copy['disponible'] = seat_key not in asientos_ocupados
+                    if not cell_copy['disponible']:
+                        cell_copy['ocupado_por'] = origen_ocupacion.get(seat_key, 'sistema')
                     if user_id:
                         cell_copy['bloqueado_por_mi'] = seat_key in asientos_bloqueados_mios
                 fila_result.append(cell_copy)
@@ -717,11 +752,16 @@ def _overlay_bloqueos_aerorutas(pisos, viaje, user):
     BloqueoAsiento.limpiar_expirados(viaje=viaje)
     now = timezone.now()
 
-    ocupados = set()
-    for (numero,) in Reserva.objects.filter(
+    # Lo que está tomado de NUESTRO lado, y con qué se pagó. Pisa la marca
+    # 'aerorutas' que trae pisos_shape: si el puesto es nuestro, eso es lo que
+    # hay que mostrar aunque Aerorutas también lo tenga ocupado (lo tiene
+    # porque se lo mandamos nosotros con ASIGPASA).
+    cashea = grupos_pagados_con_cashea(viaje)
+    ocupados = {}
+    for numero, grupo in Reserva.objects.filter(
         viaje=viaje, estado__in=['pendiente', 'apartado', 'confirmado']
-    ).values_list('numero_asiento'):
-        ocupados.add(numero)
+    ).values_list('numero_asiento', 'grupo_pago'):
+        ocupados[numero] = 'cashea' if grupo in cashea else 'sistema'
 
     uid = user.id if getattr(user, 'is_authenticated', False) else None
     mios = set()
@@ -731,7 +771,7 @@ def _overlay_bloqueos_aerorutas(pisos, viaje, user):
         if uid and buid == uid:
             mios.add(numero)
         else:
-            ocupados.add(numero)
+            ocupados.setdefault(numero, 'sistema')
 
     for piso in pisos:
         for row in piso.get('layout', []):
@@ -741,9 +781,11 @@ def _overlay_bloqueos_aerorutas(pisos, viaje, user):
                 n = cell['number']
                 if n in ocupados:
                     cell['disponible'] = False
+                    cell['ocupado_por'] = ocupados[n]
                 if n in mios:
                     cell['bloqueado_por_mi'] = True
                     cell['disponible'] = True
+                    cell.pop('ocupado_por', None)
     return pisos
 
 

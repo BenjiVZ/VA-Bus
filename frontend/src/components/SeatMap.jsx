@@ -1,22 +1,36 @@
 import { useState } from 'react';
 import { DoorOpen, ArrowUpCircle, UserCog } from 'lucide-react';
 
+/* Cómo se explica al pasajero de dónde viene una ocupación. */
+const MOTIVO_OCUPADO = {
+  sistema: 'vendido en esta página',
+  cashea: 'pagado con Cashea',
+  aerorutas: 'vendido en taquilla de Aerorutas',
+};
+
 /* ── Inline SVG seat icon ── */
 function SeatIcon({ number, state, onClick, title }) {
   const colors = {
     available: { fill: '#ffffff', stroke: '#c1c7d0', text: '#42526e', headrest: '#dfe1e6' },
     selected:  { fill: '#0052cc', stroke: '#003380', text: '#ffffff', headrest: '#0043a6' },
-    occupied:  { fill: '#fef9e7', stroke: '#f0d264', text: '#b8960c', headrest: '#fae8a0' },
     moving:    { fill: '#ff8f00', stroke: '#e65100', text: '#ffffff', headrest: '#f57c00' },
+    // Ocupado, con un color por procedencia (campo `ocupado_por` del backend).
+    occupied:            { fill: '#ede9fe', stroke: '#a78bfa', text: '#5b21b6', headrest: '#ddd6fe' },
+    occupied_sistema:    { fill: '#ede9fe', stroke: '#a78bfa', text: '#5b21b6', headrest: '#ddd6fe' },
+    occupied_cashea:     { fill: '#fff9c4', stroke: '#facc15', text: '#a16207', headrest: '#fef08a' },
+    occupied_aerorutas:  { fill: '#e2e8f0', stroke: '#94a3b8', text: '#475569', headrest: '#cbd5e1' },
   };
-  const c = colors[state] || colors.available;
-  const cursor = (state === 'occupied' || state === 'moving') ? 'not-allowed' : 'pointer';
+  const ocupado = String(state).startsWith('occupied');
+  // Si llegara una procedencia desconocida, se pinta como ocupado generico:
+  // nunca como libre, que invitaria a venderlo dos veces.
+  const c = colors[state] || (ocupado ? colors.occupied : colors.available);
+  const cursor = (ocupado || state === 'moving') ? 'not-allowed' : 'pointer';
 
   return (
     <svg
       width="48" height="52" viewBox="0 0 48 52"
       className={`seat-svg seat-svg-${state}`}
-      onClick={(state !== 'occupied' && state !== 'moving') ? onClick : undefined}
+      onClick={(!ocupado && state !== 'moving') ? onClick : undefined}
       style={{ cursor }}
       role="button"
       aria-label={title}
@@ -142,10 +156,13 @@ export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat, movi
               const key = `${rowIdx}-${colIdx}`;
 
               if (type === 'seat' && number) {
-                const state = !disponible ? 'occupied' : getSeatState(number);
+                const procedencia = cell.ocupado_por || 'sistema';
+                const state = !disponible ? `occupied_${procedencia}` : getSeatState(number);
                 const pulseClass = isMovingMode && state === 'available' ? ' seat-cell-pulse' : '';
                 const titleText = state === 'moving' ? `Asiento ${number} - Mover desde aquí`
-                  : `Asiento ${number} - ${disponible ? (state === 'selected' ? 'Seleccionado' : (isMovingMode ? 'Clic para mover aquí' : 'Disponible')) : 'Ocupado'}`;
+                  : `Asiento ${number} - ${disponible
+                      ? (state === 'selected' ? 'Seleccionado' : (isMovingMode ? 'Clic para mover aquí' : 'Disponible'))
+                      : `Ocupado (${MOTIVO_OCUPADO[procedencia] || 'vendido'})`}`;
                 return (
                   <div key={key} className={`layout-cell layout-cell-seat${pulseClass}`}>
                     <SeatIcon
@@ -180,8 +197,16 @@ export default function SeatMap({ pisosConfig, selectedSeats, onToggleSeat, movi
           <span>Disponible</span>
         </div>
         <div className="seat-legend-item">
-          <SeatIcon number="" state="occupied" onClick={() => {}} title="Ocupado" />
-          <span>Ocupado</span>
+          <SeatIcon number="" state="occupied_sistema" onClick={() => {}} title="Vendido en esta página" />
+          <span>Vendido aquí</span>
+        </div>
+        <div className="seat-legend-item">
+          <SeatIcon number="" state="occupied_cashea" onClick={() => {}} title="Pagado con Cashea" />
+          <span>Cashea</span>
+        </div>
+        <div className="seat-legend-item">
+          <SeatIcon number="" state="occupied_aerorutas" onClick={() => {}} title="Vendido en taquilla de Aerorutas" />
+          <span>Vendido en Aerorutas</span>
         </div>
         <div className="seat-legend-item">
           <SeatIcon number="" state="selected" onClick={() => {}} title="Seleccionado" />

@@ -311,7 +311,13 @@ def pisos_shape(puestos: list, asientos_por_fila: int = 4) -> list:
 
     layout, buffer = [], []
     for n in range(1, total + 1):
-        buffer.append({'type': 'seat', 'number': n, 'disponible': n in disponibles})
+        libre = n in disponibles
+        celda = {'type': 'seat', 'number': n, 'disponible': libre}
+        if not libre:
+            # Ocupado según Aerorutas. Si además es nuestro, el overlay de
+            # viajes.views lo reemplaza por 'sistema' o 'cashea'.
+            celda['ocupado_por'] = 'aerorutas'
+        buffer.append(celda)
         if len(buffer) == asientos_por_fila:
             layout.append(_fila_con_pasillo(buffer))
             buffer = []

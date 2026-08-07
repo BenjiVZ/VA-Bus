@@ -50,8 +50,11 @@
     display: flex; align-items: center; justify-content: center; transition: .12s;
   }
   .asiento:hover:not(.ocupado) { border-color: #2d5aa0; transform: translateY(-1px); }
-  .asiento.ocupado { background: #fde8e8; color: #b91c1c; border-color: #f5b5b5;
-    cursor: not-allowed; opacity: .75; }
+  .asiento.ocupado { cursor: not-allowed; opacity: .8; }
+  /* De dónde viene la ocupación (lo manda el backend en `ocupado_por`). */
+  .asiento.ocu-sistema   { background: #ede9fe; color: #5b21b6; border-color: #a78bfa; }
+  .asiento.ocu-cashea    { background: #fff9c4; color: #a16207; border-color: #facc15; }
+  .asiento.ocu-aerorutas { background: #e2e8f0; color: #475569; border-color: #94a3b8; }
   .asiento.sel { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
   .asiento.pasillo, .asiento.vacio { border: none; background: none; cursor: default; }
   .leyenda { display: flex; gap: 14px; font-size: .76rem; margin-top: 8px; flex-wrap: wrap; }
@@ -154,7 +157,9 @@
         <div class="leyenda">
           <span><i class="caja-chip" style="background:var(--superficie)"></i> Disponible</span>
           <span><i class="caja-chip" style="background:#1a3a6b;border-color:#1a3a6b"></i> Seleccionado</span>
-          <span><i class="caja-chip" style="background:#fde8e8;border-color:#f5b5b5"></i> Ocupado</span>
+          <span><i class="caja-chip" style="background:#ede9fe;border-color:#a78bfa"></i> Vendido aqu&iacute;</span>
+          <span><i class="caja-chip" style="background:#fff9c4;border-color:#facc15"></i> Cashea</span>
+          <span><i class="caja-chip" style="background:#e2e8f0;border-color:#94a3b8"></i> Vendido en Aerorutas</span>
         </div>
       </div>
     </div>
@@ -272,6 +277,13 @@
   // igual tiene que poder vender).
   // Destinos: se llenan con los que realmente salen desde el origen elegido, y
   // filtran la lista al instante porque los viajes ya están cargados.
+
+  // Cómo se llama cada procedencia en la interfaz.
+  const ORIGEN_OCUPACION = {
+    sistema: 'vendido en nuestro sistema',
+    cashea: 'pagado con Cashea',
+    aerorutas: 'vendido en el sistema de Aerorutas',
+  };
 
   let viajesCache = [];   // viajes del origen elegido (sin filtrar por destino)
 
@@ -474,7 +486,9 @@
             c.className = 'asiento ' + (celda.type === 'aisle' ? 'pasillo' : 'vacio');
           } else {
             const libre = celda.disponible !== false;
-            c.className = 'asiento' + (libre ? '' : ' ocupado');
+            const proc = celda.ocupado_por || 'sistema';
+            c.className = 'asiento' + (libre ? '' : ' ocupado ocu-' + proc);
+            c.title = libre ? 'Disponible' : ('Ocupado — ' + ORIGEN_OCUPACION[proc]);
             c.textContent = celda.number;
             if (libre) {
               c.addEventListener('click', function () {
