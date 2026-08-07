@@ -1,4 +1,5 @@
 {% extends "backoffice/base.html" %}
+{% load l10n %}
 
 {% block title %}Caja — Venta en taquilla{% endblock %}
 
@@ -78,11 +79,18 @@
   .aviso-info { background: #eef3fa; color: #1a3a6b; border-left: 4px solid #1a3a6b; }
   .ticket-cod { font-family: monospace; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; }
   .muted { color: var(--body-quiet-color, #64748b); font-size: .84rem; }
+
+  /* Pista al lado de la etiqueta: cuántas opciones hay o si está cargando. */
+  .pista { font-weight: 600; text-transform: none; letter-spacing: 0;
+    color: var(--texto-suave); font-size: .68rem; }
+  .pista.cargando { color: var(--navy-suave); }
+  select:disabled { opacity: .65; cursor: not-allowed; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="caja-app">
+  {{ oficinas|json_script:"datos-oficinas" }}
 
   {% if not metodos %}
   <div class="aviso aviso-error">
@@ -98,31 +106,26 @@
       <div class="caja-panel">
         <h2>1 · Buscar el viaje</h2>
         <div class="caja-row">
-          <div class="caja-field">
-            <label for="f-origen">Origen</label>
-            <select id="f-origen">
-              <option value="">— Elegir —</option>
-              {% for o in oficinas %}
-                <option value="{{ o.codofi }}">{{ o.desofi }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="caja-field">
-            <label for="f-destino">Destino (opcional)</label>
-            <select id="f-destino">
-              <option value="">Todos</option>
-              {% for o in oficinas %}
-                <option value="{{ o.codofi }}">{{ o.desofi }}</option>
-              {% endfor %}
-            </select>
-          </div>
           <div class="caja-field" style="max-width:170px">
             <label for="f-fecha">Fecha</label>
             <input type="date" id="f-fecha" value="{{ hoy }}">
           </div>
-          <div class="caja-field" style="max-width:130px; flex:0 0 auto">
+          <div class="caja-field">
+            <label for="f-origen">Origen <span class="pista" id="pista-origen"></span></label>
+            <select id="f-origen">
+              <option value="">— Elegir —</option>
+            </select>
+          </div>
+          <div class="caja-field">
+            <label for="f-destino">Destino <span class="pista" id="pista-destino"></span></label>
+            <select id="f-destino" disabled>
+              <option value="">Elige un origen primero</option>
+            </select>
+          </div>
+          <div class="caja-field" style="max-width:120px; flex:0 0 auto">
             <label>&nbsp;</label>
-            <button type="button" class="button" id="btn-buscar" style="padding:8px 16px">Buscar</button>
+            <button type="button" class="button" id="btn-buscar"
+                    title="Volver a consultar las salidas">&#8635; Refrescar</button>
           </div>
         </div>
         <div id="lista-viajes" style="margin-top:12px"></div>
@@ -215,8 +218,15 @@
 <script>
 (function () {
   "use strict";
-  const TASA = {{ tasa_bcv|default:0 }};
+  // `unlocalize` es obligatorio: en espanol Django escribiria 732,4787 y
+  // eso es un error de sintaxis en JavaScript (rompia TODO el script).
+  const TASA = {{ tasa_bcv|default:0|unlocalize }};
   const CSRF = document.cookie.match(/csrftoken=([^;]+)/) ? RegExp.$1 : '';
+  // Lista completa de oficinas; el desplegable de origen se arma en JS para
+  // poder separarlas entre las que tienen salidas y las que no.
+  const OFICINAS = (JSON.parse(document.getElementById('datos-oficinas').textContent) || [])
+    .filter(o => o && o.codofi)
+    .map(o => ({ codofi: o.codofi, desofi: o.desofi || o.codofi }));
 
   let viajeSel = null;     // viaje elegido
   let asientosSel = [];    // [{numero, piso}]
@@ -238,23 +248,101 @@
     cont.innerHTML = '<div class="aviso aviso-' + tipo + '">' + html + '</div>';
   }
 
-  // ── 1. Buscar viajes ──
-  $('btn-buscar').addEventListener('click', async function () {
+  // ══════ 1. Orígenes, destinos y lista de viajes ══════
+  //
+  // Orígenes: los que ese día tienen salidas publicadas van primero; los demás
+  // quedan en un segundo grupo (el catálogo puede venir incompleto y la cajera
+  // igual tiene que poder vender).
+  // Destinos: se llenan con los que realmente salen desde el origen elegido, y
+  // filtran la lista al instante porque los viajes ya están cargados.
+
+  let viajesCache = [];   // viajes del origen elegido (sin filtrar por destino)
+
+  function pista(id, texto, cargando) {
+    const el = $(id);
+    el.textContent = texto || '';
+    el.classList.toggle('cargando', !!cargando);
+  }
+
+  function grupoOpciones(sel, etiqueta, lista) {
+    if (!lista.length) return;
+    const g = document.createElement('optgroup');
+    g.label = etiqueta;
+    lista.forEach(function (o) {
+      const op = document.createElement('option');
+      op.value = o.codofi; op.textContent = o.desofi;
+      g.appendChild(op);
+    });
+    sel.appendChild(g);
+  }
+
+  async function cargarOrigenes() {
+    const sel = $('f-origen'), previo = sel.value;
+    pista('pista-origen', '· cargando…', true);
+
+    const res = await post('catalogo', { fecha: $('f-fecha').value });
+    const disponibles = new Set((res && res.origenes) || []);
+
+    sel.innerHTML = '<option value="">— Elegir —</option>';
+    if (res && res.ok && res.hay_catalogo && disponibles.size) {
+      const con = OFICINAS.filter(o => disponibles.has(o.codofi));
+      const sin = OFICINAS.filter(o => !disponibles.has(o.codofi));
+      grupoOpciones(sel, 'Con salidas ese día (' + con.length + ')', con);
+      grupoOpciones(sel, 'Sin salidas publicadas', sin);
+      pista('pista-origen', '· ' + con.length + ' con salidas', false);
+    } else {
+      // Sin catálogo del día no se puede saber cuáles tienen salidas: se
+      // ofrecen todas antes que dejar a la cajera sin poder buscar.
+      grupoOpciones(sel, 'Todas las oficinas', OFICINAS);
+      pista('pista-origen', '· catálogo del día no disponible', false);
+    }
+
+    sel.value = previo;                 // conservar lo elegido si sigue estando
+    if (sel.value !== previo) reiniciarDestinos();
+  }
+
+  function reiniciarDestinos() {
+    const sel = $('f-destino');
+    sel.innerHTML = '<option value="">Elige un origen primero</option>';
+    sel.disabled = true;
+    pista('pista-destino', '', false);
+    viajesCache = [];
+  }
+
+  function pintarDestinos(destinos) {
+    const sel = $('f-destino');
+    sel.innerHTML = '<option value="">Todos los destinos</option>';
+    (destinos || []).forEach(function (d) {
+      const op = document.createElement('option');
+      op.value = d; op.textContent = d;
+      sel.appendChild(op);
+    });
+    sel.disabled = !(destinos && destinos.length);
+    pista('pista-destino', destinos && destinos.length
+      ? '· ' + destinos.length + ' disponible' + (destinos.length > 1 ? 's' : '')
+      : '· sin destinos', false);
+  }
+
+  function pintarViajes() {
     const cont = $('lista-viajes');
-    cont.innerHTML = '<p class="muted">Buscando… (el barrido en vivo puede tardar unos segundos)</p>';
-    viajeSel = null; asientosSel = []; $('panel-asientos').style.display = 'none';
+    const filtro = $('f-destino').value;
+    const lista = filtro
+      ? viajesCache.filter(v => (v.ruta || {}).destino === filtro)
+      : viajesCache;
+
+    viajeSel = null; asientosSel = [];
+    $('panel-asientos').style.display = 'none';
     pintarResumen();
 
-    const res = await post('buscar', {
-      origen: $('f-origen').value,
-      destino: $('f-destino').value,
-      fecha: $('f-fecha').value,
-    });
-    if (!res.ok) { aviso(cont, 'error', res.msg); return; }
-    if (!res.viajes.length) { aviso(cont, 'info', 'No hay viajes con precio para esa búsqueda.'); return; }
+    if (!lista.length) {
+      aviso(cont, 'info', filtro
+        ? 'No hay salidas hacia ese destino ese día.'
+        : 'No hay viajes con precio para esa búsqueda.');
+      return;
+    }
 
     cont.innerHTML = '';
-    res.viajes.forEach(function (v) {
+    lista.forEach(function (v) {
       const div = document.createElement('div');
       div.className = 'viaje-item';
       div.innerHTML =
@@ -273,7 +361,46 @@
       });
       cont.appendChild(div);
     });
+  }
+
+  async function buscarViajes() {
+    const origen = $('f-origen').value;
+    const cont = $('lista-viajes');
+    if (!origen) { reiniciarDestinos(); cont.innerHTML = ''; return; }
+
+    const destinoPrevio = $('f-destino').value;
+    $('f-destino').disabled = true;
+    pista('pista-destino', '· buscando…', true);
+    cont.innerHTML = '<p class="muted">Buscando salidas… ' +
+      '(la consulta en vivo a Aerorutas puede tardar unos segundos)</p>';
+
+    // Siempre se barren TODOS los destinos: así el desplegable se llena de una
+    // vez y filtrar después no cuesta otra consulta.
+    const res = await post('buscar', { origen: origen, fecha: $('f-fecha').value });
+
+    if (!res.ok) {
+      reiniciarDestinos();
+      aviso(cont, 'error', res.msg);
+      return;
+    }
+
+    viajesCache = res.viajes || [];
+    pintarDestinos(res.destinos);
+    if (destinoPrevio && (res.destinos || []).indexOf(destinoPrevio) >= 0) {
+      $('f-destino').value = destinoPrevio;   // no perder el filtro al refrescar
+    }
+    pintarViajes();
+  }
+
+  $('f-origen').addEventListener('change', buscarViajes);
+  $('f-destino').addEventListener('change', pintarViajes);
+  $('btn-buscar').addEventListener('click', buscarViajes);
+  $('f-fecha').addEventListener('change', async function () {
+    await cargarOrigenes();
+    buscarViajes();
   });
+
+  cargarOrigenes();
 
   // ── 2. Mapa de asientos ──
   async function elegirViaje(v) {

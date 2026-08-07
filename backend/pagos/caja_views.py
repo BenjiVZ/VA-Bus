@@ -29,7 +29,7 @@ from django.utils import timezone
 from reservas.models import Reserva
 from reservas.services import confirmar_grupo_pago
 from viajes import aerorutas
-from viajes.models import ConfiguracionGeneral, Viaje
+from viajes.models import ConfiguracionGeneral, RutaAerorutasSnapshot, Viaje
 from viajes.views import (
     generar_mapa_desde_layout,
     obtener_o_crear_viaje_espejo,
@@ -113,7 +113,50 @@ def _accion_buscar(request):
         })
 
     resultados.sort(key=lambda v: str(v.get('hora_salida') or ''))
-    return JsonResponse({'ok': True, 'viajes': resultados, 'total': len(resultados)})
+
+    # Destinos realmente alcanzables desde ese origen: con esto el desplegable
+    # de destino deja de ofrecer ciudades a las que no sale nada ese día.
+    destinos, vistos = [], set()
+    for v in resultados:
+        nombre = (v.get('ruta') or {}).get('destino') or ''
+        if nombre and nombre not in vistos:
+            vistos.add(nombre)
+            destinos.append(nombre)
+    destinos.sort()
+
+    return JsonResponse({'ok': True, 'viajes': resultados,
+                         'total': len(resultados), 'destinos': destinos})
+
+
+def _accion_catalogo(request):
+    """Oficinas que ese día tienen salidas publicadas (con precio).
+
+    Sale del catálogo precargado, así que es instantáneo. No se usa para
+    bloquear: las que no aparecen se siguen ofreciendo aparte, porque el
+    snapshot puede estar incompleto y la cajera igual tiene que poder vender.
+    """
+    fecha = request.POST.get('fecha') or timezone.localdate().isoformat()
+
+    snap = RutaAerorutasSnapshot.objects.filter(fecha=fecha).first()
+    catalogo = snap.data if snap else []
+
+    con_salidas = set()
+    for v in catalogo:
+        try:
+            precio = float(v.get('precio_usd') or 0)
+        except (TypeError, ValueError):
+            precio = 0
+        if precio <= 0:
+            continue  # sin precio no se puede vender: Aerorutas no lo publicó
+        partes = str(v.get('id') or '').split('_')
+        if len(partes) > 2 and partes[1]:
+            con_salidas.add(partes[1])
+
+    return JsonResponse({
+        'ok': True,
+        'origenes': sorted(con_salidas),
+        'hay_catalogo': bool(catalogo),
+    })
 
 
 def _accion_asientos(request):
@@ -331,6 +374,7 @@ def _accion_vender(request):
 # ══════════════════════════════════════════════════════════════════
 
 ACCIONES = {
+    'catalogo': _accion_catalogo,
     'buscar': _accion_buscar,
     'asientos': _accion_asientos,
     'vender': _accion_vender,
