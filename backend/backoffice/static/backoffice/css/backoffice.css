@@ -143,6 +143,11 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
   min-height: 100vh;
 }
 
+/* El velo solo existe para el menú deslizable de pantallas chicas. Fuera del
+   media query también tiene que estar oculto: si no, cuenta como celda de la
+   grilla y descoloca la barra lateral y el contenido. */
+.bo-velo { display: none; }
+
 .bo-lateral {
   background: linear-gradient(180deg, var(--navy-oscuro) 0%, #16294a 100%);
   color: #fff;
@@ -526,7 +531,7 @@ td.mono, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospac
   .bo.abierto .bo-lateral { transform: translateX(0); }
 
   .bo-velo {
-    display: none; position: fixed; inset: 0; z-index: 50;
+    position: fixed; inset: 0; z-index: 50;
     background: rgba(8, 15, 28, .55);
   }
 
