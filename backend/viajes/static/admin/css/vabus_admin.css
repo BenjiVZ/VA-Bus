@@ -346,6 +346,10 @@ ul.messagelist li {
   background: linear-gradient(135deg, #14532d 0%, #15803d 100%);
 }
 
+.va-card--caja {
+  background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+}
+
 .va-card h2 {
   margin: 0 0 4px;
   font-size: 1.05rem;
@@ -363,6 +367,15 @@ ul.messagelist li {
 
 .va-card--pagos h2 {
   color: #bbf7d0;
+}
+
+.va-card--caja h2 {
+  color: #ddd6fe;
+}
+
+.va-card--caja .va-card__btn {
+  background: #ddd6fe;
+  color: #5b21b6;
 }
 
 .va-card p {

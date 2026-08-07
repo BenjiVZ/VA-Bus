@@ -1,0 +1,416 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Caja — Venta en taquilla{% endblock %}
+{% block content_title %}<h1>Caja — Venta en taquilla</h1>{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .caja-wrap { display: grid; grid-template-columns: 1fr 340px; gap: 18px; align-items: start; }
+  @media (max-width: 1100px) { .caja-wrap { grid-template-columns: 1fr; } }
+
+  .caja-panel {
+    background: var(--va-card-bg, #fff); border: 1px solid var(--hairline-color, #e2e8f0);
+    border-radius: 12px; padding: 16px 18px; margin-bottom: 16px;
+  }
+  .caja-panel h2 {
+    margin: -16px -18px 14px; padding: 10px 18px; font-size: .74rem; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase;
+    background: var(--darkened-bg, #f6f8fb); border-bottom: 1px solid var(--hairline-color, #e2e8f0);
+    border-radius: 12px 12px 0 0;
+  }
+  .caja-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .caja-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px; }
+  .caja-field label { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--body-quiet-color, #64748b); }
+  .caja-field input, .caja-field select, .caja-field textarea { width: 100%; }
+
+  /* Lista de viajes */
+  .viaje-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--hairline-color, #e2e8f0);
+    border-radius: 9px; margin-bottom: 8px; cursor: pointer; transition: .12s;
+  }
+  .viaje-item:hover { border-color: #2d5aa0; background: var(--selected-bg, #eef3fa); }
+  .viaje-item.sel { border-color: #2d5aa0; background: var(--selected-bg, #eef3fa);
+    box-shadow: 0 0 0 2px rgba(45,90,160,.25); }
+  .viaje-hora { font-weight: 800; font-size: 1.05rem; min-width: 62px; }
+  .viaje-ruta { font-weight: 700; }
+  .viaje-meta { font-size: .78rem; color: var(--body-quiet-color, #64748b); }
+  .viaje-precio { font-weight: 800; color: #15803d; white-space: nowrap; }
+  .tag-local { background: #f5c842; color: #1a3a6b; border-radius: 4px;
+    padding: 1px 6px; font-size: .64rem; font-weight: 800; margin-left: 6px; }
+
+  /* Mapa de asientos */
+  .bus-piso { margin-bottom: 14px; }
+  .bus-fila { display: flex; gap: 6px; margin-bottom: 6px; }
+  .asiento {
+    width: 42px; height: 42px; border-radius: 8px; border: 1px solid #cbd5e1;
+    background: #fff; color: #1e293b; font-weight: 700; font-size: .8rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: .12s;
+  }
+  .asiento:hover:not(.ocupado) { border-color: #2d5aa0; transform: translateY(-1px); }
+  .asiento.ocupado { background: #fde8e8; color: #b91c1c; border-color: #f5b5b5;
+    cursor: not-allowed; opacity: .75; }
+  .asiento.sel { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
+  .asiento.pasillo, .asiento.vacio { border: none; background: none; cursor: default; }
+  .leyenda { display: flex; gap: 14px; font-size: .76rem; margin-top: 8px; flex-wrap: wrap; }
+  .leyenda span { display: flex; align-items: center; gap: 5px; }
+  .caja-chip { width: 14px; height: 14px; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block; }
+
+  /* Resumen */
+  .resumen-linea { display: flex; justify-content: space-between; padding: 5px 0;
+    border-bottom: 1px dashed var(--hairline-color, #e2e8f0); font-size: .88rem; }
+  .resumen-total { display: flex; justify-content: space-between; margin-top: 10px;
+    padding: 10px 12px; background: #1a3a6b; color: #fff; border-radius: 9px;
+    font-weight: 800; font-size: 1.05rem; }
+  .resumen-total.bs { background: #15803d; margin-top: 6px; font-size: .95rem; }
+
+  .btn-cobrar {
+    width: 100%; padding: 13px; border: none; border-radius: 10px; cursor: pointer;
+    background: #15803d; color: #fff; font-weight: 800; font-size: 1rem; margin-top: 12px;
+  }
+  .btn-cobrar:hover { background: #166534; }
+  .btn-cobrar:disabled { background: #94a3b8; cursor: not-allowed; }
+
+  .aviso { padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: .85rem; font-weight: 600; }
+  .aviso-error { background: #fde8e8; color: #b91c1c; border-left: 4px solid #b91c1c; }
+  .aviso-ok { background: #e6f6ec; color: #14532d; border-left: 4px solid #15803d; }
+  .aviso-info { background: #eef3fa; color: #1a3a6b; border-left: 4px solid #1a3a6b; }
+  .ticket-cod { font-family: monospace; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; }
+  .muted { color: var(--body-quiet-color, #64748b); font-size: .84rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="caja-app">
+
+  {% if not metodos %}
+  <div class="aviso aviso-error">
+    No hay métodos de pago habilitados para caja. Ve a
+    <a href="/admin/pagos/metodopago/">Métodos de Pago</a> y marca
+    <strong>“Disponible en caja (taquilla)”</strong> en los que deba usar la cajera.
+  </div>
+  {% endif %}
+
+  <div class="caja-wrap">
+    <!-- ══════ Columna izquierda: viaje y puestos ══════ -->
+    <div>
+      <div class="caja-panel">
+        <h2>1 · Buscar el viaje</h2>
+        <div class="caja-row">
+          <div class="caja-field">
+            <label for="f-origen">Origen</label>
+            <select id="f-origen">
+              <option value="">— Elegir —</option>
+              {% for o in oficinas %}
+                <option value="{{ o.codofi }}">{{ o.desofi }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="caja-field">
+            <label for="f-destino">Destino (opcional)</label>
+            <select id="f-destino">
+              <option value="">Todos</option>
+              {% for o in oficinas %}
+                <option value="{{ o.codofi }}">{{ o.desofi }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="caja-field" style="max-width:170px">
+            <label for="f-fecha">Fecha</label>
+            <input type="date" id="f-fecha" value="{{ hoy }}">
+          </div>
+          <div class="caja-field" style="max-width:130px; flex:0 0 auto">
+            <label>&nbsp;</label>
+            <button type="button" class="button" id="btn-buscar" style="padding:8px 16px">Buscar</button>
+          </div>
+        </div>
+        <div id="lista-viajes" style="margin-top:12px"></div>
+      </div>
+
+      <div class="caja-panel" id="panel-asientos" style="display:none">
+        <h2>2 · Elegir puesto(s)</h2>
+        <div id="mapa"></div>
+        <div class="leyenda">
+          <span><i class="caja-chip" style="background:#fff"></i> Disponible</span>
+          <span><i class="caja-chip" style="background:#1a3a6b;border-color:#1a3a6b"></i> Seleccionado</span>
+          <span><i class="caja-chip" style="background:#fde8e8;border-color:#f5b5b5"></i> Ocupado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ Columna derecha: cliente, pago y cobro ══════ -->
+    <div>
+      <div class="caja-panel">
+        <h2>3 · Datos del cliente</h2>
+        <div class="caja-field" style="margin-bottom:8px">
+          <label for="c-nombre">Nombre completo *</label>
+          <input type="text" id="c-nombre" placeholder="Nombre y apellido">
+        </div>
+        <div class="caja-row" style="margin-bottom:8px">
+          <div class="caja-field" style="max-width:80px; flex:0 0 auto">
+            <label for="c-tipo">Tipo</label>
+            <select id="c-tipo"><option>V</option><option>E</option><option>J</option><option>P</option></select>
+          </div>
+          <div class="caja-field">
+            <label for="c-cedula">Cédula</label>
+            <input type="text" id="c-cedula" placeholder="12345678" inputmode="numeric">
+          </div>
+        </div>
+        <div class="caja-field" style="margin-bottom:8px">
+          <label for="c-telefono">Teléfono</label>
+          <input type="text" id="c-telefono" placeholder="04141234567" inputmode="numeric">
+        </div>
+        <div class="caja-field">
+          <label for="c-email">Correo (opcional — se le envía el ticket)</label>
+          <input type="email" id="c-email" placeholder="cliente@correo.com">
+        </div>
+      </div>
+
+      <div class="caja-panel">
+        <h2>4 · Pago</h2>
+        <div class="caja-field" style="margin-bottom:8px">
+          <label for="p-metodo">Método</label>
+          <select id="p-metodo">
+            {% for m in metodos %}
+              <option value="{{ m.id }}" data-moneda="{{ m.moneda }}">{{ m.nombre }} — {{ m.get_tipo_display }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="caja-row" style="margin-bottom:8px">
+          <div class="caja-field" style="max-width:110px; flex:0 0 auto">
+            <label for="p-moneda">Moneda</label>
+            <select id="p-moneda">
+              <option value="BS">Bs.</option>
+              <option value="USD">$</option>
+            </select>
+          </div>
+          <div class="caja-field">
+            <label for="p-monto">Monto cobrado</label>
+            <input type="number" id="p-monto" step="0.01" min="0" placeholder="0.00">
+          </div>
+        </div>
+        <div class="caja-field" style="margin-bottom:8px">
+          <label for="p-referencia">Referencia / código</label>
+          <input type="text" id="p-referencia" placeholder="Nº de pago móvil, débito o Cashea">
+        </div>
+        <div class="caja-field">
+          <label for="p-nota">Observaciones</label>
+          <input type="text" id="p-nota" placeholder="Opcional">
+        </div>
+      </div>
+
+      <div class="caja-panel">
+        <h2>5 · Resumen</h2>
+        <div id="resumen">
+          <p class="muted">Elige un viaje y sus puestos.</p>
+        </div>
+        <button type="button" class="btn-cobrar" id="btn-cobrar" disabled>Cobrar y emitir boleto</button>
+        <div id="salida"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const TASA = {{ tasa_bcv|default:0 }};
+  const CSRF = document.cookie.match(/csrftoken=([^;]+)/) ? RegExp.$1 : '';
+
+  let viajeSel = null;     // viaje elegido
+  let asientosSel = [];    // [{numero, piso}]
+
+  const $ = (id) => document.getElementById(id);
+
+  async function post(accion, datos) {
+    const fd = new FormData();
+    fd.append('accion', accion);
+    fd.append('csrfmiddlewaretoken', CSRF);
+    Object.entries(datos || {}).forEach(([k, v]) => fd.append(k, v));
+    const r = await fetch(window.location.pathname, {
+      method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    return r.json();
+  }
+
+  function aviso(cont, tipo, html) {
+    cont.innerHTML = '<div class="aviso aviso-' + tipo + '">' + html + '</div>';
+  }
+
+  // ── 1. Buscar viajes ──
+  $('btn-buscar').addEventListener('click', async function () {
+    const cont = $('lista-viajes');
+    cont.innerHTML = '<p class="muted">Buscando… (el barrido en vivo puede tardar unos segundos)</p>';
+    viajeSel = null; asientosSel = []; $('panel-asientos').style.display = 'none';
+    pintarResumen();
+
+    const res = await post('buscar', {
+      origen: $('f-origen').value,
+      destino: $('f-destino').value,
+      fecha: $('f-fecha').value,
+    });
+    if (!res.ok) { aviso(cont, 'error', res.msg); return; }
+    if (!res.viajes.length) { aviso(cont, 'info', 'No hay viajes con precio para esa búsqueda.'); return; }
+
+    cont.innerHTML = '';
+    res.viajes.forEach(function (v) {
+      const div = document.createElement('div');
+      div.className = 'viaje-item';
+      div.innerHTML =
+        '<div class="viaje-hora">' + String(v.hora_salida || '').slice(0, 5) + '</div>' +
+        '<div style="flex:1">' +
+          '<div class="viaje-ruta">' + v.ruta.origen + ' → ' + v.ruta.destino +
+            (v.local ? '<span class="tag-local">LOCAL</span>' : '') + '</div>' +
+          '<div class="viaje-meta">' + (v.autobus.nombre || '') +
+            (v.asientos_disponibles != null ? ' · ' + v.asientos_disponibles + ' puestos' : '') + '</div>' +
+        '</div>' +
+        '<div class="viaje-precio">$' + v.precio_usd + '</div>';
+      div.addEventListener('click', function () {
+        document.querySelectorAll('.viaje-item').forEach(e => e.classList.remove('sel'));
+        div.classList.add('sel');
+        elegirViaje(v);
+      });
+      cont.appendChild(div);
+    });
+  });
+
+  // ── 2. Mapa de asientos ──
+  async function elegirViaje(v) {
+    viajeSel = v; asientosSel = [];
+    const panel = $('panel-asientos'), mapa = $('mapa');
+    panel.style.display = '';
+    mapa.innerHTML = '<p class="muted">Cargando el bus…</p>';
+    pintarResumen();
+
+    const res = await post('asientos', { viaje_id: v.id });
+    if (!res.ok) { aviso(mapa, 'error', res.msg); return; }
+
+    mapa.innerHTML = '';
+    (res.pisos || []).forEach(function (piso) {
+      const cont = document.createElement('div');
+      cont.className = 'bus-piso';
+      if ((res.pisos || []).length > 1) {
+        cont.innerHTML = '<p class="muted" style="font-weight:700">Piso ' + piso.numero_piso + '</p>';
+      }
+      (piso.layout || []).forEach(function (fila) {
+        const f = document.createElement('div');
+        f.className = 'bus-fila';
+        fila.forEach(function (celda) {
+          const c = document.createElement('div');
+          if (celda.type !== 'seat') {
+            c.className = 'asiento ' + (celda.type === 'aisle' ? 'pasillo' : 'vacio');
+          } else {
+            const libre = celda.disponible !== false;
+            c.className = 'asiento' + (libre ? '' : ' ocupado');
+            c.textContent = celda.number;
+            if (libre) {
+              c.addEventListener('click', function () {
+                toggleAsiento(c, celda.number, piso.numero_piso);
+              });
+            }
+          }
+          f.appendChild(c);
+        });
+        cont.appendChild(f);
+      });
+      mapa.appendChild(cont);
+    });
+  }
+
+  function toggleAsiento(el, numero, piso) {
+    const i = asientosSel.findIndex(a => a.numero === numero && a.piso === piso);
+    if (i >= 0) { asientosSel.splice(i, 1); el.classList.remove('sel'); }
+    else { asientosSel.push({ numero: numero, piso: piso }); el.classList.add('sel'); }
+    pintarResumen();
+  }
+
+  // ── Resumen y total ──
+  function pintarResumen() {
+    const cont = $('resumen'), btn = $('btn-cobrar');
+    if (!viajeSel || !asientosSel.length) {
+      cont.innerHTML = '<p class="muted">Elige un viaje y sus puestos.</p>';
+      btn.disabled = true;
+      return;
+    }
+    const precio = parseFloat(viajeSel.precio_usd) || 0;
+    const totalUsd = precio * asientosSel.length;
+    const totalBs = TASA > 0 ? totalUsd * TASA : 0;
+    const nums = asientosSel.map(a => '#' + a.numero).join(', ');
+
+    let html =
+      '<div class="resumen-linea"><span>Ruta</span><strong>' +
+        viajeSel.ruta.origen + ' → ' + viajeSel.ruta.destino + '</strong></div>' +
+      '<div class="resumen-linea"><span>Salida</span><strong>' +
+        viajeSel.fecha_salida + ' ' + String(viajeSel.hora_salida || '').slice(0, 5) + '</strong></div>' +
+      '<div class="resumen-linea"><span>Puestos (' + asientosSel.length + ')</span><strong>' + nums + '</strong></div>' +
+      '<div class="resumen-linea"><span>Precio unitario</span><strong>$' + precio.toFixed(2) + '</strong></div>' +
+      '<div class="resumen-total"><span>Total</span><span>$' + totalUsd.toFixed(2) + '</span></div>';
+    if (TASA > 0) {
+      html += '<div class="resumen-total bs"><span>En bolívares</span><span>Bs. ' +
+        totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span></div>' +
+        '<p class="muted" style="margin-top:6px">Tasa BCV: ' + TASA + '</p>';
+    }
+    cont.innerHTML = html;
+    btn.disabled = false;
+
+    // Sugerir el monto según la moneda elegida (la cajera puede ajustarlo).
+    const moneda = $('p-moneda').value;
+    $('p-monto').value = (moneda === 'USD' ? totalUsd : totalBs).toFixed(2);
+  }
+
+  $('p-moneda').addEventListener('change', pintarResumen);
+  $('p-metodo').addEventListener('change', function () {
+    const m = this.selectedOptions[0];
+    if (m && m.dataset.moneda) { $('p-moneda').value = m.dataset.moneda; pintarResumen(); }
+  });
+
+  // ── 3. Cobrar ──
+  $('btn-cobrar').addEventListener('click', async function () {
+    const salida = $('salida'), btn = this;
+    const nombre = $('c-nombre').value.trim();
+    if (!nombre) { aviso(salida, 'error', 'Escribe el nombre del cliente.'); return; }
+    if (!$('p-metodo').value) { aviso(salida, 'error', 'Elige el método de pago.'); return; }
+
+    btn.disabled = true; btn.textContent = 'Procesando…';
+    aviso(salida, 'info', 'Apartando los puestos y emitiendo el boleto…');
+
+    const ced = $('c-cedula').value.trim();
+    const res = await post('vender', {
+      viaje_id: viajeSel.id,
+      asientos: JSON.stringify(asientosSel),
+      cliente_nombre: nombre,
+      cliente_cedula: ced ? ($('c-tipo').value + '-' + ced) : '',
+      cliente_telefono: $('c-telefono').value.trim(),
+      cliente_email: $('c-email').value.trim(),
+      metodo_pago: $('p-metodo').value,
+      moneda: $('p-moneda').value,
+      monto: $('p-monto').value,
+      referencia: $('p-referencia').value.trim(),
+      nota: $('p-nota').value.trim(),
+    });
+
+    btn.disabled = false; btn.textContent = 'Cobrar y emitir boleto';
+    if (!res.ok) {
+      aviso(salida, 'error', res.msg + (res.detalles && res.detalles.length ? '<br>' + res.detalles.join('<br>') : ''));
+      return;
+    }
+
+    const codigos = (res.tickets || [])
+      .map(t => '<div>Puesto #' + t.asiento + ' → <span class="ticket-cod">' + t.codigo + '</span></div>')
+      .join('');
+    salida.innerHTML =
+      '<div class="aviso aviso-ok">✅ <strong>Venta registrada.</strong>' + codigos +
+      '<div style="margin-top:8px"><a class="button" target="_blank" href="/api/ticket/' +
+        res.grupo_pago + '/">Ver / imprimir ticket</a></div></div>';
+
+    // Dejar listo para el siguiente cliente, conservando la búsqueda.
+    asientosSel = [];
+    ['c-nombre', 'c-cedula', 'c-telefono', 'c-email', 'p-referencia', 'p-nota']
+      .forEach(id => { $(id).value = ''; });
+    if (viajeSel) elegirViaje(viajeSel);
+  });
+})();
+</script>
+{% endblock %}

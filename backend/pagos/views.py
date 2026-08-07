@@ -28,7 +28,11 @@ class MetodosPagoListView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        metodos = MetodoPago.objects.filter(activo=True).prefetch_related('datos')
+        # Solo los del canal WEB: los de taquilla (efectivo, débito, Cashea…)
+        # no se le ofrecen al cliente que paga desde la web o la app.
+        metodos = (MetodoPago.objects
+                   .filter(activo=True, disponible_web=True)
+                   .prefetch_related('datos'))
         return Response(MetodoPagoSerializer(metodos, many=True).data)
 
 
@@ -65,9 +69,11 @@ class CrearComprobanteView(APIView):
                 status=status.HTTP_409_CONFLICT
             )
 
-        # Verify metodo_pago exists
+        # Verify metodo_pago exists (y que sea del canal web: un cliente no
+        # puede reportar un pago con un método que solo existe en taquilla).
         try:
-            metodo = MetodoPago.objects.get(pk=metodo_pago_id, activo=True)
+            metodo = MetodoPago.objects.get(
+                pk=metodo_pago_id, activo=True, disponible_web=True)
         except MetodoPago.DoesNotExist:
             return Response(
                 {"error": "Método de pago no válido."},

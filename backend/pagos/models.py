@@ -14,6 +14,9 @@ class MetodoPago(models.Model):
         ('transferencia', 'Transferencia Bancaria'),
         ('pago_movil', 'Pago Móvil'),
         ('divisas', 'Divisas (Efectivo)'),
+        ('efectivo', 'Efectivo'),
+        ('debito', 'Débito (punto de venta)'),
+        ('cashea', 'Cashea'),
         ('zinli', 'Zinli'),
         ('zelle', 'Zelle'),
         ('binance', 'Binance'),
@@ -43,6 +46,16 @@ class MetodoPago(models.Model):
         help_text="Si es pago en divisas/efectivo, el cliente debe subir foto del billete"
     )
     activo = models.BooleanField(default=True, verbose_name="Activo")
+    # Canal: dónde se ofrece este método. Permite tener, por ejemplo, efectivo y
+    # Cashea solo en taquilla, y pago móvil/transferencia solo en la web.
+    disponible_web = models.BooleanField(
+        default=True, verbose_name="Disponible en web/app",
+        help_text="Se le muestra al cliente cuando paga desde la web o la app."
+    )
+    disponible_caja = models.BooleanField(
+        default=False, verbose_name="Disponible en caja (taquilla)",
+        help_text="La cajera puede cobrar con este método en el módulo de Caja."
+    )
     orden = models.PositiveIntegerField(default=0, verbose_name="Orden de aparición")
 
     class Meta:
@@ -151,3 +164,70 @@ class ComprobantePago(models.Model):
 
     def __str__(self):
         return f"Comprobante {self.id} — {self.get_estado_display()}"
+
+
+class PagoCaja(models.Model):
+    """
+    Venta cobrada en TAQUILLA por una cajera.
+
+    A diferencia de ComprobantePago (que sube el cliente y un admin revisa),
+    aquí el dinero ya se recibió en el mostrador: la venta se confirma en el
+    acto. Este registro queda como respaldo de arqueo — quién cobró, con qué
+    método, en qué moneda y a qué tasa.
+    """
+    MONEDA_CHOICES = [
+        ('BS', 'Bolívares'),
+        ('USD', 'Dólares'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    grupo_pago = models.UUIDField(
+        db_index=True, verbose_name="Grupo de Pago",
+        help_text="UUID que agrupa las reservas vendidas en esta operación"
+    )
+    cajero = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='ventas_caja', verbose_name="Cajero/a"
+    )
+    metodo_pago = models.ForeignKey(
+        MetodoPago, on_delete=models.SET_NULL, null=True,
+        related_name='pagos_caja', verbose_name="Método de Pago"
+    )
+    moneda = models.CharField(
+        max_length=3, choices=MONEDA_CHOICES, default='BS',
+        verbose_name="Moneda cobrada"
+    )
+    monto = models.DecimalField(
+        max_digits=14, decimal_places=2,
+        verbose_name="Monto cobrado",
+        help_text="En la moneda indicada arriba"
+    )
+    monto_usd = models.DecimalField(
+        max_digits=12, decimal_places=2,
+        verbose_name="Equivalente en USD",
+        help_text="Precio de los boletos; referencia para el arqueo"
+    )
+    tasa_bcv = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        verbose_name="Tasa BCV usada",
+        help_text="Tasa con la que se calculó el monto en bolívares"
+    )
+    referencia = models.CharField(
+        max_length=100, blank=True,
+        verbose_name="Referencia",
+        help_text="Nº de referencia del pago móvil/débito, o código de Cashea"
+    )
+    cliente_nombre = models.CharField(max_length=200, verbose_name="Nombre del cliente")
+    cliente_cedula = models.CharField(max_length=20, blank=True, verbose_name="Cédula del cliente")
+    cliente_telefono = models.CharField(max_length=20, blank=True, verbose_name="Teléfono del cliente")
+    nota = models.TextField(blank=True, verbose_name="Observaciones")
+    fecha_creacion = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name="Fecha")
+
+    class Meta:
+        verbose_name = "Venta en Caja"
+        verbose_name_plural = "Ventas en Caja"
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        simbolo = 'Bs.' if self.moneda == 'BS' else '$'
+        return f"Caja {simbolo} {self.monto} — {self.cliente_nombre}"
