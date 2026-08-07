@@ -99,6 +99,10 @@
     border-color: var(--hairline-color, #e2e8f0); background: none; transform: none;
   }
   .viaje-resumen { font-size: .78rem; color: var(--texto-suave); margin: 0 0 8px; }
+  .cupo-salio { background: var(--rojo-claro); color: var(--rojo); }
+  .viaje-aviso { font-size: .74rem; font-weight: 700; margin-top: 2px; }
+  .viaje-aviso.pronto { color: var(--ambar); }
+  .viaje-aviso.salio  { color: var(--rojo); }
 
   /* Pista al lado de la etiqueta: cuántas opciones hay o si está cargando. */
   .pista { font-weight: 600; text-transform: none; letter-spacing: 0;
@@ -370,33 +374,43 @@
       return;
     }
 
-    const conPuestos = lista.filter(v => v.asientos_disponibles == null ||
-                                          v.asientos_disponibles > 0).length;
+    const salieron = lista.filter(v => estadoSalida(v).salio).length;
+    const vendibles = lista.filter(v => !estadoSalida(v).salio &&
+      (v.asientos_disponibles == null || v.asientos_disponibles > 0)).length;
     cont.innerHTML =
       '<p class="viaje-resumen">' + lista.length + ' salida' + (lista.length > 1 ? 's' : '') +
-      ' · <strong>' + conPuestos + '</strong> con puestos' +
-      (lista.length - conPuestos ? ' · ' + (lista.length - conPuestos) + ' sin cupo' : '') +
+      ' · <strong>' + vendibles + '</strong> se puede(n) vender' +
+      (salieron ? ' · ' + salieron + ' ya salió/salieron' : '') +
       '</p>';
 
     lista.forEach(function (v) {
       const cupo = estadoCupo(v.asientos_disponibles);
+      const salida = estadoSalida(v);
+      const bloqueado = cupo.agotado || salida.salio;
       const div = document.createElement('div');
-      div.className = 'viaje-item' + (cupo.agotado ? ' agotado' : '');
+      div.className = 'viaje-item' + (bloqueado ? ' agotado' : '');
       div.innerHTML =
         '<div class="viaje-hora">' + String(v.hora_salida || '').slice(0, 5) + '</div>' +
         '<div style="flex:1">' +
           '<div class="viaje-ruta">' + v.ruta.origen + ' → ' + v.ruta.destino +
             (v.local ? '<span class="tag-local">LOCAL</span>' : '') + '</div>' +
           '<div class="viaje-meta">' + (v.autobus.nombre || '') + '</div>' +
+          (salida.aviso
+            ? '<div class="viaje-aviso ' + salida.clase + '">' + salida.aviso + '</div>' : '') +
         '</div>' +
         '<div style="text-align:right">' +
           '<div class="viaje-precio">$' + v.precio_usd + '</div>' +
-          '<span class="cupo ' + cupo.clase + '">' + cupo.texto + '</span>' +
+          (salida.salio
+            ? '<span class="cupo cupo-salio">YA SALIÓ</span>'
+            : '<span class="cupo ' + cupo.clase + '">' + cupo.texto + '</span>') +
         '</div>';
 
-      if (cupo.agotado) {
-        // Sin puestos no se puede vender: se muestra, pero no se puede elegir.
-        div.title = 'Este viaje no tiene puestos disponibles.';
+      if (bloqueado) {
+        // Ni un bus que ya salió ni uno lleno se pueden vender: se muestran,
+        // pero no se pueden elegir.
+        div.title = salida.salio
+          ? 'Este viaje ya salió, no se puede cobrar.'
+          : 'Este viaje no tiene puestos disponibles.';
       } else {
         div.addEventListener('click', function () {
           document.querySelectorAll('.viaje-item').forEach(e => e.classList.remove('sel'));
@@ -406,6 +420,29 @@
       }
       cont.appendChild(div);
     });
+  }
+
+  // Cuánto falta (o cuánto hace) para la salida, en texto.
+  function textoDuracion(min) {
+    const m = Math.abs(min);
+    if (m < 60) return m + ' min';
+    const h = Math.floor(m / 60), r = m % 60;
+    return h + ' h' + (r ? ' ' + r + ' min' : '');
+  }
+
+  // Un bus que ya salió no se puede vender; uno que sale pronto se avisa.
+  function estadoSalida(v) {
+    const m = v.minutos_para_salir;
+    if (m === null || m === undefined) return { salio: false, aviso: '' };
+    if (m < 0) {
+      return { salio: true, clase: 'salio',
+               aviso: '⚠ Ya salió hace ' + textoDuracion(m) };
+    }
+    if (m <= 60) {
+      return { salio: false, clase: 'pronto',
+               aviso: '⏱ Sale en ' + textoDuracion(m) };
+    }
+    return { salio: false, aviso: '' };
   }
 
   // Cómo se muestra la disponibilidad de un viaje.

@@ -58,6 +58,35 @@ def _dec(valor, campo):
         raise ValueError(f'{campo} inválido.')
 
 
+def minutos_para_salir(fecha, hora):
+    """Minutos que faltan para la salida. Negativo si ya salió; None si no se sabe.
+
+    Se compara con la hora de Venezuela, no con UTC: si no, un bus de la noche
+    se seguiría vendiendo durante horas después de haber salido.
+    """
+    if isinstance(fecha, str):
+        try:
+            fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+    if isinstance(hora, str):
+        crudo = hora.strip()
+        hora = None
+        for formato in ('%H:%M:%S', '%H:%M'):
+            try:
+                hora = datetime.strptime(crudo[:8] if len(crudo) >= 8 else crudo, formato).time()
+                break
+            except ValueError:
+                continue
+    if fecha is None or hora is None:
+        return None
+
+    salida = datetime.combine(fecha, hora)
+    if timezone.is_naive(salida):
+        salida = timezone.make_aware(salida, timezone.get_current_timezone())
+    return int((salida - timezone.now()).total_seconds() // 60)
+
+
 # ══════════════════════════════════════════════════════════════════
 #  Acciones (AJAX)
 # ══════════════════════════════════════════════════════════════════
@@ -120,6 +149,12 @@ def _accion_buscar(request):
         })
 
     resultados.sort(key=lambda v: str(v.get('hora_salida') or ''))
+
+    # Cuánto falta para cada salida, para avisar en pantalla si ya se fue.
+    for v in resultados:
+        faltan = minutos_para_salir(v.get('fecha_salida'), v.get('hora_salida'))
+        v['minutos_para_salir'] = faltan
+        v['ya_salio'] = faltan is not None and faltan < 0
 
     # Destinos realmente alcanzables desde ese origen: con esto el desplegable
     # de destino deja de ofrecer ciudades a las que no sale nada ese día.
@@ -218,6 +253,18 @@ def _enviar_ticket_al_cliente(reservas, email, nombre):
 
 
 @transaction.atomic
+def _msg_ya_salio(faltan):
+    """Mensaje para un bus que ya salió. `faltan` viene en minutos, negativo."""
+    pasados = abs(faltan)
+    if pasados < 60:
+        cuanto = f'hace {pasados} min'
+    else:
+        horas, minutos = divmod(pasados, 60)
+        cuanto = f'hace {horas} h' + (f' {minutos} min' if minutos else '')
+    return (f'Ese viaje ya salió ({cuanto}). No se puede cobrar. '
+            f'Elige una salida posterior.')
+
+
 def _accion_vender(request):
     """Cobra en taquilla: aparta, reserva, confirma y registra el pago."""
     viaje_id = (request.POST.get('viaje_id') or '').strip()
@@ -290,6 +337,12 @@ def _accion_vender(request):
                 return JsonResponse({'ok': False, 'msg': 'El viaje ya no está disponible en Aerorutas.'})
             info = aerorutas.viaje_shape(ruta_ext, inicio, fin, fecha_str, None)
 
+            # La hora recién se conoce aquí. Se revisa ANTES de apartar: si el
+            # bus ya salió no hay que tocar nada en Aerorutas.
+            faltan = minutos_para_salir(fecha_str, info.get('hora_salida'))
+            if faltan is not None and faltan < 0:
+                return JsonResponse({'ok': False, 'msg': _msg_ya_salio(faltan)})
+
             # Apartar cada puesto allá antes de cobrarlo acá.
             for n in numeros:
                 aerorutas.apartar_puesto(fecha_str, codrut, str(n), inicio, fin)
@@ -303,8 +356,9 @@ def _accion_vender(request):
             viaje = Viaje.objects.select_related('ruta').get(pk=int(viaje_id), activo=True)
         except (Viaje.DoesNotExist, ValueError):
             return JsonResponse({'ok': False, 'msg': 'El viaje no existe o está inactivo.'})
-        if viaje.fecha_salida < timezone.localdate():
-            return JsonResponse({'ok': False, 'msg': 'Ese viaje ya pasó.'})
+        faltan = minutos_para_salir(viaje.fecha_salida, viaje.hora_salida)
+        if faltan is not None and faltan < 0:
+            return JsonResponse({'ok': False, 'msg': _msg_ya_salio(faltan)})
         piso_fijo = None
 
     # ── Crear las reservas ──
