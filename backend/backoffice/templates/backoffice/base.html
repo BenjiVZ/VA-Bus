@@ -21,13 +21,15 @@
 </head>
 
 <body>
+{% include "backoffice/_iconos.html" %}
+
 <div class="bo" id="bo-raiz">
   <div class="bo-velo" id="bo-velo"></div>
 
   {# ══════════════ Barra lateral ══════════════ #}
   <aside class="bo-lateral">
     <div class="bo-marca">
-      <div class="bo-marca__logo">&#128652;</div>
+      <div class="bo-marca__logo"><svg class="ico"><use href="#i-bus"></use></svg></div>
       <div class="bo-marca__txt">
         <b>Aerorutas</b>
         <span>Back office</span>
@@ -37,31 +39,31 @@
     <nav class="bo-nav">
       <div class="bo-nav__grupo">Operación</div>
       <a href="{% url 'backoffice:inicio' %}" class="{% if seccion == 'inicio' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#127968;</span> Inicio</a>
+        <svg class="bo-nav__icono ico"><use href="#i-inicio"></use></svg> Inicio</a>
       <a href="{% url 'backoffice:caja' %}" class="{% if seccion == 'caja' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#128179;</span> Caja (taquilla)</a>
+        <svg class="bo-nav__icono ico"><use href="#i-caja"></use></svg> Caja (taquilla)</a>
       <a href="{% url 'backoffice:viajes' %}" class="{% if seccion == 'viajes' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#128652;</span> Viajes</a>
+        <svg class="bo-nav__icono ico"><use href="#i-bus"></use></svg> Viajes</a>
       <a href="{% url 'backoffice:boletos' %}" class="{% if seccion == 'boletos' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#127915;</span> Boletos</a>
+        <svg class="bo-nav__icono ico"><use href="#i-boleto"></use></svg> Boletos</a>
 
       <div class="bo-nav__grupo">Cobranza</div>
       <a href="{% url 'backoffice:comprobantes' %}" class="{% if seccion == 'comprobantes' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#128196;</span> Comprobantes
+        <svg class="bo-nav__icono ico"><use href="#i-comprobante"></use></svg> Comprobantes
         {% if pendientes_comprobantes %}<span class="bo-nav__pin">{{ pendientes_comprobantes }}</span>{% endif %}</a>
       <a href="{% url 'backoffice:pagos_r4' %}" class="{% if seccion == 'pagos_r4' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#127974;</span> Pagos R4</a>
+        <svg class="bo-nav__icono ico"><use href="#i-banco"></use></svg> Pagos R4</a>
       <a href="{% url 'backoffice:arqueo' %}" class="{% if seccion == 'arqueo' %}activo{% endif %}">
-        <span class="bo-nav__icono">&#128200;</span> Arqueo de caja</a>
+        <svg class="bo-nav__icono ico"><use href="#i-arqueo"></use></svg> Arqueo de caja</a>
 
       <div class="bo-nav__grupo">Sistema</div>
       <a href="/admin/" target="_blank" rel="noopener">
-        <span class="bo-nav__icono">&#9881;</span> Datos y configuración</a>
+        <svg class="bo-nav__icono ico"><use href="#i-config"></use></svg> Datos y configuración</a>
     </nav>
 
     <div class="bo-lateral__pie">
       {% if tasa_bcv %}Tasa BCV: <strong>{{ tasa_bcv }}</strong> Bs/$<br>{% endif %}
-      <a href="{% url 'backoffice:salir' %}">Cerrar sesión</a>
+      <a href="{% url 'backoffice:salir' %}"><svg class="ico"><use href="#i-salir"></use></svg> Cerrar sesión</a>
     </div>
   </aside>
 
@@ -69,14 +71,14 @@
   <div class="bo-principal">
     <header class="bo-topbar">
       <button type="button" class="bo-icono-btn bo-hamburguesa" id="bo-menu"
-              aria-label="Abrir el menú">&#9776;</button>
+              aria-label="Abrir el menú"><svg class="ico"><use href="#i-menu"></use></svg></button>
       <div>
         {% block content_title %}<h1>{{ titulo|default:"Back office" }}</h1>{% endblock %}
         {% if subtitulo %}<p class="bo-topbar__sub">{{ subtitulo }}</p>{% endif %}
       </div>
       <div class="bo-topbar__der">
         <button type="button" class="bo-icono-btn" id="bo-tema"
-                aria-label="Cambiar entre tema claro y oscuro" title="Tema claro / oscuro">&#9789;</button>
+                aria-label="Cambiar entre tema claro y oscuro" title="Tema claro / oscuro"><svg class="ico"><use href="#i-tema"></use></svg></button>
         <div class="bo-usuario">
           <span class="bo-usuario__ini">{{ user.get_username|slice:":1"|upper }}</span>
           <span>{{ user.get_short_name|default:user.get_username }}</span>

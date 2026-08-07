@@ -6,7 +6,7 @@
 
 {% if tasa_vieja %}
 <div class="aviso aviso-error">
-  ⚠️ La tasa BCV no se actualiza desde el {{ tasa_actualizada|date:"d/m/Y H:i" }}.
+  <svg class="ico"><use href="#i-alerta"></use></svg> La tasa BCV no se actualiza desde el {{ tasa_actualizada|date:"d/m/Y H:i" }}.
   Los cobros en bolívares se están calculando con esa tasa.
 </div>
 {% endif %}
@@ -14,19 +14,19 @@
 {# ══════════ Números del día ══════════ #}
 <div class="metricas">
   <div class="metrica metrica--verde">
-    <div class="metrica__et">&#128179; Cobrado en caja hoy</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-dinero"></use></svg> Cobrado en caja hoy</div>
     <div class="metrica__n">${{ caja_hoy_usd|floatformat:2 }}</div>
     <div class="metrica__pie">{{ caja_hoy_n }} venta(s) de taquilla</div>
   </div>
 
   <div class="metrica">
-    <div class="metrica__et">&#127915; Boletos emitidos hoy</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-boleto"></use></svg> Boletos emitidos hoy</div>
     <div class="metrica__n">{{ boletos_hoy }}</div>
     <div class="metrica__pie">Confirmados por todos los canales</div>
   </div>
 
   <div class="metrica {% if comprobantes_pend %}metrica--ambar{% endif %}">
-    <div class="metrica__et">&#128196; Comprobantes por revisar</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-comprobante"></use></svg> Comprobantes por revisar</div>
     <div class="metrica__n">{{ comprobantes_pend }}</div>
     <div class="metrica__pie">
       {% if comprobantes_pend %}
@@ -36,13 +36,13 @@
   </div>
 
   <div class="metrica">
-    <div class="metrica__et">&#127974; Pagos R4 en curso</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-banco"></use></svg> Pagos R4 en curso</div>
     <div class="metrica__n">{{ r4_espera }}</div>
     <div class="metrica__pie">Se validan solos</div>
   </div>
 
   <div class="metrica">
-    <div class="metrica__et">&#9203; Reservas sin pagar</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-espera"></use></svg> Reservas sin pagar</div>
     <div class="metrica__n">{{ reservas_pend }}</div>
     <div class="metrica__pie">Caducan solas al vencer</div>
   </div>
@@ -52,34 +52,34 @@
 <div class="accesos">
   <a class="acceso acceso--caja" href="{% url 'backoffice:caja' %}">
     <div>
-      <h3>&#128179; Caja (taquilla)</h3>
+      <h3><svg class="ico"><use href="#i-caja"></use></svg> Caja (taquilla)</h3>
       <p>Vender en el mostrador y cobrar en efectivo, débito, pago móvil o Cashea</p>
     </div>
-    <span class="acceso__flecha">&rarr;</span>
+    <span class="acceso__flecha"><svg class="ico ico--lg"><use href="#i-flecha"></use></svg></span>
   </a>
 
   <a class="acceso acceso--viajes" href="{% url 'backoffice:viajes' %}">
     <div>
-      <h3>&#128652; Viajes</h3>
+      <h3><svg class="ico"><use href="#i-bus"></use></svg> Viajes</h3>
       <p>Crear viajes sueltos o en lote y revisar los programados</p>
     </div>
-    <span class="acceso__flecha">&rarr;</span>
+    <span class="acceso__flecha"><svg class="ico ico--lg"><use href="#i-flecha"></use></svg></span>
   </a>
 
   <a class="acceso acceso--boletos" href="{% url 'backoffice:boletos' %}">
     <div>
-      <h3>&#127915; Boletos</h3>
+      <h3><svg class="ico"><use href="#i-boleto"></use></svg> Boletos</h3>
       <p>Buscar una reserva por ticket, cédula o nombre del pasajero</p>
     </div>
-    <span class="acceso__flecha">&rarr;</span>
+    <span class="acceso__flecha"><svg class="ico ico--lg"><use href="#i-flecha"></use></svg></span>
   </a>
 
   <a class="acceso acceso--pagos" href="{% url 'backoffice:arqueo' %}">
     <div>
-      <h3>&#128200; Arqueo de caja</h3>
+      <h3><svg class="ico"><use href="#i-arqueo"></use></svg> Arqueo de caja</h3>
       <p>Cuadrar el turno: total cobrado por método y por cajera</p>
     </div>
-    <span class="acceso__flecha">&rarr;</span>
+    <span class="acceso__flecha"><svg class="ico ico--lg"><use href="#i-flecha"></use></svg></span>
   </a>
 </div>
 

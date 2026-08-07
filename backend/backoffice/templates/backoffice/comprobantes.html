@@ -129,11 +129,11 @@
                     placeholder="Ej.: la referencia no aparece en el banco"></textarea>
           <button type="submit" name="decision" value="aprobado" class="button button--verde"
                   data-confirmar="Se confirmarán los puestos y se le enviará el ticket al cliente. ¿Aprobar?">
-            &#10003; Aprobar y emitir
+            <svg class="ico"><use href="#i-check"></use></svg> Aprobar y emitir
           </button>
           <button type="submit" name="decision" value="rechazado" class="button button--rojo"
                   data-confirmar="Se cancelarán los puestos y volverán a quedar libres. ¿Rechazar?">
-            &#10007; Rechazar
+            <svg class="ico"><use href="#i-equis"></use></svg> Rechazar
           </button>
         </form>
       {% else %}
@@ -146,7 +146,7 @@
 {% empty %}
 <div class="panel">
   <p class="muted" style="text-align:center; padding:26px 0; margin:0">
-    No hay comprobantes con ese filtro. 🎉
+    No hay comprobantes con ese filtro.
   </p>
 </div>
 {% endfor %}

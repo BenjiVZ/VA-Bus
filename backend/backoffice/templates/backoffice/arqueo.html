@@ -34,13 +34,13 @@
     </select>
   </div>
   <button type="submit" class="button">Filtrar</button>
-  <button type="button" class="button button--fantasma" onclick="window.print()">&#128424; Imprimir</button>
+  <button type="button" class="button button--fantasma" onclick="window.print()"><svg class="ico"><use href="#i-imprimir"></use></svg> Imprimir</button>
 </form>
 
 {# ══════════ Cierre del turno ══════════ #}
 <div class="metricas">
   <div class="metrica metrica--verde">
-    <div class="metrica__et">&#128176; Total del período</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-dinero"></use></svg> Total del período</div>
     <div class="metrica__n">${{ total_usd|floatformat:2 }}</div>
     <div class="metrica__pie">{{ total_n }} venta(s)</div>
   </div>

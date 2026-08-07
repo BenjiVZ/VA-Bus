@@ -136,6 +136,24 @@ a:hover { text-decoration: underline; }
 
 h1, h2, h3 { margin: 0; line-height: 1.25; }
 
+/* ── Iconos ─────────────────────────────────────────────────────────────── */
+/* SVG de trazo que heredan el color y el tamaño del texto que los rodea.
+   Las figuras viven en templates/backoffice/_iconos.html. */
+.ico {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.14em;
+}
+
+.ico--lg { width: 1.3em; height: 1.3em; }
+.ico--fino { stroke-width: 1.6; }
+
 /* ── Estructura: barra lateral + contenido ──────────────────────────────── */
 .bo {
   display: grid;
@@ -208,7 +226,7 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
   box-shadow: inset 3px 0 0 var(--oro);
 }
 
-.bo-nav__icono { width: 20px; text-align: center; font-size: 1rem; flex: 0 0 auto; }
+.bo-nav__icono { width: 18px; height: 18px; flex: 0 0 auto; }
 
 .bo-nav__pin {
   margin-left: auto; background: var(--oro); color: #12294d;
@@ -221,7 +239,9 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
   font-size: .72rem; color: rgba(255, 255, 255, .5);
 }
 
-.bo-lateral__pie a { color: rgba(255, 255, 255, .72); }
+.bo-lateral__pie a { color: rgba(255, 255, 255, .72);
+  display: inline-flex; align-items: center; gap: 5px; }
+.bo-lateral__pie .ico { width: 13px; height: 13px; }
 
 /* ── Barra superior ─────────────────────────────────────────────────────── */
 .bo-principal { min-width: 0; display: flex; flex-direction: column; }
@@ -266,6 +286,7 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
 }
 
 .bo-icono-btn:hover { background: var(--selected-bg); border-color: var(--borde-fuerte); }
+.bo-icono-btn .ico { width: 18px; height: 18px; }
 
 .bo-hamburguesa { display: none; }
 
@@ -411,6 +432,8 @@ td.mono, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospac
 .aviso-info { background: var(--selected-bg); color: var(--navy-suave); border-left: 4px solid var(--navy-suave); }
 .aviso a { color: inherit; text-decoration: underline; }
 
+.aviso .ico { width: 15px; height: 15px; vertical-align: -0.2em; }
+
 .muted, .apagado { color: var(--texto-suave); font-size: .84rem; }
 
 /* ── Métricas del inicio ────────────────────────────────────────────────── */
@@ -433,6 +456,8 @@ td.mono, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospac
   font-size: .68rem; font-weight: 800; letter-spacing: .9px; text-transform: uppercase;
   color: var(--texto-suave); display: flex; align-items: center; gap: 6px;
 }
+
+.metrica__et .ico { width: 15px; height: 15px; }
 
 .metrica__n { font-size: 1.7rem; font-weight: 800; letter-spacing: -1px; margin-top: 5px; }
 .metrica__pie { font-size: .75rem; color: var(--texto-suave); }
@@ -462,9 +487,11 @@ td.mono, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospac
 .acceso:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta);
   filter: brightness(1.05); text-decoration: none; }
 
-.acceso h3 { font-size: 1.02rem; font-weight: 800; margin-bottom: 3px; }
+.acceso h3 { font-size: 1.02rem; font-weight: 800; margin-bottom: 3px;
+  display: flex; align-items: center; gap: 8px; }
 .acceso p { margin: 0; font-size: .81rem; color: rgba(255, 255, 255, .86); }
-.acceso__flecha { font-size: 1.3rem; opacity: .8; }
+.acceso__flecha { display: flex; opacity: .8; }
+.acceso__flecha .ico { width: 22px; height: 22px; }
 
 .acceso--caja { background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%); }
 .acceso--caja h3 { color: #ddd6fe; }

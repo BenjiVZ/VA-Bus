@@ -8,13 +8,14 @@
 <link rel="stylesheet" href="{% estatico_versionado 'backoffice/css/backoffice.css' %}">
 </head>
 <body>
+{% include "backoffice/_iconos.html" %}
 <div class="bo-ingreso">
   <form class="bo-ingreso__caja" method="post" autocomplete="on">
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ next }}">
 
     <div class="bo-ingreso__marca">
-      <div class="bo-marca__logo">&#128652;</div>
+      <div class="bo-marca__logo"><svg class="ico"><use href="#i-bus"></use></svg></div>
       <b>Aerorutas de Venezuela</b>
       <span>Back office</span>
     </div>

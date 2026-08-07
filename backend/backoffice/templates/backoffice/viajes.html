@@ -370,7 +370,7 @@
 
     <!-- Left: Route & Bus -->
     <div class="portal-card">
-      <h3>&#128652; Ruta y Autobus</h3>
+      <h3><svg class="ico"><use href="#i-bus"></use></svg> Ruta y Autobus</h3>
 
       <div class="pf-group">
         <label for="ruta">Ruta</label>
@@ -423,7 +423,7 @@
 
     <!-- Right: Dates & Price -->
     <div class="portal-card">
-      <h3>&#128197; Fechas y Precio</h3>
+      <h3><svg class="ico"><use href="#i-calendario"></use></svg> Fechas y Precio</h3>
 
       <div class="pf-row">
         <div class="pf-group">
@@ -482,24 +482,24 @@
 
     <!-- Actions -->
     <div class="portal-card full-width">
-      <h3>&#9989; Acciones</h3>
+      <h3><svg class="ico"><use href="#i-ok-circulo"></use></svg> Acciones</h3>
 
       <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
         <button type="submit" class="pf-btn pf-btn-primary" id="submitBtn">
-          &#10133; Crear Viaje
+          <svg class="ico"><use href="#i-mas"></use></svg> Crear Viaje
         </button>
 
         <button type="button" class="pf-btn pf-btn-batch" onclick="toggleBatch()">
-          &#128257; Creacion en lote
+          <svg class="ico"><use href="#i-refrescar"></use></svg> Creacion en lote
         </button>
 
         <a href="/admin/viajes/viaje/" class="pf-btn" style="background:#e2e8f0; color: var(--portal-text); text-decoration:none;">
-          &#128203; Ver todos los viajes
+          <svg class="ico"><use href="#i-lista"></use></svg> Ver todos los viajes
         </a>
       </div>
 
       <div class="batch-section" id="batchSection">
-        <h4>&#128257; Crear viajes en lote para multiples dias</h4>
+        <h4><svg class="ico"><use href="#i-refrescar"></use></svg> Crear viajes en lote para multiples dias</h4>
         <p style="font-size:0.8rem; color:var(--portal-muted); margin-bottom:0.75rem;">
           Se creara el mismo viaje (misma ruta, autobus, hora y precio) para cada dia en el rango seleccionado.
         </p>
@@ -515,7 +515,7 @@
           <div class="pf-group">
             <label>&nbsp;</label>
             <button type="button" class="pf-btn pf-btn-batch" onclick="submitBatch()" id="batchBtn">
-              &#128640; Crear en Lote
+              <svg class="ico"><use href="#i-mas"></use></svg> Crear en Lote
             </button>
           </div>
         </div>
@@ -536,7 +536,7 @@
 
     <!-- Recent Trips -->
     <div class="portal-card full-width">
-      <h3>&#128338; Ultimos viajes creados</h3>
+      <h3><svg class="ico"><use href="#i-reloj"></use></svg> Ultimos viajes creados</h3>
       {% if recientes %}
       <table class="pf-table">
         <thead>
@@ -571,7 +571,7 @@
               <div class="pf-actions-cell">
                 <a href="/admin/viajes/viaje/{{ v.id }}/change/" style="color:var(--portal-primary); font-size:0.78rem;">Editar</a>
                 <button type="button" class="pf-btn-delete" onclick="eliminarViaje({{ v.id }}, '{{ v.ruta.origen }} → {{ v.ruta.destino }}', '{{ v.fecha_salida|date:"d/m/Y" }}')">
-                  &#128465; Eliminar
+                  <svg class="ico"><use href="#i-basura"></use></svg> Eliminar
                 </button>
               </div>
             </td>
@@ -649,7 +649,7 @@
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
-    btn.innerHTML = '&#9203; Creando...';
+    btn.innerHTML = '<svg class="ico"><use href="#i-espera"></use></svg> Creando...';
 
     const fd = new FormData(this);
     try {
@@ -665,7 +665,7 @@
       showMessage('error', 'Error de conexion.');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '&#10133; Crear Viaje';
+      btn.innerHTML = '<svg class="ico"><use href="#i-mas"></use></svg> Crear Viaje';
     }
   });
 
@@ -691,7 +691,7 @@
     }
 
     btn.disabled = true;
-    btn.innerHTML = '&#9203; Creando...';
+    btn.innerHTML = '<svg class="ico"><use href="#i-espera"></use></svg> Creando...';
 
     const days = [...document.querySelectorAll('.batch-day:checked')].map(cb => parseInt(cb.value));
     const fd = new FormData(form);
@@ -713,7 +713,7 @@
       showMessage('error', 'Error de conexion.');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '&#128640; Crear en Lote';
+      btn.innerHTML = '<svg class="ico"><use href="#i-mas"></use></svg> Crear en Lote';
     }
   }
 

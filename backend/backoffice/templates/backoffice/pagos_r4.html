@@ -11,30 +11,30 @@
 
 <div class="metricas">
   <div class="metrica">
-    <div class="metrica__et">&#128203; Revisadas ahora</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-lista"></use></svg> Revisadas ahora</div>
     <div class="metrica__n">{{ resumen.total }}</div>
     <div class="metrica__pie">En la última consulta al banco</div>
   </div>
   <div class="metrica metrica--verde">
-    <div class="metrica__et">&#9989; Aprobadas</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-ok-circulo"></use></svg> Aprobadas</div>
     <div class="metrica__n">{{ resumen.aprobadas }}</div>
   </div>
   <div class="metrica metrica--ambar">
-    <div class="metrica__et">&#8987; En espera</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-espera"></use></svg> En espera</div>
     <div class="metrica__n">{{ resumen.en_espera }}</div>
   </div>
   <div class="metrica metrica--rojo">
-    <div class="metrica__et">&#10060; Rechazadas</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-no-circulo"></use></svg> Rechazadas</div>
     <div class="metrica__n">{{ resumen.rechazadas }}</div>
   </div>
   <div class="metrica metrica--rojo">
-    <div class="metrica__et">&#9888; Con error</div>
+    <div class="metrica__et"><svg class="ico"><use href="#i-alerta"></use></svg> Con error</div>
     <div class="metrica__n">{{ resumen.error }}</div>
   </div>
 </div>
 
 <div class="aviso aviso-ok">
-  &#128260; Esta pantalla se actualiza y revalida sola cada {{ refresco }} segundos.
+  <svg class="ico"><use href="#i-refrescar"></use></svg> Esta pantalla se actualiza y revalida sola cada {{ refresco }} segundos.
   Las operaciones en espera (AC00) se consultan al banco sin que nadie las toque.
 </div>
 

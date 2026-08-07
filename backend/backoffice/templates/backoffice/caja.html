@@ -149,7 +149,7 @@
           <div class="caja-field" style="max-width:120px; flex:0 0 auto">
             <label>&nbsp;</label>
             <button type="button" class="button" id="btn-buscar"
-                    title="Volver a consultar las salidas">&#8635; Refrescar</button>
+                    title="Volver a consultar las salidas"><svg class="ico"><use href="#i-refrescar"></use></svg> Refrescar</button>
           </div>
         </div>
         <div id="lista-viajes" style="margin-top:12px"></div>
@@ -422,6 +422,13 @@
     });
   }
 
+  // Iconos que el JS inserta en el HTML que genera.
+  const ICO = {
+    alerta: '<svg class="ico"><use href="#i-alerta"></use></svg>',
+    reloj: '<svg class="ico"><use href="#i-reloj"></use></svg>',
+    check: '<svg class="ico"><use href="#i-ok-circulo"></use></svg>',
+  };
+
   // Cuánto falta (o cuánto hace) para la salida, en texto.
   function textoDuracion(min) {
     const m = Math.abs(min);
@@ -436,11 +443,11 @@
     if (m === null || m === undefined) return { salio: false, aviso: '' };
     if (m < 0) {
       return { salio: true, clase: 'salio',
-               aviso: '⚠ Ya salió hace ' + textoDuracion(m) };
+               aviso: ICO.alerta + ' Ya salió hace ' + textoDuracion(m) };
     }
     if (m <= 60) {
       return { salio: false, clase: 'pronto',
-               aviso: '⏱ Sale en ' + textoDuracion(m) };
+               aviso: ICO.reloj + ' Sale en ' + textoDuracion(m) };
     }
     return { salio: false, aviso: '' };
   }
@@ -623,7 +630,7 @@
       .map(t => '<div>Puesto #' + t.asiento + ' → <span class="ticket-cod">' + t.codigo + '</span></div>')
       .join('');
     salida.innerHTML =
-      '<div class="aviso aviso-ok">✅ <strong>Venta registrada.</strong>' + codigos +
+      '<div class="aviso aviso-ok">' + ICO.check + ' <strong>Venta registrada.</strong>' + codigos +
       '<div style="margin-top:8px"><a class="button" target="_blank" href="/api/ticket/' +
         res.grupo_pago + '/">Ver / imprimir ticket</a></div></div>';
 
