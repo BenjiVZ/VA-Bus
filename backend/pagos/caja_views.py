@@ -22,6 +22,7 @@ from decimal import Decimal, InvalidOperation
 
 from backoffice.auth import staff_requerido
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -91,9 +92,15 @@ def _accion_buscar(request):
     resultados = [v for v in resultados if _precio(v) > 0]
 
     # ── Viajes locales (los creados en el Portal de Viajes) ──
+    # Se cuentan los puestos tomados en la misma consulta para poder decir si
+    # el viaje está disponible o lleno, igual que los de Aerorutas.
     locales = (Viaje.objects
                .filter(activo=True, aerorutas_codrut='', fecha_salida=fecha)
-               .select_related('ruta', 'autobus'))
+               .select_related('ruta', 'autobus')
+               .prefetch_related('autobus__pisos_config')
+               .annotate(ocupados=Count(
+                   'reservas',
+                   filter=Q(reservas__estado__in=['pendiente', 'apartado', 'confirmado']))))
     for v in locales:
         if origen or destino:
             texto = f"{v.ruta.origen} {v.ruta.destino}".upper()
@@ -107,7 +114,7 @@ def _accion_buscar(request):
             'fecha_salida': str(v.fecha_salida),
             'hora_salida': str(v.hora_salida),
             'precio_usd': str(v.precio_usd),
-            'asientos_disponibles': None,
+            'asientos_disponibles': max(v.autobus.capacidad_total - v.ocupados, 0),
             'ruta': {'origen': v.ruta.origen, 'destino': v.ruta.destino},
             'autobus': {'nombre': v.autobus.nombre},
         })

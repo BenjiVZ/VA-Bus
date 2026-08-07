@@ -80,6 +80,23 @@
   .ticket-cod { font-family: monospace; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; }
   .muted { color: var(--body-quiet-color, #64748b); font-size: .84rem; }
 
+  /* Disponibilidad del viaje */
+  .cupo {
+    display: inline-block; margin-top: 4px; padding: 2px 9px;
+    border-radius: 999px; font-size: .68rem; font-weight: 800;
+    white-space: nowrap; letter-spacing: .2px;
+  }
+  .cupo-ok      { background: var(--verde-claro);   color: var(--verde); }
+  .cupo-pocos   { background: var(--ambar-claro);   color: var(--ambar); }
+  .cupo-lleno   { background: var(--rojo-claro);    color: var(--rojo); }
+  .cupo-nosabe  { background: var(--superficie-2);  color: var(--texto-suave); }
+
+  .viaje-item.agotado { opacity: .55; cursor: not-allowed; }
+  .viaje-item.agotado:hover {
+    border-color: var(--hairline-color, #e2e8f0); background: none; transform: none;
+  }
+  .viaje-resumen { font-size: .78rem; color: var(--texto-suave); margin: 0 0 8px; }
+
   /* Pista al lado de la etiqueta: cuántas opciones hay o si está cargando. */
   .pista { font-weight: 600; text-transform: none; letter-spacing: 0;
     color: var(--texto-suave); font-size: .68rem; }
@@ -341,26 +358,54 @@
       return;
     }
 
-    cont.innerHTML = '';
+    const conPuestos = lista.filter(v => v.asientos_disponibles == null ||
+                                          v.asientos_disponibles > 0).length;
+    cont.innerHTML =
+      '<p class="viaje-resumen">' + lista.length + ' salida' + (lista.length > 1 ? 's' : '') +
+      ' · <strong>' + conPuestos + '</strong> con puestos' +
+      (lista.length - conPuestos ? ' · ' + (lista.length - conPuestos) + ' sin cupo' : '') +
+      '</p>';
+
     lista.forEach(function (v) {
+      const cupo = estadoCupo(v.asientos_disponibles);
       const div = document.createElement('div');
-      div.className = 'viaje-item';
+      div.className = 'viaje-item' + (cupo.agotado ? ' agotado' : '');
       div.innerHTML =
         '<div class="viaje-hora">' + String(v.hora_salida || '').slice(0, 5) + '</div>' +
         '<div style="flex:1">' +
           '<div class="viaje-ruta">' + v.ruta.origen + ' → ' + v.ruta.destino +
             (v.local ? '<span class="tag-local">LOCAL</span>' : '') + '</div>' +
-          '<div class="viaje-meta">' + (v.autobus.nombre || '') +
-            (v.asientos_disponibles != null ? ' · ' + v.asientos_disponibles + ' puestos' : '') + '</div>' +
+          '<div class="viaje-meta">' + (v.autobus.nombre || '') + '</div>' +
         '</div>' +
-        '<div class="viaje-precio">$' + v.precio_usd + '</div>';
-      div.addEventListener('click', function () {
-        document.querySelectorAll('.viaje-item').forEach(e => e.classList.remove('sel'));
-        div.classList.add('sel');
-        elegirViaje(v);
-      });
+        '<div style="text-align:right">' +
+          '<div class="viaje-precio">$' + v.precio_usd + '</div>' +
+          '<span class="cupo ' + cupo.clase + '">' + cupo.texto + '</span>' +
+        '</div>';
+
+      if (cupo.agotado) {
+        // Sin puestos no se puede vender: se muestra, pero no se puede elegir.
+        div.title = 'Este viaje no tiene puestos disponibles.';
+      } else {
+        div.addEventListener('click', function () {
+          document.querySelectorAll('.viaje-item').forEach(e => e.classList.remove('sel'));
+          div.classList.add('sel');
+          elegirViaje(v);
+        });
+      }
       cont.appendChild(div);
     });
+  }
+
+  // Cómo se muestra la disponibilidad de un viaje.
+  function estadoCupo(n) {
+    if (n === null || n === undefined) {
+      // Aerorutas no respondió el conteo: no se afirma que esté lleno, se
+      // avisa que hay que abrir el bus para verlo.
+      return { clase: 'cupo-nosabe', texto: 'Ver disponibilidad', agotado: false };
+    }
+    if (n <= 0) return { clase: 'cupo-lleno', texto: 'SIN PUESTOS', agotado: true };
+    if (n <= 5) return { clase: 'cupo-pocos', texto: '¡Últimos ' + n + '!', agotado: false };
+    return { clase: 'cupo-ok', texto: n + ' libres', agotado: false };
   }
 
   async function buscarViajes() {
