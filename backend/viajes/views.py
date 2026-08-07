@@ -297,14 +297,14 @@ class ConfiguracionPublicaView(APIView):
 #  Portal de Viajes (custom admin view)
 # ────────────────────────────────────────────────
 from django.shortcuts import render
-from django.contrib.admin.views.decorators import staff_member_required
+from backoffice.auth import staff_requerido
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
 from datetime import datetime, timedelta, date as date_type
 
 
-@staff_member_required
+@staff_requerido
 def portal_viajes_view(request):
     """Portal cómodo para crear viajes desde el admin."""
 
@@ -426,10 +426,10 @@ def portal_viajes_view(request):
         'recientes': Viaje.objects.select_related('ruta', 'autobus').order_by('-id')[:15],
         'title': 'Portal de Viajes',
     }
-    return render(request, 'admin/portal_viajes.html', context)
+    return render(request, 'backoffice/viajes.html', context)
 
 
-@staff_member_required
+@staff_requerido
 @require_http_methods(["DELETE"])
 def eliminar_viaje_view(request, viaje_id):
     """Eliminar un viaje desde el portal de admin."""

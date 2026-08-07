@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'pagos',
     'api_externa',
     'r4conecta',
+    'backoffice',
 ]
 
 MIDDLEWARE = [
@@ -79,6 +80,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Contadores y tasa que muestra la barra lateral del back office.
+                'backoffice.context.barra_lateral',
             ],
         },
     },

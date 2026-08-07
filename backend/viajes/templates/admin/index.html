@@ -1,34 +1,23 @@
 {% extends "admin/index.html" %}
 
-{# Accesos directos a los paneles propios. Los estilos viven en
-   static/admin/css/vabus_admin.css (clases .va-card*), no incrustados, para
-   que respeten el modo claro/oscuro y se adapten en pantallas chicas. #}
+{# El admin ya no es el back office: aquí solo se tocan datos crudos
+   (rutas, autobuses, usuarios, configuración). Las pantallas de trabajo
+   diario viven en /panel/. Estilos en static/admin/css/vabus_admin.css. #}
 {% block content %}
 <div class="va-shortcuts">
   <div class="va-card va-card--caja">
     <div>
-      <h2>&#128179; Caja (Taquilla)</h2>
-      <p>Vender boletos en el mostrador y cobrar en efectivo, débito, pago móvil o Cashea</p>
+      <h2>&#128188; Back office</h2>
+      <p>Caja, viajes, boletos, comprobantes y arqueo — el trabajo del día a día</p>
     </div>
-    <a class="va-card__btn" href="/admin/caja/">&#128722; Abrir Caja</a>
-  </div>
-
-  <div class="va-card va-card--viajes">
-    <div>
-      <h2>&#128652; Portal de Viajes</h2>
-      <p>Crea viajes individuales o en lote de forma rápida y cómoda</p>
-    </div>
-    <a class="va-card__btn" href="/admin/portal-viajes/">&#10133; Abrir Portal</a>
-  </div>
-
-  <div class="va-card va-card--pagos">
-    <div>
-      <h2>&#128179; Pagos R4 (Débito Inmediato)</h2>
-      <p>Lista de pagos OTP; las operaciones en espera se validan solas</p>
-    </div>
-    <a class="va-card__btn" href="/admin/r4-pagos/">&#128202; Ver pagos</a>
+    <a class="va-card__btn" href="/panel/">&#128640; Ir al back office</a>
   </div>
 </div>
+
+<p style="margin:-8px 0 20px; color:var(--body-quiet-color); font-size:.86rem">
+  Esta sección es para datos y configuración: rutas, autobuses, métodos de pago,
+  usuarios y ajustes generales.
+</p>
 
 {{ block.super }}
 {% endblock %}

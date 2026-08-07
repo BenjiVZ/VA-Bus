@@ -1,0 +1,139 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+
+{% if tasa_vieja %}
+<div class="aviso aviso-error">
+  ⚠️ La tasa BCV no se actualiza desde el {{ tasa_actualizada|date:"d/m/Y H:i" }}.
+  Los cobros en bolívares se están calculando con esa tasa.
+</div>
+{% endif %}
+
+{# ══════════ Números del día ══════════ #}
+<div class="metricas">
+  <div class="metrica metrica--verde">
+    <div class="metrica__et">&#128179; Cobrado en caja hoy</div>
+    <div class="metrica__n">${{ caja_hoy_usd|floatformat:2 }}</div>
+    <div class="metrica__pie">{{ caja_hoy_n }} venta(s) de taquilla</div>
+  </div>
+
+  <div class="metrica">
+    <div class="metrica__et">&#127915; Boletos emitidos hoy</div>
+    <div class="metrica__n">{{ boletos_hoy }}</div>
+    <div class="metrica__pie">Confirmados por todos los canales</div>
+  </div>
+
+  <div class="metrica {% if comprobantes_pend %}metrica--ambar{% endif %}">
+    <div class="metrica__et">&#128196; Comprobantes por revisar</div>
+    <div class="metrica__n">{{ comprobantes_pend }}</div>
+    <div class="metrica__pie">
+      {% if comprobantes_pend %}
+        <a href="{% url 'backoffice:comprobantes' %}">Revisarlos ahora →</a>
+      {% else %}Todo al día{% endif %}
+    </div>
+  </div>
+
+  <div class="metrica">
+    <div class="metrica__et">&#127974; Pagos R4 en curso</div>
+    <div class="metrica__n">{{ r4_espera }}</div>
+    <div class="metrica__pie">Se validan solos</div>
+  </div>
+
+  <div class="metrica">
+    <div class="metrica__et">&#9203; Reservas sin pagar</div>
+    <div class="metrica__n">{{ reservas_pend }}</div>
+    <div class="metrica__pie">Caducan solas al vencer</div>
+  </div>
+</div>
+
+{# ══════════ Accesos ══════════ #}
+<div class="accesos">
+  <a class="acceso acceso--caja" href="{% url 'backoffice:caja' %}">
+    <div>
+      <h3>&#128179; Caja (taquilla)</h3>
+      <p>Vender en el mostrador y cobrar en efectivo, débito, pago móvil o Cashea</p>
+    </div>
+    <span class="acceso__flecha">&rarr;</span>
+  </a>
+
+  <a class="acceso acceso--viajes" href="{% url 'backoffice:viajes' %}">
+    <div>
+      <h3>&#128652; Viajes</h3>
+      <p>Crear viajes sueltos o en lote y revisar los programados</p>
+    </div>
+    <span class="acceso__flecha">&rarr;</span>
+  </a>
+
+  <a class="acceso acceso--boletos" href="{% url 'backoffice:boletos' %}">
+    <div>
+      <h3>&#127915; Boletos</h3>
+      <p>Buscar una reserva por ticket, cédula o nombre del pasajero</p>
+    </div>
+    <span class="acceso__flecha">&rarr;</span>
+  </a>
+
+  <a class="acceso acceso--pagos" href="{% url 'backoffice:arqueo' %}">
+    <div>
+      <h3>&#128200; Arqueo de caja</h3>
+      <p>Cuadrar el turno: total cobrado por método y por cajera</p>
+    </div>
+    <span class="acceso__flecha">&rarr;</span>
+  </a>
+</div>
+
+{# ══════════ Dos columnas ══════════ #}
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(330px,1fr)); gap:16px">
+
+  <div class="panel">
+    <h2>Salidas de hoy</h2>
+    {% if viajes_hoy %}
+      <div class="tabla-envoltura" style="border:none; box-shadow:none">
+        <table class="tabla" style="min-width:0">
+          <thead><tr><th>Hora</th><th>Ruta</th><th>Bus</th><th style="text-align:right">Precio</th></tr></thead>
+          <tbody>
+            {% for v in viajes_hoy %}
+            <tr>
+              <td><strong>{{ v.hora_salida|time:"H:i" }}</strong></td>
+              <td>{{ v.ruta.origen }} &rarr; {{ v.ruta.destino }}</td>
+              <td class="muted">{{ v.autobus.nombre }}</td>
+              <td style="text-align:right"><strong>${{ v.precio_usd }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">No hay viajes propios programados para hoy.
+        Los de Aerorutas se consultan en vivo desde la Caja.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Últimas ventas en taquilla</h2>
+    {% if ultimas_ventas %}
+      <div class="tabla-envoltura" style="border:none; box-shadow:none">
+        <table class="tabla" style="min-width:0">
+          <thead><tr><th>Hora</th><th>Cliente</th><th>Método</th><th style="text-align:right">Monto</th></tr></thead>
+          <tbody>
+            {% for p in ultimas_ventas %}
+            <tr>
+              <td class="muted">{{ p.fecha_creacion|date:"d/m H:i" }}</td>
+              <td>{{ p.cliente_nombre }}</td>
+              <td><span class="pin pin-gris">{{ p.metodo_pago.nombre|default:"—" }}</span></td>
+              <td style="text-align:right">
+                <strong>{% if p.moneda == 'BS' %}Bs. {% else %}${% endif %}{{ p.monto|floatformat:2 }}</strong>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">Todavía no se ha cobrado nada en taquilla.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

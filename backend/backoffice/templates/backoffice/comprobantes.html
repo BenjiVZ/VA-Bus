@@ -1,0 +1,196 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Comprobantes{% endblock %}
+
+{% block extrastyle %}
+<style>
+  .comp {
+    display: grid; grid-template-columns: 200px 1fr 250px; gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 940px) { .comp { grid-template-columns: 1fr; } }
+
+  .comp__img {
+    width: 100%; border-radius: var(--radio-sm); border: 1px solid var(--borde);
+    background: var(--superficie-2); display: block; cursor: zoom-in;
+  }
+  .comp__datos dt { font-size: .68rem; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--texto-suave); }
+  .comp__datos dd { margin: 0 0 10px; font-size: .9rem; }
+  .comp__monto { font-size: 1.35rem; font-weight: 800; color: var(--verde); }
+  .comp__acciones { display: flex; flex-direction: column; gap: 8px; }
+  .comp__acciones textarea { min-height: 62px; resize: vertical; }
+  .comp__puestos { font-size: .82rem; }
+  .comp__puestos li { margin-bottom: 2px; }
+
+  /* Lupa: la imagen a pantalla completa al hacer clic. */
+  #lupa {
+    display: none; position: fixed; inset: 0; z-index: 90;
+    background: rgba(8, 15, 28, .88); padding: 24px;
+    place-items: center; cursor: zoom-out;
+  }
+  #lupa.abierta { display: grid; }
+  #lupa img { max-width: 100%; max-height: 100%; border-radius: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<form class="filtros" method="get">
+  <div class="campo campo--crece">
+    <label for="q">Buscar</label>
+    <input type="search" id="q" name="q" value="{{ f.q }}" placeholder="Referencia o cliente">
+  </div>
+  <div class="campo">
+    <label for="estado">Estado</label>
+    <select id="estado" name="estado">
+      <option value="">Todos</option>
+      {% for valor, etiqueta in estados %}
+        <option value="{{ valor }}" {% if f.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="button">Filtrar</button>
+</form>
+
+{% for c in pagina %}
+<div class="panel">
+  <h2>
+    {{ c.fecha_creacion|date:"d/m/Y H:i" }} ·
+    <span class="pin pin-{{ c.estado }}">{{ c.get_estado_display }}</span>
+  </h2>
+
+  <div class="comp">
+    {# ── Imagen ── #}
+    <div>
+      {% if c.imagen %}
+        <img class="comp__img" src="{{ c.imagen.url }}" alt="Comprobante" loading="lazy" data-lupa>
+      {% else %}
+        <p class="muted">Sin imagen.</p>
+      {% endif %}
+      {% if c.foto_billete %}
+        <img class="comp__img" style="margin-top:8px" src="{{ c.foto_billete.url }}"
+             alt="Foto del billete" loading="lazy" data-lupa>
+        <p class="muted" style="text-align:center">Foto del billete</p>
+      {% endif %}
+    </div>
+
+    {# ── Datos ── #}
+    <dl class="comp__datos">
+      <dt>Monto reportado</dt>
+      <dd class="comp__monto">
+        {% if c.moneda == 'BS' %}Bs. {% else %}${% endif %}{{ c.monto|floatformat:2 }}
+      </dd>
+
+      <dt>Método</dt>
+      <dd>{{ c.metodo_pago.nombre|default:"—" }}</dd>
+
+      <dt>Referencia</dt>
+      <dd class="mono">{{ c.numero_referencia|default:"— sin referencia —" }}</dd>
+
+      <dt>Cliente</dt>
+      <dd>
+        {{ c.usuario.get_full_name|default:c.usuario.username }}
+        <div class="muted">{{ c.usuario.email }}</div>
+      </dd>
+
+      <dt>Puestos de esta orden</dt>
+      <dd>
+        <ul class="comp__puestos" style="margin:0; padding-left:16px">
+          {% for r in c.reservas_lista %}
+            <li>#{{ r.numero_asiento }} · {{ r.viaje.ruta.origen }} &rarr; {{ r.viaje.ruta.destino }}
+              · {{ r.viaje.fecha_salida|date:"d/m" }}
+              <span class="pin pin-{{ r.estado }}">{{ r.get_estado_display }}</span></li>
+          {% empty %}
+            <li class="muted">No quedan reservas ligadas a esta orden.</li>
+          {% endfor %}
+        </ul>
+      </dd>
+
+      {% if c.estado != 'pendiente' %}
+      <dt>Revisado por</dt>
+      <dd>
+        {{ c.revisado_por.get_username|default:"—" }}
+        <span class="muted">{{ c.fecha_revision|date:"d/m/Y H:i" }}</span>
+        {% if c.nota_admin %}<div class="muted">“{{ c.nota_admin }}”</div>{% endif %}
+      </dd>
+      {% endif %}
+    </dl>
+
+    {# ── Decisión ── #}
+    <div>
+      {% if c.estado == 'pendiente' %}
+        <form method="post" class="comp__acciones">
+          {% csrf_token %}
+          <input type="hidden" name="id" value="{{ c.id }}">
+          <input type="hidden" name="volver_a" value="{{ f.estado }}">
+          <label for="nota-{{ c.id }}">Nota (obligatoria si rechazas)</label>
+          <textarea id="nota-{{ c.id }}" name="nota"
+                    placeholder="Ej.: la referencia no aparece en el banco"></textarea>
+          <button type="submit" name="decision" value="aprobado" class="button button--verde"
+                  data-confirmar="Se confirmarán los puestos y se le enviará el ticket al cliente. ¿Aprobar?">
+            &#10003; Aprobar y emitir
+          </button>
+          <button type="submit" name="decision" value="rechazado" class="button button--rojo"
+                  data-confirmar="Se cancelarán los puestos y volverán a quedar libres. ¿Rechazar?">
+            &#10007; Rechazar
+          </button>
+        </form>
+      {% else %}
+        <p class="muted">Ya fue revisado. Para revertirlo hay que ajustar las reservas
+          desde <a href="{% url 'backoffice:boletos' %}">Boletos</a>.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="panel">
+  <p class="muted" style="text-align:center; padding:26px 0; margin:0">
+    No hay comprobantes con ese filtro. 🎉
+  </p>
+</div>
+{% endfor %}
+
+{% if pagina.paginator.num_pages > 1 %}
+<div class="paginacion">
+  {% if pagina.has_previous %}
+    <a class="button button--sm button--fantasma" href="{% querystring p=pagina.previous_page_number %}">← Anterior</a>
+  {% endif %}
+  <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  {% if pagina.has_next %}
+    <a class="button button--sm button--fantasma" href="{% querystring p=pagina.next_page_number %}">Siguiente →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<div id="lupa"><img alt="Comprobante ampliado"></div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+  (function () {
+    "use strict";
+    var lupa = document.getElementById('lupa');
+    var img = lupa.querySelector('img');
+
+    document.querySelectorAll('[data-lupa]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        img.src = el.src;
+        lupa.classList.add('abierta');
+      });
+    });
+
+    lupa.addEventListener('click', function () { lupa.classList.remove('abierta'); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') lupa.classList.remove('abierta');
+    });
+
+    // Aprobar o rechazar mueve dinero y puestos: siempre se confirma.
+    document.querySelectorAll('[data-confirmar]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        if (!window.confirm(btn.dataset.confirmar)) e.preventDefault();
+      });
+    });
+  })();
+</script>
+{% endblock %}

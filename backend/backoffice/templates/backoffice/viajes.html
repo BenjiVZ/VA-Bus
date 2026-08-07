@@ -1,25 +1,23 @@
-{% extends "admin/base_site.html" %}
-{% load static %}
+{% extends "backoffice/base.html" %}
 
 {% block title %}Portal de Viajes{% endblock %}
-{% block content_title %}<h1>Portal de Creacion de Viajes</h1>{% endblock %}
 
-{% block extrastyle %}{{ block.super }}
+{% block extrastyle %}
 <style>
+  /* Los colores propios del portal se enganchan al tema del back office
+     para que el modo oscuro también funcione aquí. */
   :root {
-    --portal-primary: #1a3a6b;
-    --portal-gold: #f5c842;
-    --portal-success: #22c55e;
-    --portal-danger: #ef4444;
-    --portal-bg: #f8fafc;
-    --portal-card: #fff;
-    --portal-border: #e2e8f0;
-    --portal-text: #1e293b;
-    --portal-muted: #64748b;
-    --portal-radius: 12px;
+    --portal-primary: var(--navy);
+    --portal-gold: var(--oro);
+    --portal-success: var(--verde);
+    --portal-danger: var(--rojo);
+    --portal-bg: var(--fondo);
+    --portal-card: var(--superficie);
+    --portal-border: var(--borde);
+    --portal-text: var(--texto);
+    --portal-muted: var(--texto-suave);
+    --portal-radius: var(--radio);
   }
-
-  #content { background: var(--portal-bg); }
 
   .portal-grid {
     display: grid;
@@ -80,7 +78,7 @@
     border-radius: 8px;
     font-size: 0.9rem;
     color: var(--portal-text);
-    background: #fff;
+    background: var(--portal-card);
     transition: border-color 0.2s, box-shadow 0.2s;
     font-family: inherit;
   }
@@ -105,7 +103,7 @@
 
   /* ── Bus info card ── */
   .bus-info {
-    background: #f1f5f9;
+    background: var(--superficie-2);
     border-radius: 8px;
     padding: 0.75rem 1rem;
     font-size: 0.82rem;
@@ -217,7 +215,7 @@
   }
 
   .pf-table th {
-    background: #f1f5f9;
+    background: var(--superficie-2);
     color: var(--portal-muted);
     font-weight: 600;
     text-transform: uppercase;
@@ -230,12 +228,12 @@
 
   .pf-table td {
     padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--portal-border);
     color: var(--portal-text);
   }
 
   .pf-table tr:hover td {
-    background: #f8fafc;
+    background: var(--superficie-2);
   }
 
   .pf-badge {
@@ -264,7 +262,7 @@
     padding: 4px 10px;
     border: 1px solid #fecaca;
     border-radius: 6px;
-    background: #fff;
+    background: var(--portal-card);
     color: #dc2626;
     font-size: 0.72rem;
     font-weight: 600;
@@ -291,7 +289,7 @@
 
   /* ── Batch section ── */
   .batch-section {
-    background: #faf5ff;
+    background: var(--superficie-2);
     border: 1px dashed #c084fc;
     border-radius: 8px;
     padding: 1rem;
@@ -319,7 +317,7 @@
     padding: 4px 10px;
     border: 1px solid var(--portal-border);
     border-radius: 6px;
-    background: #fff;
+    background: var(--portal-card);
     font-size: 0.72rem;
     cursor: pointer;
     transition: all 0.15s;
@@ -330,7 +328,7 @@
   .quick-date-btn:hover {
     border-color: var(--portal-primary);
     color: var(--portal-primary);
-    background: #eef2ff;
+    background: var(--selected-bg);
   }
 
   /* ── Animation ── */
@@ -733,7 +731,7 @@
 
     try {
       const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-      const res = await fetch(`/admin/portal-viajes/eliminar/${id}/`, {
+      const res = await fetch(`/panel/viajes/eliminar/${id}/`, {
         method: 'DELETE',
         headers: {
           'X-CSRFToken': csrfToken,

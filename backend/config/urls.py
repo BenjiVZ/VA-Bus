@@ -5,20 +5,26 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from viajes.views import portal_viajes_view, eliminar_viaje_view
-from pagos.caja_views import caja_view
-from r4conecta.panel_views import panel_pagos
+from django.views.generic import RedirectView
 
-admin.site.site_header = "Aerorutas de Venezuela — Administración"
-admin.site.site_title = "Aerorutas Admin"
-admin.site.index_title = "Panel de Administración"
+admin.site.site_header = "Aerorutas de Venezuela — Datos y configuración"
+admin.site.site_title = "Aerorutas — Datos"
+admin.site.index_title = "Datos y configuración"
 
 urlpatterns = [
-    path('admin/portal-viajes/', portal_viajes_view, name='portal-viajes'),
-    path('admin/portal-viajes/eliminar/<int:viaje_id>/', eliminar_viaje_view, name='eliminar-viaje'),
-    path('admin/caja/', caja_view, name='caja'),
-    path('admin/r4-pagos/', panel_pagos, name='r4-panel-pagos'),
+    # ── Enlaces viejos ──
+    # Estas pantallas vivían bajo /admin/. Van ANTES del admin porque su
+    # URLconf termina en un catch-all que si no devolvería 404.
+    path('admin/caja/', RedirectView.as_view(url='/panel/caja/')),
+    path('admin/portal-viajes/', RedirectView.as_view(url='/panel/viajes/')),
+    path('admin/r4-pagos/', RedirectView.as_view(url='/panel/pagos-r4/')),
+
+    # Back office propio (todas las pantallas del personal).
+    path('panel/', include('backoffice.urls')),
+
+    # El admin de Django queda solo para tocar datos crudos.
     path('admin/', admin.site.urls),
+
     path('api/', include('viajes.urls')),
     path('api/', include('reservas.urls')),
     path('api/', include('pagos.urls')),
@@ -30,6 +36,5 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     # daphne no sirve estáticos como runserver: los servimos aquí en desarrollo
-    # (necesario para que el CSS/imágenes del admin de Django carguen).
+    # (necesario para que el CSS/imágenes carguen).
     urlpatterns += staticfiles_urlpatterns()
-

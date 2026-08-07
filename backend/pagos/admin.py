@@ -72,7 +72,7 @@ class PagoCajaAdmin(admin.ModelAdmin):
     ordering = ('-fecha_creacion',)
 
     def has_add_permission(self, request):
-        return False  # se registra desde /admin/caja/
+        return False  # se registra desde /panel/caja/
 
     def get_readonly_fields(self, request, obj=None):
         return [f.name for f in self.model._meta.fields]

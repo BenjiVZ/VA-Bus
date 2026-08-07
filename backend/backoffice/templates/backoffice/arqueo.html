@@ -1,0 +1,109 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Arqueo de caja{% endblock %}
+
+{% block content %}
+
+<form class="filtros" method="get">
+  <div class="campo">
+    <label for="desde">Desde</label>
+    <input type="date" id="desde" name="desde" value="{{ f.desde }}">
+  </div>
+  <div class="campo">
+    <label for="hasta">Hasta</label>
+    <input type="date" id="hasta" name="hasta" value="{{ f.hasta }}">
+  </div>
+  <div class="campo">
+    <label for="cajero">Cajera / cajero</label>
+    <select id="cajero" name="cajero">
+      <option value="">Todos</option>
+      {% for c in cajeros %}
+        <option value="{{ c.cajero_id }}" {% if f.cajero == c.cajero_id|stringformat:"s" %}selected{% endif %}>
+          {{ c.cajero__username }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo">
+    <label for="metodo">Método</label>
+    <select id="metodo" name="metodo">
+      <option value="">Todos</option>
+      {% for m in metodos %}
+        <option value="{{ m.id }}" {% if f.metodo == m.id|stringformat:"s" %}selected{% endif %}>
+          {{ m.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="button">Filtrar</button>
+  <button type="button" class="button button--fantasma" onclick="window.print()">&#128424; Imprimir</button>
+</form>
+
+{# ══════════ Cierre del turno ══════════ #}
+<div class="metricas">
+  <div class="metrica metrica--verde">
+    <div class="metrica__et">&#128176; Total del período</div>
+    <div class="metrica__n">${{ total_usd|floatformat:2 }}</div>
+    <div class="metrica__pie">{{ total_n }} venta(s)</div>
+  </div>
+
+  {% for m in por_metodo %}
+  <div class="metrica">
+    <div class="metrica__et">{{ m.metodo_pago__nombre|default:"Sin método" }}</div>
+    <div class="metrica__n" style="font-size:1.4rem">
+      {% if m.moneda == 'BS' %}Bs. {% else %}${% endif %}{{ m.total|floatformat:2 }}
+    </div>
+    <div class="metrica__pie">{{ m.n }} venta(s) · ${{ m.total_usd|floatformat:2 }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ══════════ Detalle ══════════ #}
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Método</th>
+        <th style="text-align:right">Cobrado</th>
+        <th style="text-align:right">En $</th>
+        <th>Tasa</th>
+        <th>Referencia</th>
+        <th>Cajera</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in ventas %}
+      <tr>
+        <td class="muted">{{ p.fecha_creacion|date:"d/m/Y H:i" }}</td>
+        <td>
+          <strong>{{ p.cliente_nombre }}</strong>
+          {% if p.cliente_cedula %}<div class="muted">{{ p.cliente_cedula }}</div>{% endif %}
+        </td>
+        <td><span class="pin pin-gris">{{ p.metodo_pago.nombre|default:"—" }}</span></td>
+        <td style="text-align:right"><strong>
+          {% if p.moneda == 'BS' %}Bs. {% else %}${% endif %}{{ p.monto|floatformat:2 }}
+        </strong></td>
+        <td style="text-align:right">${{ p.monto_usd|floatformat:2 }}</td>
+        <td class="muted">{{ p.tasa_bcv|floatformat:2|default:"—" }}</td>
+        <td class="mono">{{ p.referencia|default:"—" }}</td>
+        <td class="muted">{{ p.cajero.username|default:"—" }}</td>
+        <td>
+          <a class="button button--sm button--fantasma" target="_blank"
+             href="/api/ticket/{{ p.grupo_pago }}/">Ticket</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="tabla-vacia">No se cobró nada en taquilla en ese período.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_n > 400 %}
+<p class="muted" style="margin-top:10px">
+  Mostrando las 400 ventas más recientes de {{ total_n }}. Acota las fechas para verlas todas.
+</p>
+{% endif %}
+
+{% endblock %}

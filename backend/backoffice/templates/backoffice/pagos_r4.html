@@ -1,0 +1,71 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Pagos R4{% endblock %}
+
+{% block extrastyle %}
+{# La página se revalida sola: recarga y, al entrar, la vista consulta al banco. #}
+<meta http-equiv="refresh" content="{{ refresco }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="metricas">
+  <div class="metrica">
+    <div class="metrica__et">&#128203; Revisadas ahora</div>
+    <div class="metrica__n">{{ resumen.total }}</div>
+    <div class="metrica__pie">En la última consulta al banco</div>
+  </div>
+  <div class="metrica metrica--verde">
+    <div class="metrica__et">&#9989; Aprobadas</div>
+    <div class="metrica__n">{{ resumen.aprobadas }}</div>
+  </div>
+  <div class="metrica metrica--ambar">
+    <div class="metrica__et">&#8987; En espera</div>
+    <div class="metrica__n">{{ resumen.en_espera }}</div>
+  </div>
+  <div class="metrica metrica--rojo">
+    <div class="metrica__et">&#10060; Rechazadas</div>
+    <div class="metrica__n">{{ resumen.rechazadas }}</div>
+  </div>
+  <div class="metrica metrica--rojo">
+    <div class="metrica__et">&#9888; Con error</div>
+    <div class="metrica__n">{{ resumen.error }}</div>
+  </div>
+</div>
+
+<div class="aviso aviso-ok">
+  &#128260; Esta pantalla se actualiza y revalida sola cada {{ refresco }} segundos.
+  Las operaciones en espera (AC00) se consultan al banco sin que nadie las toque.
+</div>
+
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>#</th><th>Estado</th><th>Código</th><th>Cliente</th><th>Cédula</th>
+        <th>Teléfono</th><th style="text-align:right">Monto (Bs)</th>
+        <th>Referencia</th><th>Id banco</th><th>Creado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for op in operaciones %}
+      <tr>
+        <td class="muted">{{ op.id }}</td>
+        <td><span class="pin pin-{{ op.estado }}">{{ op.get_estado_display }}</span></td>
+        <td class="mono">{{ op.code|default:"—" }}</td>
+        <td><strong>{{ op.nombre|default:"—" }}</strong></td>
+        <td>{{ op.cedula }}</td>
+        <td>{{ op.telefono }}</td>
+        <td style="text-align:right"><strong>{{ op.monto|floatformat:2 }}</strong></td>
+        <td class="mono">{{ op.referencia|default:"—" }}</td>
+        <td class="mono">{{ op.operacion_id|default:"—" }}</td>
+        <td class="muted">{{ op.created_at|date:"d/m/Y H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" class="tabla-vacia">No hay operaciones de pago todavía.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

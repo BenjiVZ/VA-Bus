@@ -1,0 +1,44 @@
+{% load static %}<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ingresar · Aerorutas Back office</title>
+<link rel="stylesheet" href="{% static 'backoffice/css/backoffice.css' %}">
+</head>
+<body>
+<div class="bo-ingreso">
+  <form class="bo-ingreso__caja" method="post" autocomplete="on">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <div class="bo-ingreso__marca">
+      <div class="bo-marca__logo">&#128652;</div>
+      <b>Aerorutas de Venezuela</b>
+      <span>Back office</span>
+    </div>
+
+    {% if error %}<div class="aviso aviso-error">{{ error }}</div>{% endif %}
+
+    <div class="campo">
+      <label for="usuario">Usuario</label>
+      <input type="text" id="usuario" name="usuario" autocomplete="username"
+             autofocus required>
+    </div>
+
+    <div class="campo">
+      <label for="clave">Contraseña</label>
+      <input type="password" id="clave" name="clave"
+             autocomplete="current-password" required>
+    </div>
+
+    <button type="submit" class="button">Entrar</button>
+
+    <p class="muted" style="text-align:center; margin:16px 0 0; font-size:.76rem">
+      Acceso solo para personal autorizado.
+    </p>
+  </form>
+</div>
+</body>
+</html>

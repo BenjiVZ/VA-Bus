@@ -20,7 +20,7 @@ import uuid as uuid_lib
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from django.contrib.admin.views.decorators import staff_member_required
+from backoffice.auth import staff_requerido
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -337,7 +337,7 @@ ACCIONES = {
 }
 
 
-@staff_member_required
+@staff_requerido
 def caja_view(request):
     """Punto de venta de taquilla dentro del back office."""
     if request.method == 'POST':
@@ -356,8 +356,10 @@ def caja_view(request):
     except aerorutas.AerorutasError:
         oficinas = []
 
-    return render(request, 'admin/caja.html', {
-        'title': 'Caja — Venta en taquilla',
+    return render(request, 'backoffice/caja.html', {
+        'seccion': 'caja',
+        'titulo': 'Caja — venta en taquilla',
+        'subtitulo': 'Cobra en el mostrador y emite el boleto en el acto',
         'oficinas': sorted(oficinas, key=lambda o: str(o.get('desofi') or '')),
         'metodos': MetodoPago.objects.filter(activo=True, disponible_caja=True),
         'tasa_bcv': _tasa(),
