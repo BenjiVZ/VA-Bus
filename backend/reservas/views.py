@@ -368,6 +368,11 @@ class MisReservasView(generics.ListAPIView):
         # de Aerorutas). Sin esto, una reserva sin pagar se quedaba "pendiente"
         # para siempre y el asiento nunca se liberaba.
         Reserva.limpiar_expiradas()
+        # Por lo mismo (no hay cron garantizado): un cobro que el banco dejó
+        # esperando se resuelve aquí, en background. Si no, la reserva se
+        # quedaba EN VALIDACIÓN hasta que alguien corriera algo a mano.
+        from r4conecta.operaciones import resolver_en_espera_async
+        resolver_en_espera_async(self.request.user.id)
         return Reserva.objects.filter(
             usuario=self.request.user
         ).select_related('viaje', 'viaje__ruta', 'viaje__autobus')

@@ -33,6 +33,20 @@ export default function MisReservasPage() {
       .finally(() => setLoading(false));
   }, [user, navigate]);
 
+  // Un pago "apartado" está validándose: el backend lo resuelve solo cuando se
+  // lee este listado (ver MisReservasView), así que hay que volver a leer para
+  // que el boleto pase a CONFIRMADO sin que el cliente recargue la página.
+  const hayValidando = reservas.some((r) => r.estado === 'apartado');
+  useEffect(() => {
+    if (!hayValidando) return undefined;
+    const t = setInterval(() => {
+      getMisReservas()
+        .then((res) => setReservas(res.data))
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, [hayValidando]);
+
   if (loading) {
     return (
       <div className="page">
