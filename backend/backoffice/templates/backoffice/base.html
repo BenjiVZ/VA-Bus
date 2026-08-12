@@ -6,6 +6,10 @@
 <meta name="robots" content="noindex, nofollow">
 <title>{% block title %}Back office{% endblock %} · Aerorutas</title>
 
+{# El logo de la marca en la pestaña del navegador. #}
+<link rel="icon" type="image/svg+xml"
+      href="{% estatico_versionado 'backoffice/img/favicon.svg' %}">
+
 {# El tema se aplica antes de pintar para que no haya destello blanco. #}
 <script>
   (function () {

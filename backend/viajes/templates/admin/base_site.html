@@ -8,6 +8,8 @@
    se mantiene en todas las pantallas. #}
 {% block extrastyle %}{{ block.super }}
   <link rel="stylesheet" href="{% static 'admin/css/vabus_admin.css' %}">
+  {# Mismo logo que el back office, para que la pestaña no salga en blanco. #}
+  <link rel="icon" type="image/svg+xml" href="{% static 'backoffice/img/favicon.svg' %}">
 {% endblock %}
 
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
