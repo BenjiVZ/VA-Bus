@@ -13,7 +13,7 @@ from viajes.models import ConfiguracionGeneral
 
 from . import services
 from .bancos import BANCOS
-from .operaciones import aplicar_respuesta
+from .operaciones import aplicar_respuesta, apartar_grupo, devolver_grupo_a_pendiente
 from .models import OperacionDebitoOTP
 from .serializers import GenerarOtpSerializer, ConfirmarDebitoSerializer
 
@@ -150,6 +150,10 @@ class ConfirmarDebitoView(APIView):
 
         op = OperacionDebitoOTP.objects.get(pk=d['operacion_id'])
 
+        # Desde que se intenta el débito el asiento queda apartado: el cobro
+        # puede tardar y la reserva no se puede vencer con el dinero en camino.
+        apartar_grupo(op.grupo_pago)
+
         # Comprobante opcional adjunto por el cliente.
         comprobante = request.FILES.get('comprobante')
         if comprobante:
@@ -178,6 +182,7 @@ class ConfirmarDebitoView(APIView):
             op.estado = 'error'
             op.mensaje = e.message[:255]
             op.save(update_fields=['estado', 'mensaje', 'updated_at'])
+            devolver_grupo_a_pendiente(op.grupo_pago)
             return Response({'error': e.message}, status=status.HTTP_502_BAD_GATEWAY)
 
 

@@ -26,6 +26,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
   String? _error;
   List<Reserva> _reservas = [];
   String _filtro = 'todos'; // todos | proximos | pasados
+  Timer? _autoRefresco;
 
   @override
   void initState() {
@@ -33,25 +34,49 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
     _cargar();
   }
 
-  Future<void> _cargar() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _autoRefresco?.cancel();
+    super.dispose();
+  }
+
+  /// `silencioso`: refresco de fondo. No muestra el esqueleto de carga ni borra
+  /// la lista si falla la red — solo reintenta en el siguiente ciclo.
+  Future<void> _cargar({bool silencioso = false}) async {
+    if (!silencioso) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final r = await context.read<ReservasService>().getMisReservas();
       if (!mounted) return;
       setState(() {
         _reservas = r;
         _loading = false;
+        _error = null;
       });
+      _programarRefresco();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || silencioso) return;
       setState(() {
         _error = ApiClient.extractError(e);
         _loading = false;
       });
     }
+  }
+
+  /// Mientras haya un pago en validación (R4 esperando al banco o comprobante
+  /// por revisar) se refresca solo, para que el boleto pase a CONFIRMADO sin
+  /// que el usuario tenga que salir y volver a entrar.
+  void _programarRefresco() {
+    _autoRefresco?.cancel();
+    if (!_reservas.any((r) => r.estado == 'apartado')) return;
+    _autoRefresco = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _cargar(silencioso: true),
+    );
   }
 
   Map<String, List<Reserva>> get _gruposFiltrados {
@@ -78,7 +103,9 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgSecondary,
-      body: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: _cargar,
+        child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(
@@ -160,6 +187,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
               ),
             ),
         ],
+        ),
       ),
     );
   }
@@ -269,6 +297,41 @@ class _ExpiraPagoBannerState extends State<_ExpiraPagoBanner> {
   }
 }
 
+/// Aviso de "tu pago se está validando": el asiento quedó apartado y la
+/// reserva no se vence mientras el banco (o el operador) resuelve.
+class _ValidandoPagoBanner extends StatelessWidget {
+  const _ValidandoPagoBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.blue50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.blue500.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: const [
+          Icon(Icons.hourglass_top_rounded, size: 18, color: AppColors.blue500),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Estamos validando tu pago. El asiento está apartado y el boleto '
+              'se confirma solo — no hace falta pagar de nuevo.',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.blue700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GrupoCard extends StatelessWidget {
   final String grupoPago;
   final List<Reserva> reservas;
@@ -361,6 +424,12 @@ class _GrupoCard extends StatelessWidget {
                 if (estado == 'pendiente' && first.fechaExpiracion != null) ...[
                   const SizedBox(height: 10),
                   _ExpiraPagoBanner(fechaExpiracionIso: first.fechaExpiracion!),
+                ],
+                // Pago en validación: el asiento ya está apartado y esta
+                // reserva NO vence mientras se resuelve.
+                if (estado == 'apartado') ...[
+                  const SizedBox(height: 10),
+                  const _ValidandoPagoBanner(),
                 ],
                 if (first.esConfirmada && isGroup) ...[
                   const SizedBox(height: 12),

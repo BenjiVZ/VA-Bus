@@ -54,7 +54,6 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   int? _operacionId;
   XFile? _comprobante;
   Timer? _pollTimer;
-  bool _esperaAgotada = false; // el banco no resolvió dentro del tiempo de sondeo
 
   @override
   void initState() {
@@ -264,72 +263,72 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
     }
   }
 
-  /// Nº de sondeos antes de rendirse (~3 min a 8 s). Sin este tope, un estado
-  /// que nunca es aceptada/rechazada (ej. 'error') dejaba la pantalla girando
-  /// indefinidamente y el usuario no sabía qué pasó.
-  static const _maxSondeos = 22;
+  /// Cuánto se le sondea al banco con el usuario mirando la pantalla: 3 veces
+  /// cada 8 s (~24 s). Si para entonces no resolvió, NO se deja al usuario
+  /// girando: el asiento ya quedó apartado en el servidor y el boleto sigue su
+  /// curso, así que se le manda a "Mis viajes" con el sello EN VALIDACIÓN.
+  static const _maxSondeos = 3;
+  static const _cadaSondeo = Duration(seconds: 8);
   int _sondeos = 0;
 
   void _startPolling() {
     _pollTimer?.cancel();
     _sondeos = 0;
-    _esperaAgotada = false;
-    _pollTimer = Timer.periodic(const Duration(seconds: 8), (t) async {
-      if (_operacionId == null) return;
-      try {
-        final data = await context.read<PagosService>().r4EstadoOperacion(_operacionId!);
-        final estado = data['estado']?.toString();
-        if (estado == 'aceptada') {
-          t.cancel();
-          _irAConfirmacion();
-          return;
-        }
-        if (estado == 'rechazada') {
-          t.cancel();
-          if (mounted) setState(() { _paso = 2; _error = 'El pago fue rechazado por el banco.'; });
-          return;
-        }
-        if (estado == 'error') {
-          // También es terminal: el banco no va a cambiarlo solo.
-          t.cancel();
-          if (mounted) {
-            setState(() {
-              _paso = 2;
-              _error = (data['mensaje']?.toString().isNotEmpty ?? false)
-                  ? data['mensaje'].toString()
-                  : 'El banco reportó un error con la operación.';
-            });
-          }
-          return;
-        }
-      } catch (_) {/* reintentar en el próximo tick */}
-
-      // Sigue 'en_espera'/'procesando': cortar al llegar al tope.
-      if (++_sondeos >= _maxSondeos) {
-        t.cancel();
-        if (mounted) setState(() => _esperaAgotada = true);
-      }
-    });
+    _sondear(); // primer intento ya: muchos AC00 se resuelven al preguntarle al banco
+    _pollTimer = Timer.periodic(_cadaSondeo, (_) => _sondear());
   }
 
-  /// Reintenta la consulta manualmente tras agotarse la espera.
-  Future<void> _verificarDeNuevo() async {
+  Future<void> _sondear() async {
     if (_operacionId == null) return;
-    setState(() { _esperaAgotada = false; _enviando = true; });
     try {
       final data = await context.read<PagosService>().r4EstadoOperacion(_operacionId!);
       if (!mounted) return;
-      setState(() => _enviando = false);
-      _aplicarEstado(data['estado']?.toString() ?? '');
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _enviando = false; _esperaAgotada = true; });
+      final estado = data['estado']?.toString();
+      if (estado == 'aceptada') {
+        _pollTimer?.cancel();
+        _irAConfirmacion();
+        return;
+      }
+      // 'rechazada' y 'error' son terminales: el banco no los cambia solo.
+      if (estado == 'rechazada' || estado == 'error') {
+        _pollTimer?.cancel();
+        final msg = data['message']?.toString() ?? '';
+        setState(() {
+          _paso = 2;
+          _error = estado == 'rechazada'
+              ? 'El pago fue rechazado por el banco.'
+              : (msg.isNotEmpty ? msg : 'El banco reportó un error con la operación.');
+        });
+        return;
+      }
+    } catch (_) {/* reintentar en el próximo tick */}
+
+    // Sigue 'en_espera'/'procesando': soltar al usuario al llegar al tope.
+    if (++_sondeos > _maxSondeos) {
+      _pollTimer?.cancel();
+      _irAMisReservas();
     }
   }
 
   void _irAConfirmacion() {
     if (!mounted) return;
     context.go('/reserva/confirmacion?grupo=${widget.grupoPago}');
+  }
+
+  /// Saca al usuario de la espera. El pago no se pierde: el asiento quedó
+  /// apartado y la reserva aparece como EN VALIDACIÓN hasta que el banco
+  /// responda, momento en el que pasa sola a CONFIRMADO.
+  void _irAMisReservas() {
+    if (!mounted) return;
+    _pollTimer?.cancel();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        duration: Duration(seconds: 8),
+        content: Text('Tu pago quedó en validación. El asiento está apartado y '
+            'el boleto se confirma solo apenas el banco responda.'),
+      ),
+    );
+    context.go('/mis-reservas');
   }
 
   // ── UI ──
@@ -504,55 +503,48 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   }
 
   Widget _pasoEspera() {
-    // Se agotó el tiempo de sondeo: no dejar la rueda girando para siempre.
-    if (_esperaAgotada) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.hourglass_bottom_rounded,
-                size: 48, color: AppColors.yellow600),
-            const SizedBox(height: 20),
-            const Text('El banco aún no responde',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            const Text(
-              'La operación sigue en proceso. Tu reserva no se pierde: si el banco '
-              'aprueba, el pago se confirma solo y lo verás en "Mis viajes".',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Verificar de nuevo'),
-              onPressed: _enviando ? null : _verificarDeNuevo,
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => context.go('/mis-reservas'),
-              child: const Text('Ir a Mis viajes'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return const Padding(
-      padding: EdgeInsets.all(24),
+    return Padding(
+      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(width: 48, height: 48, child: CircularProgressIndicator()),
-          SizedBox(height: 20),
-          Text('Validando tu pago…',
+          const SizedBox(width: 48, height: 48, child: CircularProgressIndicator()),
+          const SizedBox(height: 20),
+          const Text('Validando tu pago…',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          SizedBox(height: 8),
-          Text(
-            'El banco está procesando la operación. Tu silla queda reservada y se confirmará en cuanto el banco apruebe.',
+          const SizedBox(height: 8),
+          const Text(
+            'El banco está procesando la operación. Tu asiento ya quedó apartado: '
+            'no lo pierdes aunque el banco tarde.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.blue500.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 18, color: AppColors.blue700),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'No hace falta esperar aquí. En "Mis viajes" verás el boleto '
+                    'EN VALIDACIÓN y pasará a CONFIRMADO solo.',
+                    style: TextStyle(fontSize: 12.5, color: AppColors.blue700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            icon: const Icon(Icons.confirmation_number_outlined, size: 18),
+            label: const Text('Ir a Mis viajes'),
+            onPressed: _irAMisReservas,
           ),
         ],
       ),
