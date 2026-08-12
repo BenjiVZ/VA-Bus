@@ -500,7 +500,7 @@ class _ViajeCard extends StatelessWidget {
                               ),
                             ),
                             TextSpan(
-                              text: viaje.precioUsd.toStringAsFixed(2),
+                              text: montoUsd(viaje.precioUsd),
                               style: AppMono.style(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,

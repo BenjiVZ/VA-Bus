@@ -206,7 +206,14 @@ class ConsultarOperacionView(APIView):
 
 
 class OperacionDetalleView(APIView):
-    """Estado de una operación (para polling del frontend)."""
+    """Estado de una operación (para el sondeo de los clientes).
+
+    Si quedó en espera (AC00), aquí mismo se le pregunta al banco. Antes esto
+    solo leía el registro local: la app sondeaba este endpoint y el estado no
+    avanzaba nunca, así que el dinero salía debitado y la pantalla se quedaba
+    "validando" para siempre. La web no lo sufría porque llama al endpoint
+    /consultar/, que sí interroga al banco.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
@@ -215,6 +222,16 @@ class OperacionDetalleView(APIView):
         except OperacionDebitoOTP.DoesNotExist:
             return Response({'error': 'Operación no encontrada.'},
                             status=status.HTTP_404_NOT_FOUND)
+
+        if op.estado == 'en_espera' and op.operacion_id:
+            try:
+                aplicar_respuesta(op, services.consultar_operacion(op.operacion_id),
+                                  campo='consulta_response')
+            except services.R4Error:
+                pass          # banco caído: se reintenta en el siguiente sondeo
+            except Exception:  # nunca dejar al cliente sin respuesta por esto
+                logger.exception('R4: fallo al resolver la operación %s', op.pk)
+
         return Response({
             'operacion_id': op.pk,
             'estado': op.estado,

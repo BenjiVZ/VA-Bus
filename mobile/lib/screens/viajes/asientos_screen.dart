@@ -567,7 +567,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
                                 ),
                               ),
                               Text(
-                                '\$${total.toStringAsFixed(2)} USD',
+                                '\$${montoUsd(total)} USD',
                                 style: const TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
@@ -1920,7 +1920,7 @@ class _TripDetailCard extends StatelessWidget {
                 _miniKv(
                   icon: Icons.attach_money_rounded,
                   label: 'PRECIO',
-                  value: viaje.precioUsd.toStringAsFixed(0),
+                  value: montoUsd(viaje.precioUsd),
                   mono: true,
                   prefix: '\$',
                 ),

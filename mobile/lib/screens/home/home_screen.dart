@@ -1321,7 +1321,7 @@ class _BoardRow extends StatelessWidget {
               ),
               // Precio
               Text(
-                '\$${viaje.precioUsd.toStringAsFixed(0)}',
+                '\$${montoUsd(viaje.precioUsd)}',
                 style: AppMono.style(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,

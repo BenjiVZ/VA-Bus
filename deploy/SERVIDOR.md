@@ -145,6 +145,18 @@ Cron actual (cada 6 h, hora de Venezuela):
 
 ---
 
+## 6.b Pagos R4 en espera (cron)
+
+Débito Inmediato puede devolver **AC00 (en proceso)**: el débito ya salió, pero
+falta preguntar el resultado con `ConsultarOperaciones`. Quien tenga la pantalla
+de pago abierta lo resuelve al sondear; si cierra la app, la operación se queda
+colgada y el pasajero no recibe su boleto.
+```
+*/2 * * * * cd /opt/va-bus/backend && venv/bin/python manage.py r4_validar_pendientes >> /opt/va-bus/backend/r4_pendientes.log 2>&1
+```
+Abrir `/panel/pagos-r4/` también las resuelve (esa pantalla valida en cada carga),
+pero no se puede depender de que alguien la tenga abierta.
+
 ## 7. Desplegar / actualizar (cuando cambia el código)
 
 1. En tu PC: `git push origin main`.

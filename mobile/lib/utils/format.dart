@@ -1,5 +1,11 @@
 // Utilidades de formato compartidas por toda la app.
 
+/// Monto en dólares, siempre con sus centavos: 20 → "20.00", 0.01 → "0.01".
+///
+/// No usar `toStringAsFixed(0)` para dinero: redondea y hace desaparecer los
+/// centavos (un pasaje de 0.01 se mostraba como "0", y uno de 20.50 como "21").
+String montoUsd(num? valor) => (valor ?? 0).toStringAsFixed(2);
+
 /// Convierte una hora en formato 24h ("HH:MM" o "HH:MM:SS") a formato de
 /// 12 horas con meridiano: "8:00 a. m." / "2:30 p. m.".
 ///

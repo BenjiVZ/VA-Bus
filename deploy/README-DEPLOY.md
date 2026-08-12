@@ -85,6 +85,19 @@ primera corrida del día y no tomaba rutas/precios agregados después). El barri
 reintenta ante fallos de red y conserva el snapshot anterior si el nuevo trae
 < 60 % de viajes (protege contra barridos parciales).
 
+### 8. Cron para resolver los pagos R4 en espera
+```bash
+crontab -e
+```
+```
+*/2 * * * * cd /opt/va-bus/backend && venv/bin/python manage.py r4_validar_pendientes >> /opt/va-bus/backend/r4_pendientes.log 2>&1
+```
+El banco a veces responde **AC00 (en proceso)**: el dinero sale de la cuenta pero
+la operación queda sin resolver hasta que alguien le pregunta el resultado. Los
+clientes que siguen con la pantalla abierta la resuelven solos al sondear, pero
+si cierran la app nadie pregunta y **el pasajero queda pagado y sin boleto**.
+Este cron cierra ese hueco.
+
 ---
 
 ## B) Actualizar (cada vez que cambia el código)
