@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show DioException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -32,7 +33,9 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   int _paso = 1;
   bool _loading = true;
   bool _enviando = false;
+  bool _reenviando = false;
   String? _error;
+  String? _aviso;
 
   // Datos del cliente
   final _cedula = TextEditingController();
@@ -55,6 +58,12 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   XFile? _comprobante;
   Timer? _pollTimer;
 
+  // Reenvío del OTP: el banco cobra/limita cada SMS, así que hay una espera
+  // obligatoria entre un envío y el siguiente.
+  static const _esperaReenvio = 60;
+  int _restanteReenvio = 0;
+  Timer? _cooldown;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +77,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _cooldown?.cancel();
     _cedula.dispose();
     _telefono.dispose();
     _nombre.dispose();
@@ -179,7 +189,13 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   }
 
   // ── Acciones ──
-  Future<void> _generarOtp() async {
+  Future<void> _generarOtp() => _pedirOtp();
+
+  /// Pide otro SMS al banco. Genera una operación nueva (el OTP anterior queda
+  /// sin usar) y limpia el campo para que nadie teclee el código viejo.
+  Future<void> _reenviarOtp() => _pedirOtp(reenvio: true);
+
+  Future<void> _pedirOtp({bool reenvio = false}) async {
     // El banco/validador esperan la cédula como letra + dígitos, SIN guion ni
     // espacios (ej: "V30719983"). El perfil la guarda como "V-30719983", así
     // que hay que limpiarla antes de validar y enviar (igual que la web).
@@ -197,7 +213,11 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
       setState(() => _error = 'Selecciona tu banco.');
       return;
     }
-    setState(() { _enviando = true; _error = null; });
+    setState(() {
+      if (reenvio) { _reenviando = true; } else { _enviando = true; }
+      _error = null;
+      _aviso = null;
+    });
     try {
       final data = await context.read<PagosService>().r4GenerarOtp(
             grupoPago: widget.grupoPago,
@@ -210,21 +230,50 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
       if (!mounted) return;
       final enviado = data['otp_enviado'] == true || data['code']?.toString() == '202';
       if (enviado) {
+        if (reenvio) _otp.clear();
         setState(() {
           _operacionId = data['operacion_id'] as int?;
           _paso = 2;
           _enviando = false;
+          _reenviando = false;
+          _aviso = reenvio ? 'Te enviamos un código nuevo. Usa el último que recibas.' : null;
         });
+        _iniciarEsperaReenvio();
       } else {
         setState(() {
           _error = (data['error'] ?? data['message'] ?? 'El banco no envió el OTP.').toString();
           _enviando = false;
+          _reenviando = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = ApiClient.extractError(e); _enviando = false; });
+      setState(() {
+        _error = _mensajeError(e);
+        _enviando = false;
+        _reenviando = false;
+      });
+      // El límite de envíos es temporal: dejar reintentar cuando pase la espera.
+      if (reenvio) _iniciarEsperaReenvio();
     }
+  }
+
+  /// El 429 del backend viene en inglés ("Request was throttled…"); traducirlo.
+  String _mensajeError(Object e) {
+    if (e is DioException && e.response?.statusCode == 429) {
+      return 'Pediste demasiados códigos seguidos. Espera un minuto e intenta otra vez.';
+    }
+    return ApiClient.extractError(e);
+  }
+
+  void _iniciarEsperaReenvio() {
+    _cooldown?.cancel();
+    setState(() => _restanteReenvio = _esperaReenvio);
+    _cooldown = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() => _restanteReenvio--);
+      if (_restanteReenvio <= 0) t.cancel();
+    });
   }
 
   Future<void> _confirmar() async {
@@ -232,7 +281,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
       setState(() => _error = 'Ingresa el OTP recibido (numérico).');
       return;
     }
-    setState(() { _enviando = true; _error = null; });
+    setState(() { _enviando = true; _error = null; _aviso = null; });
     try {
       final data = await context.read<PagosService>().r4ConfirmarDebito(
             operacionId: _operacionId!,
@@ -368,6 +417,30 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
     );
   }
 
+  Widget _avisoBox() {
+    if (_aviso == null) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.green500.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.green500.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.mark_email_read_outlined,
+              size: 18, color: AppColors.green500),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(_aviso!, style: const TextStyle(color: AppColors.green500)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _pasoDatos() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -459,6 +532,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
             style: const TextStyle(fontSize: 13, color: AppColors.textTertiary)),
         const SizedBox(height: 16),
         _errorBox(),
+        _avisoBox(),
         TextField(
           controller: _otp,
           keyboardType: TextInputType.number,
@@ -466,7 +540,28 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: const InputDecoration(labelText: 'Código OTP', hintText: '19807849', counterText: ''),
         ),
-        const SizedBox(height: 12),
+        // Reenviar: solo cuando pasó la espera y no hay otra petición en curso.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            icon: Icon(
+              _restanteReenvio > 0 ? Icons.timer_outlined : Icons.sms_outlined,
+              size: 18,
+            ),
+            label: Text(
+              _reenviando
+                  ? 'Reenviando…'
+                  : _restanteReenvio > 0
+                      ? 'Reenviar código en ${_restanteReenvio}s'
+                      : '¿No te llegó? Reenviar código',
+              style: const TextStyle(fontSize: 13),
+            ),
+            onPressed: (_reenviando || _enviando || _restanteReenvio > 0)
+                ? null
+                : _reenviarOtp,
+          ),
+        ),
+        const SizedBox(height: 4),
         // Comprobante opcional
         InkWell(
           onTap: _pickComprobante,
@@ -495,7 +590,9 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
           child: Text(_enviando ? 'Procesando…' : 'Confirmar pago'),
         ),
         TextButton(
-          onPressed: _enviando ? null : () => setState(() { _paso = 1; _error = null; }),
+          onPressed: _enviando
+              ? null
+              : () => setState(() { _paso = 1; _error = null; _aviso = null; }),
           child: const Text('Volver'),
         ),
       ],
