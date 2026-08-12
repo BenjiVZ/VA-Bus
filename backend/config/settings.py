@@ -264,6 +264,10 @@ EXTERNAL_API_KEY = os.getenv('EXTERNAL_API_KEY', '')
 R4_BASE_URL = os.getenv('R4_BASE_URL', 'https://r4conecta.mibanco.com.ve')
 R4_COMMERCE_TOKEN = os.getenv('R4_COMMERCE_TOKEN', '')  # Token del comercio (Commerce)
 R4_TIMEOUT = int(os.getenv('R4_TIMEOUT', '20'))
+# Vigilante interno que confirma solo los cobros que el banco dejó en espera
+# (ver r4conecta/vigilante.py). Apagarlo solo si se prefiere el cron externo
+# `r4_validar_pendientes`, o si algún día se sirve con varios workers.
+R4_VIGILANTE = os.getenv('R4_VIGILANTE', '1') not in ('0', 'false', 'False')
 
 # Logging: que el logger 'r4conecta' escriba a consola (lo captura journalctl).
 LOGGING = {

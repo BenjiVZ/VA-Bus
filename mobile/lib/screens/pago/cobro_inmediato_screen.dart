@@ -43,6 +43,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   final _nombre = TextEditingController();
   final _concepto = TextEditingController();
   final _otp = TextEditingController();
+  final _focoOtp = FocusNode();
 
   // Bancos
   List<Banco> _bancos = [];
@@ -64,6 +65,9 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
   int _restanteReenvio = 0;
   Timer? _cooldown;
 
+  // Veces que el banco no aceptó el código: cambia el botón a "Reintentar".
+  int _intentos = 0;
+
   @override
   void initState() {
     super.initState();
@@ -83,6 +87,7 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
     _nombre.dispose();
     _concepto.dispose();
     _otp.dispose();
+    _focoOtp.dispose();
     super.dispose();
   }
 
@@ -305,11 +310,31 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
       setState(() { _paso = 3; _enviando = false; });
       _startPolling();
     } else {
-      setState(() {
-        _enviando = false;
-        _error = 'El pago fue rechazado por el banco. Verifica tu saldo o tus datos.';
-      });
+      _pedirCorregirOtp('El banco no aceptó el pago. Si escribiste mal el '
+          'código, corrígelo y reintenta; si no, revisa tu saldo.');
     }
+  }
+
+  /// El banco no aceptó: dejar el campo vacío y con el teclado listo para
+  /// reescribir el código. Antes había que borrarlo a mano, y no quedaba claro
+  /// que se podía reintentar sin rehacer todo el flujo.
+  ///
+  /// El mismo OTP sigue sirviendo: el backend deja reconfirmar una operación
+  /// que quedó 'rechazada' o en 'error'.
+  void _pedirCorregirOtp(String mensaje) {
+    if (!mounted) return;
+    _otp.clear();
+    _pollTimer?.cancel();
+    setState(() {
+      _paso = 2;
+      _enviando = false;
+      _aviso = null;
+      _error = mensaje;
+      _intentos++;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focoOtp.requestFocus();
+    });
   }
 
   /// Cuánto se le sondea al banco con el usuario mirando la pantalla: 3 veces
@@ -340,14 +365,11 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
       }
       // 'rechazada' y 'error' son terminales: el banco no los cambia solo.
       if (estado == 'rechazada' || estado == 'error') {
-        _pollTimer?.cancel();
         final msg = data['message']?.toString() ?? '';
-        setState(() {
-          _paso = 2;
-          _error = estado == 'rechazada'
-              ? 'El pago fue rechazado por el banco.'
-              : (msg.isNotEmpty ? msg : 'El banco reportó un error con la operación.');
-        });
+        _pedirCorregirOtp(estado == 'rechazada'
+            ? 'El banco no aceptó el pago. Si escribiste mal el código, '
+                'corrígelo y reintenta; si no, revisa tu saldo.'
+            : (msg.isNotEmpty ? msg : 'El banco reportó un error con la operación.'));
         return;
       }
     } catch (_) {/* reintentar en el próximo tick */}
@@ -535,10 +557,26 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
         _avisoBox(),
         TextField(
           controller: _otp,
+          focusNode: _focoOtp,
+          autofocus: true,
           keyboardType: TextInputType.number,
           maxLength: 8,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: 'Código OTP', hintText: '19807849', counterText: ''),
+          // setState en cada tecla: quita el error viejo (si no, parece que el
+          // rechazo sigue vigente mientras se reescribe) y refresca la X.
+          onChanged: (_) => setState(() => _error = null),
+          decoration: InputDecoration(
+            labelText: 'Código OTP',
+            hintText: '19807849',
+            counterText: '',
+            suffixIcon: _otp.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Borrar',
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => setState(_otp.clear),
+                  ),
+          ),
         ),
         // Reenviar: solo cuando pasó la espera y no hay otra petición en curso.
         Align(
@@ -587,7 +625,11 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
         const SizedBox(height: 20),
         FilledButton(
           onPressed: _enviando ? null : _confirmar,
-          child: Text(_enviando ? 'Procesando…' : 'Confirmar pago'),
+          child: Text(_enviando
+              ? 'Procesando…'
+              : _intentos > 0
+                  ? 'Reintentar pago'
+                  : 'Confirmar pago'),
         ),
         TextButton(
           onPressed: _enviando
