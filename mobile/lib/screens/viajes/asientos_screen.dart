@@ -75,6 +75,10 @@ class _AsientosScreenState extends State<AsientosScreen> {
   AsientosWs? _ws;
   StreamSubscription? _wsSub;
 
+  /// Refresco de respaldo: el WebSocket puede caerse, y además los bloqueos
+  /// del servidor duran 2 minutos y hay que renovarlos (igual que la web).
+  Timer? _refresco;
+
   /// Id numérico del viaje ESPEJO. Los de Aerorutas tienen id compuesto, pero
   /// los bloqueos y el WebSocket viven sobre el espejo local. Llega en la
   /// respuesta del mapa de asientos.
@@ -87,6 +91,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
     // del viaje espejo, que es el que identifica el canal.
     _cargar();
     _prefillBuyer();
+    _refresco = Timer.periodic(const Duration(seconds: 30), (_) => _refrescar());
     // Re-evaluar validación cuando cambian los campos del comprador,
     // para activar/desactivar el botón Continuar en tiempo real.
     _nombreCtrl.addListener(_onFormChanged);
@@ -95,6 +100,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
 
   @override
   void dispose() {
+    _refresco?.cancel();
     _wsSub?.cancel();
     _ws?.dispose();
     _nombreCtrl.removeListener(_onFormChanged);
@@ -132,7 +138,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
       // Si el evento lo originamos nosotros, lo ignoramos (estado local ya OK).
       if (myId != null && evt.usuarioId == myId) return;
       // Refrescamos el mapa — fuente de verdad sigue siendo el GET.
-      if (mounted) _cargar();
+      if (mounted) _cargar(silencioso: true);
     });
     ws.connect();
   }
@@ -153,11 +159,16 @@ class _AsientosScreenState extends State<AsientosScreen> {
     }
   }
 
-  Future<void> _cargar() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  /// [silencioso] para los refrescos de fondo: no muestra la rueda de carga ni
+  /// borra el mapa si falla, para no parpadear cada vez que alguien elige un
+  /// puesto en otro dispositivo.
+  Future<void> _cargar({bool silencioso = false}) async {
+    if (!silencioso) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final r = await context.read<ViajesService>().getAsientos(widget.viajeId);
       if (!mounted) return;
@@ -169,11 +180,30 @@ class _AsientosScreenState extends State<AsientosScreen> {
       });
       _conectarWs();   // idempotente: solo conecta la primera vez
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || silencioso) return;
       setState(() {
         _error = ApiClient.extractError(e);
         _loading = false;
       });
+    }
+  }
+
+  /// Cada 30 s: relee el mapa (por si el WebSocket se cayó) y renueva los
+  /// bloqueos de lo que tengamos elegido, que el servidor solo guarda 2 min.
+  Future<void> _refrescar() async {
+    if (!mounted) return;
+    await _cargar(silencioso: true);
+    final canal = _idCanal;
+    if (!mounted || canal == null || _selected.isEmpty) return;
+    final svc = context.read<ReservasService>();
+    for (final s in _selected.toList()) {
+      try {
+        await svc.bloquearAsiento(
+          viajeId: canal,
+          numeroAsiento: s.numero,
+          pisoAsiento: s.piso,
+        );
+      } catch (_) {/* lo recoge el siguiente ciclo */}
     }
   }
 
