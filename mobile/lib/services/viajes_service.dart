@@ -44,7 +44,11 @@ class ViajesService {
   }
 
   /// Devuelve viaje + pisos_config con disponibilidad por celda.
-  Future<({Viaje viaje, List<PisoConfig> pisos})> getAsientos(String viajeId) async {
+  /// Mapa de asientos. `viajeLocalId` es el id numérico del viaje ESPEJO: los
+  /// viajes de Aerorutas tienen id compuesto ("005_04_34_2026-08-12") y los
+  /// bloqueos y el WebSocket de tiempo real trabajan sobre el espejo local.
+  Future<({Viaje viaje, List<PisoConfig> pisos, int? viajeLocalId})> getAsientos(
+      String viajeId) async {
     final res = await client.dio.get('/aerorutas/viajes/$viajeId/asientos/');
     final data = res.data as Map<String, dynamic>;
     final viaje = Viaje.fromJson(data['viaje'] as Map<String, dynamic>);
@@ -53,7 +57,9 @@ class ViajesService {
         .whereType<Map<String, dynamic>>()
         .map(PisoConfig.fromJson)
         .toList();
-    return (viaje: viaje, pisos: pisos);
+    final crudo = data['viaje_local_id'];
+    final localId = crudo is int ? crudo : int.tryParse('${crudo ?? ''}');
+    return (viaje: viaje, pisos: pisos, viajeLocalId: localId);
   }
 
   Future<Map<String, dynamic>> getTasaCambio() async {

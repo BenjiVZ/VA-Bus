@@ -75,12 +75,18 @@ class _AsientosScreenState extends State<AsientosScreen> {
   AsientosWs? _ws;
   StreamSubscription? _wsSub;
 
+  /// Id numérico del viaje ESPEJO. Los de Aerorutas tienen id compuesto, pero
+  /// los bloqueos y el WebSocket viven sobre el espejo local. Llega en la
+  /// respuesta del mapa de asientos.
+  int? _viajeLocalId;
+
   @override
   void initState() {
     super.initState();
+    // El WebSocket se conecta al terminar _cargar(): antes no se conoce el id
+    // del viaje espejo, que es el que identifica el canal.
     _cargar();
     _prefillBuyer();
-    _conectarWs();
     // Re-evaluar validación cuando cambian los campos del comprador,
     // para activar/desactivar el botón Continuar en tiempo real.
     _nombreCtrl.addListener(_onFormChanged);
@@ -108,10 +114,19 @@ class _AsientosScreenState extends State<AsientosScreen> {
   // viaje espejo local para seguir con el pago normal.
   bool get _esAerorutas => widget.viajeId.contains('_');
 
+  /// Id que usan el bloqueo de asientos y el canal de tiempo real. En Aerorutas
+  /// es el del viaje espejo; en los propios, el del viaje mismo.
+  String? get _idCanal {
+    if (!_esAerorutas) return widget.viajeId;
+    final id = _viajeLocalId;
+    return id == null ? null : '$id';
+  }
+
   void _conectarWs() {
-    if (_esAerorutas) return; // sin WS de bloqueo para viajes de Aerorutas
+    final canal = _idCanal;
+    if (canal == null || _ws != null) return;   // sin espejo aún, o ya conectado
     final myId = context.read<AuthProvider>().usuario?.id;
-    final ws = AsientosWs(viajeId: widget.viajeId);
+    final ws = AsientosWs(viajeId: canal);
     _ws = ws;
     _wsSub = ws.events.listen((evt) {
       // Si el evento lo originamos nosotros, lo ignoramos (estado local ya OK).
@@ -149,8 +164,10 @@ class _AsientosScreenState extends State<AsientosScreen> {
       setState(() {
         _viaje = r.viaje;
         _pisos = r.pisos;
+        _viajeLocalId = r.viajeLocalId ?? _viajeLocalId;
         _loading = false;
       });
+      _conectarWs();   // idempotente: solo conecta la primera vez
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -186,8 +203,10 @@ class _AsientosScreenState extends State<AsientosScreen> {
       _pedirLogin();
       return;
     }
-    // Aerorutas: solo selección local (sin bloqueo en servidor).
-    if (_esAerorutas) {
+    // Sin viaje espejo todavía (Aerorutas que no lo devolvió) no se puede
+    // bloquear: se selecciona solo en local para no dejar al cliente trabado.
+    final canal = _idCanal;
+    if (canal == null) {
       setState(() {
         if (_selected.contains(seat)) {
           _selected.remove(seat);
@@ -211,7 +230,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
       });
       try {
         await svc.liberarAsiento(
-          viajeId: widget.viajeId,
+          viajeId: canal,
           numeroAsiento: seat.numero,
           pisoAsiento: seat.piso,
         );
@@ -220,7 +239,7 @@ class _AsientosScreenState extends State<AsientosScreen> {
     }
     try {
       await svc.bloquearAsiento(
-        viajeId: widget.viajeId,
+        viajeId: canal,
         numeroAsiento: seat.numero,
         pisoAsiento: seat.piso,
       );
