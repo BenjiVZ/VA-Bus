@@ -80,9 +80,21 @@ export default function PagoPage() {
   const [ciEstado, setCiEstado] = useState('idle'); // idle|otp_enviado|en_espera|rechazada
   const [ciLoading, setCiLoading] = useState(false);
   const [ciError, setCiError] = useState('');
+  const [ciAviso, setCiAviso] = useState('');
+  // Reenvío del OTP: el banco cobra/limita cada SMS, así que hay una espera
+  // obligatoria entre un envío y el siguiente (el endpoint admite 10/min).
+  const [ciEsperaReenvio, setCiEsperaReenvio] = useState(0);
 
   // Candado anti doble-envío (evita pagos duplicados por doble click / doble tap).
   const submitLockRef = useRef(false);
+
+  const iniciarEsperaReenvio = () => setCiEsperaReenvio(60);
+
+  useEffect(() => {
+    if (ciEsperaReenvio <= 0) return undefined;
+    const t = setTimeout(() => setCiEsperaReenvio((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [ciEsperaReenvio]);
 
   // Initialize data
   useEffect(() => {
@@ -304,11 +316,25 @@ export default function PagoPage() {
     setCiNombre([user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() || user?.username || '');
     setCiBanco(''); setBancoFiltro(''); setCiConcepto('');
     setCiOtp(''); setCiComprobante(null); setCiComprobantePreview(null);
-    setCiEstado('idle'); setCiError('');
+    setCiEstado('idle'); setCiError(''); setCiAviso(''); setCiEsperaReenvio(0);
     setPaso(3);
   };
 
-  const handleGenerarOtp = async () => {
+  /// Motivo real del fallo. El 429 solo trae `detail` (y en inglés), y cuando
+  /// el rechazo lo pone el banco viene en `message`: sin esto todo terminaba
+  /// en un "no se pudo" genérico que no ayuda a nadie.
+  const motivoOtp = (err) => {
+    const data = err?.response?.data;
+    if (err?.response?.status === 429) {
+      return 'Pediste demasiados códigos seguidos. Espera un minuto e intenta otra vez.';
+    }
+    if (data?.error) return data.error;
+    if (data?.message) return `El banco no envió el código: ${data.message}`;
+    if (data?.detail) return data.detail;
+    return 'No se pudo generar el OTP. Intenta de nuevo.';
+  };
+
+  const pedirOtp = async (reenvio = false) => {
     // El banco/validador esperan la cédula como letra + dígitos, SIN guion ni
     // espacios (ej: "V30719983"). El perfil la guarda como "V-30719983".
     const cedulaLimpia = ciCedula.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -317,7 +343,7 @@ export default function PagoPage() {
     if (!/^\d{11}$/.test(ciTelefono)) { setCiError('El teléfono debe tener 11 dígitos (ej: 04141234567).'); return; }
     if (submitLockRef.current) return;   // evita generar dos OTP / operaciones
     submitLockRef.current = true;
-    setCiLoading(true); setCiError('');
+    setCiLoading(true); setCiError(''); setCiAviso('');
     try {
       const { data } = await r4GenerarOtp({
         grupo_pago: grupoPago,
@@ -331,16 +357,31 @@ export default function PagoPage() {
         setCiOperacionId(data.operacion_id);
         setCiEstado('otp_enviado');
         setPaso(4);
+        if (reenvio) {
+          setCiOtp('');   // que nadie teclee el código viejo
+          setCiAviso('Te enviamos un código nuevo. Usa el último que recibas.');
+        }
+        iniciarEsperaReenvio();
       } else {
         setCiError(data.message || 'El banco no envió el OTP. Verifica los datos.');
       }
     } catch (err) {
-      setCiError(err.response?.data?.error || 'No se pudo generar el OTP. Intenta de nuevo.');
+      // Que falle el reenvío no invalida el código anterior: el débito de R4 no
+      // lleva referencia de operación, el OTP lo valida el banco contra el
+      // teléfono. Decirlo, o el cliente cree que se quedó sin forma de pagar.
+      const pista = reenvio && ciOperacionId
+        ? ' El código que ya recibiste sigue sirviendo: prueba con ese.'
+        : '';
+      setCiError(motivoOtp(err) + pista);
+      if (reenvio) iniciarEsperaReenvio();
     } finally {
       setCiLoading(false);
       submitLockRef.current = false;
     }
   };
+
+  const handleGenerarOtp = () => pedirOtp(false);
+  const handleReenviarOtp = () => pedirOtp(true);
 
   const handleCiComprobanteChange = (e) => {
     const file = e.target.files[0];
@@ -359,7 +400,13 @@ export default function PagoPage() {
       setCiEstado('en_espera');
     } else {
       setCiEstado('rechazada');
-      setCiError('El pago fue rechazado por el banco. Verifica tu saldo/datos e inténtalo de nuevo.');
+      // Vaciar el campo: si el código estaba mal, que se pueda reescribir sin
+      // borrarlo a mano (y sin rehacer todo el flujo: el backend deja
+      // reconfirmar una operación que quedó rechazada).
+      setCiOtp('');
+      setCiAviso('');
+      setCiError('El banco no aceptó el pago. Si escribiste mal el código, '
+        + 'corrígelo y reintenta; si no, revisa tu saldo.');
     }
   };
 
@@ -684,13 +731,24 @@ export default function PagoPage() {
                 </div>
 
                 {ciError && <div className="alert alert-error">{ciError}</div>}
+                {ciAviso && <div className="alert alert-success">{ciAviso}</div>}
 
                 <div className="pago-upload-form">
                   <div className="form-group">
                     <label>Código OTP</label>
                     <input className="form-control" value={ciOtp} maxLength={8}
-                      onChange={(e) => setCiOtp(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Ej: 19807849" inputMode="numeric" />
+                      onChange={(e) => { setCiOtp(e.target.value.replace(/\D/g, '')); setCiError(''); }}
+                      placeholder="Ej: 19807849" inputMode="numeric" autoFocus />
+                    <button
+                      type="button"
+                      className="btn-link-otp"
+                      onClick={handleReenviarOtp}
+                      disabled={ciLoading || ciEsperaReenvio > 0}
+                    >
+                      {ciEsperaReenvio > 0
+                        ? `Reenviar código en ${ciEsperaReenvio}s`
+                        : '¿No te llegó? Reenviar código'}
+                    </button>
                   </div>
 
                   <div className="form-group">

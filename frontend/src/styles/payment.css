@@ -353,6 +353,24 @@
 @media (max-width: 480px) {
   .otp-resumen { grid-template-columns: 1fr; }
 }
+/* "¿No te llegó? Reenviar código" — enlace debajo del campo del OTP.
+   Deshabilitado mientras corre la espera entre envíos. */
+.btn-link-otp {
+  margin-top: 0.4rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--primary, #0052cc);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.btn-link-otp:disabled {
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: default;
+}
 .pago-upload-area {
   display: flex;
   flex-direction: column;
