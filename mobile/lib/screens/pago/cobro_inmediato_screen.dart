@@ -253,8 +253,14 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      // Que falle el reenvío no invalida el código anterior: el débito de R4
+      // no lleva referencia de operación, el OTP lo valida el banco contra el
+      // teléfono. Decirlo, o el usuario cree que se quedó sin forma de pagar.
+      final hint = reenvio && _operacionId != null
+          ? '\n\nEl código que ya recibiste sigue sirviendo: prueba con ese.'
+          : '';
       setState(() {
-        _error = _mensajeError(e);
+        _error = '${_mensajeError(e)}$hint';
         _enviando = false;
         _reenviando = false;
       });
@@ -263,10 +269,19 @@ class _CobroInmediatoScreenState extends State<CobroInmediatoScreen> {
     }
   }
 
-  /// El 429 del backend viene en inglés ("Request was throttled…"); traducirlo.
   String _mensajeError(Object e) {
-    if (e is DioException && e.response?.statusCode == 429) {
-      return 'Pediste demasiados códigos seguidos. Espera un minuto e intenta otra vez.';
+    if (e is DioException) {
+      // El 429 del backend viene en inglés ("Request was throttled…").
+      if (e.response?.statusCode == 429) {
+        return 'Pediste demasiados códigos seguidos. Espera un minuto e intenta otra vez.';
+      }
+      // Cuando el rechazo lo pone el banco, el motivo viene en `message`
+      // (en inglés en el JSON de R4); extractError no mira esa clave.
+      final data = e.response?.data;
+      if (data is Map && data['error'] == null) {
+        final msg = data['message']?.toString() ?? '';
+        if (msg.isNotEmpty) return 'El banco no envió el código: $msg';
+      }
     }
     return ApiClient.extractError(e);
   }

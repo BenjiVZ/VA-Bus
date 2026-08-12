@@ -84,6 +84,13 @@ class PagosService {
       // inválido (el campo no admite blanco).
       if (concepto.trim().isNotEmpty) 'concepto': concepto.trim(),
     });
+    // `validateStatus` del cliente deja pasar todo lo <500, así que un 429
+    // (demasiados códigos seguidos) o un 409 llegaban aquí como respuesta
+    // normal y la pantalla mostraba "El banco no envió el OTP", que no dice
+    // nada. Convertirlos en excepción para que se lea el motivo real.
+    if (res.statusCode == null || res.statusCode! >= 400) {
+      throw DioException(requestOptions: res.requestOptions, response: res);
+    }
     return res.data as Map<String, dynamic>;
   }
 
