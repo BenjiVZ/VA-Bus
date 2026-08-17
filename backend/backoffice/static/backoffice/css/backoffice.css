@@ -421,18 +421,11 @@ table.tabla th.num, table.tabla td.num { text-align: right; font-variant-numeric
 }
 .bo-seccion:first-child { margin-top: 0; }
 
-/* Bloque plegable (<details>): tablas de apoyo que no deben robar la pantalla. */
-.bo-plegable { margin: 26px 0 10px; }
-.bo-plegable > summary {
-  cursor: pointer;
-  padding: 10px 12px;
-  border: 1px solid var(--borde);
-  border-radius: 10px;
-  background: var(--superficie);
-  font-size: .9rem;
-}
-.bo-plegable > summary:hover { background: var(--superficie-2); }
-.bo-plegable[open] > summary { margin-bottom: 10px; }
+/* Filas que no son una salida (rutas sin viaje, buses sin asignar): van en el
+   mismo listado pero apagadas, para que no compitan con lo que sí se vende. */
+table.tabla tbody tr.fila-suelta { background: var(--superficie-2); }
+table.tabla tbody tr.fila-suelta td { color: var(--texto-suave); }
+table.tabla tbody tr.fila-suelta strong { font-weight: 600; }
 
 /* Aviso dentro de una celda: algo que revisar sin que llegue a ser un error. */
 .alerta-fila {

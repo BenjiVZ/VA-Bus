@@ -30,10 +30,19 @@ def _num(valor):
 
 
 def _fila(**kw):
-    """Fila de la tabla. Un solo sitio donde están todas las claves."""
+    """Fila de la tabla. Un solo sitio donde están todas las claves.
+
+    `tipo` decide el orden y qué se puede rellenar:
+      salida            · una salida de verdad (propia o de Aerorutas)
+      ruta_sin_salidas  · la ruta existe pero ese día no sale nada
+      bus_sin_viaje     · el autobús no está puesto en ninguna salida
+    """
     fila = {
+        'tipo': 'salida',
+        'orden': 0,
         'fuente': 'propio',      # propio | aerorutas
-        'origen': '', 'destino': '', 'hora': '', 'autobus': '',
+        'codrut': '',            # nº de ruta/línea (codrut en Aerorutas)
+        'origen': '', 'destino': '', 'hora': '', 'autobus': '', 'placa': '',
         'precio': 0.0,
         'capacidad': None,       # None = no se sabe (Aerorutas no la publica)
         'ocupados': None,
@@ -92,12 +101,17 @@ def salidas_propias(fecha, hoy=None):
         if not v.autobus.disponible:
             problemas.append('El autobús está marcado como NO disponible (%s).'
                              % (v.autobus.motivo_no_disponible or 'sin motivo anotado'))
+        if not (v.ruta.origen or '').strip() or not (v.ruta.destino or '').strip():
+            problemas.append('La ruta está incompleta: le falta el origen o el destino.')
 
         filas.append(_fila(
             fuente='propio',
+            # En los propios no hay "número de línea" como en Aerorutas; lo más
+            # parecido es el id de la ruta, que es con lo que se busca en el admin.
+            codrut=v.aerorutas_codrut or ('R%s' % v.ruta_id),
             origen=v.ruta.origen, destino=v.ruta.destino,
             hora=v.hora_salida.strftime('%H:%M') if v.hora_salida else '',
-            autobus=v.autobus.nombre,
+            autobus=v.autobus.nombre, placa=v.autobus.placa,
             precio=precio,
             capacidad=capacidad,
             ocupados=v.ocupados,
@@ -152,6 +166,12 @@ def salidas_aerorutas(fecha):
         elif disponibles == 0:
             problemas.append('Lleno, no quedan puestos.')
 
+        if not (ruta.get('origen') or '').strip() or not (ruta.get('destino') or '').strip():
+            problemas.append('Aerorutas no devolvió el nombre de la oficina de '
+                             'origen o destino para este tramo.')
+        if not (v.get('autobus') or {}).get('nombre'):
+            problemas.append('Sin línea/autobús en el catálogo de Aerorutas.')
+
         # El id trae codrut_ofisal_ofides_fecha; de ahí sale el espejo.
         partes = str(v.get('id') or '').split('_', 3)
         clave = tuple(partes[:3]) if len(partes) >= 3 else None
@@ -159,6 +179,7 @@ def salidas_aerorutas(fecha):
 
         filas.append(_fila(
             fuente='aerorutas',
+            codrut=str(v.get('codrut') or ''),
             origen=ruta.get('origen', ''), destino=ruta.get('destino', ''),
             hora=(v.get('hora_salida') or '')[:5],
             autobus=(v.get('autobus') or {}).get('nombre', ''),
@@ -187,20 +208,27 @@ def analizar(fecha, origen='', destino='', filtro='', hoy=None):
 
     propias = salidas_propias(fecha, hoy=hoy)
     aero, actualizado = salidas_aerorutas(fecha)
-    filas = propias + aero
+    salidas = propias + aero
+    cubiertas = {(f['origen'].strip().lower(), f['destino'].strip().lower())
+                 for f in salidas}
+    sueltas = rutas_sin_salidas(fecha, cubiertas) + buses_sin_viaje(fecha)
+    filas = salidas + sueltas
 
     # El resumen se calcula ANTES de filtrar: si no, decir "3 ocultas" mientras
     # se está viendo justamente el filtro de ocultas no informa de nada.
+    # Cuenta SALIDAS: las rutas y los buses sueltos no son salidas, meterlos
+    # inflaría el total y "ocultas" dejaría de significar nada.
     resumen = {
-        'total': len(filas),
-        'visibles': sum(1 for f in filas if f['visible']),
-        'ocultas': sum(1 for f in filas if not f['visible']),
+        'total': len(salidas),
+        'visibles': sum(1 for f in salidas if f['visible']),
+        'ocultas': sum(1 for f in salidas if not f['visible']),
         # Publicadas PERO con algo mal: son las peligrosas, porque el cliente
         # las ve y las compra igual (sin precio, bus en taller, sin puestos).
-        'con_defecto': sum(1 for f in filas if f['visible'] and f['problemas']),
-        'sin_precio': sum(1 for f in filas if f['precio'] <= 0),
+        'con_defecto': sum(1 for f in salidas if f['visible'] and f['problemas']),
+        'sin_precio': sum(1 for f in salidas if f['precio'] <= 0),
         'propias': len(propias),
         'aerorutas': len(aero),
+        'sueltas': len(sueltas),
     }
 
     origen = (origen or '').strip().lower()
@@ -214,49 +242,87 @@ def analizar(fecha, origen='', destino='', filtro='', hoy=None):
     elif filtro == 'problemas':
         filas = [f for f in filas if f['problemas'] or not f['visible']]
     elif filtro == 'sin_precio':
-        filas = [f for f in filas if f['precio'] <= 0]
+        filas = [f for f in filas if f['tipo'] == 'salida' and f['precio'] <= 0]
+    elif filtro == 'salidas':
+        filas = [f for f in filas if f['tipo'] == 'salida']
 
-    filas.sort(key=lambda f: (f['origen'], f['destino'], f['hora']))
+    # Primero las salidas (por ruta y hora), después lo que quedó suelto.
+    filas.sort(key=lambda f: (f['orden'], f['origen'], f['destino'],
+                              f['hora'], f['autobus']))
 
     return {
         'filas': filas,
         'resumen': resumen,
         'hay_catalogo': bool(aero),
         'catalogo_actualizado': actualizado,
-        'pares': _pares(filas),
-        'rutas_sin_salidas': rutas_sin_salidas(fecha),
     }
 
 
-def _pares(filas):
-    """Los "desde → hasta" distintos que hay, con su resumen."""
-    pares = {}
-    for f in filas:
-        clave = (f['origen'], f['destino'])
-        p = pares.setdefault(clave, {
-            'origen': f['origen'], 'destino': f['destino'],
-            'salidas': 0, 'visibles': 0, 'precio_min': None, 'precio_max': None,
-            'disponibles': 0, 'sin_disponibilidad': False,
-        })
-        p['salidas'] += 1
-        if f['visible']:
-            p['visibles'] += 1
-        if f['precio'] > 0:
-            p['precio_min'] = f['precio'] if p['precio_min'] is None else min(p['precio_min'], f['precio'])
-            p['precio_max'] = f['precio'] if p['precio_max'] is None else max(p['precio_max'], f['precio'])
-        if f['disponibles'] is None:
-            p['sin_disponibilidad'] = True
-        else:
-            p['disponibles'] += f['disponibles']
-    return sorted(pares.values(), key=lambda p: (p['origen'], p['destino']))
-
-
-def rutas_sin_salidas(fecha):
-    """Rutas dadas de alta que ese día no tienen ningún viaje propio.
+def rutas_sin_salidas(fecha, cubiertas=frozenset()):
+    """Rutas dadas de alta que ese día no salen por ningún lado.
 
     No es un error por sí solo (puede que ese día simplemente no salga), pero
-    explica por qué un par que "existe" no aparece por ningún lado.
+    explica por qué un par que "existe" no aparece.
+
+    `cubiertas`: pares (origen, destino) en minúsculas que YA aparecen como
+    salida. Hace falta porque cada par de Aerorutas deja una `Ruta` local
+    creada por el viaje espejo: sin este filtro, un par que el catálogo sí
+    publica ese día saldría listado como "no tiene ninguna salida", justo
+    debajo de su propia salida. Contradecirse sería peor que no informar.
     """
     con_viaje = set(Viaje.objects.filter(fecha_salida=fecha)
                     .values_list('ruta_id', flat=True))
-    return list(Ruta.objects.exclude(id__in=con_viaje).order_by('origen', 'destino'))
+    filas = []
+    for r in Ruta.objects.exclude(id__in=con_viaje).order_by('origen', 'destino'):
+        if ((r.origen or '').strip().lower(),
+                (r.destino or '').strip().lower()) in cubiertas:
+            continue
+        problemas = []
+        if not (r.origen or '').strip() or not (r.destino or '').strip():
+            problemas.append('La ruta está incompleta: le falta el origen o el destino.')
+        filas.append(_fila(
+            tipo='ruta_sin_salidas', orden=1,
+            codrut='R%s' % r.pk,
+            origen=r.origen, destino=r.destino,
+            visible=False,
+            motivos=['No tiene ninguna salida cargada ese día, así que no '
+                     'aparece por ningún lado.'],
+            problemas=problemas,
+        ))
+    return filas
+
+
+def buses_sin_viaje(fecha):
+    """Autobuses que ese día no están puestos en ninguna salida.
+
+    Van en la misma lista porque la pregunta es la misma: por qué no se está
+    vendiendo algo. Un bus parado con puestos dibujados es capacidad ociosa;
+    uno sin puestos dibujados no serviría ni asignándolo.
+    """
+    from viajes.models import Autobus
+
+    ocupados = set(Viaje.objects.filter(fecha_salida=fecha)
+                   .values_list('autobus_id', flat=True))
+    filas = []
+    # Los "AR-<codrut>" no son flota: los crea solo el espejo de Aerorutas para
+    # poder bloquear puestos. Listarlos como buses parados sería puro ruido.
+    for b in (Autobus.objects.exclude(id__in=ocupados)
+              .exclude(placa__startswith='AR-')
+              .prefetch_related('pisos_config').order_by('nombre')):
+        problemas = []
+        capacidad = b.capacidad_total
+        if capacidad == 0:
+            problemas.append('No tiene puestos dibujados: aunque se le asigne '
+                             'una ruta, nadie podría comprar.')
+        if not b.disponible:
+            problemas.append('Marcado como NO disponible (%s).'
+                             % (b.motivo_no_disponible or 'sin motivo anotado'))
+        filas.append(_fila(
+            tipo='bus_sin_viaje', orden=2,
+            autobus=b.nombre, placa=b.placa,
+            capacidad=capacidad, ocupados=0, disponibles=0,
+            visible=False,
+            motivos=['No está asignado a ninguna salida ese día.'],
+            problemas=problemas,
+        ))
+    return filas
