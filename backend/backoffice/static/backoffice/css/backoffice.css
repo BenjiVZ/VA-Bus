@@ -46,6 +46,9 @@ html[data-tema="claro"] {
   --radio: 12px;
   --radio-sm: 8px;
   --lateral: 244px;
+  /* Alto real de la topbar; el guion de base.html lo mide y lo corrige.
+     Lo usa la cabecera pegajosa de las tablas para no quedar debajo. */
+  --topbar: 62px;
 }
 
 html[data-tema="oscuro"] {
@@ -376,11 +379,52 @@ input[type="submit"], input[type="button"] {
 
 /* ── Tablas ─────────────────────────────────────────────────────────────── */
 .tabla-envoltura {
-  overflow-x: auto;
+  overflow: auto;
+  /* Alto tope ≈ lo que queda de pantalla bajo la topbar. No fuerza scroll: una
+     tabla corta se pinta entera; una larga scrollea aquí dentro, y ahí es
+     donde su cabecera se queda pegada (ver más abajo).
+
+     El colchón de 150px no es decorativo: al bajar la página del todo, lo que
+     va DESPUÉS de la tabla (paginación, notas al pie —medidas: hasta 125px—)
+     empuja la caja hacia arriba, y sin él la cabecera terminaba metida DEBAJO
+     de la topbar, que la tapa por z-index. Anclar la caja con `sticky` también
+     lo arreglaba, pero entonces la paginación de Boletos quedaba escondida
+     detrás de ella. */
+  max-height: calc(100vh - var(--topbar) - 150px);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
   background: var(--superficie);
   box-shadow: var(--sombra);
+}
+
+/* ── Cabecera que se queda a la vista al bajar ───────────────────────────
+   En una tabla larga hay que volver arriba para recordar qué columna es cuál.
+
+   El scroll que hay aquí es el de la PÁGINA (así funcionan .bo-lateral y
+   .bo-topbar). Pero `overflow-x: auto` en la envoltura la convierte también en
+   contenedor de scroll vertical —la otra propiedad pasa de `visible` a `auto`
+   sola— y entonces el `sticky` se resuelve contra esa caja, que no scrollea:
+   la cabecera se va con el scroll. Comprobado midiendo en el navegador; con
+   `overflow-y: clip` tampoco sirve, porque junto a un `auto` computa a
+   `hidden` y el contenedor se crea igual.
+
+   Quitarle el overflow en pantallas anchas tampoco vale: a 1200px la tabla no
+   entraba por 36px y era la PÁGINA la que se iba de lado (medido). El ancho de
+   la tabla lo decide el contenido, así que no hay punto de corte fiable.
+
+   Solución: la envoltura scrollea en los dos ejes y tiene un alto tope de casi
+   una pantalla. La cabecera se pega a ella (`top: 0`), no a la página. Como el
+   tope deja la tabla a pantalla completa, al bajar la página primero sube la
+   tabla hasta arriba y a partir de ahí el scroll es el suyo, con la cabecera
+   siempre visible. */
+table.tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  /* Con `border-collapse: collapse` el borde inferior NO viaja con la celda
+     pegada y la cabecera queda flotando sin línea. La sombra interior sí. */
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 var(--borde);
 }
 
 table.tabla { width: 100%; border-collapse: collapse; min-width: 620px; }

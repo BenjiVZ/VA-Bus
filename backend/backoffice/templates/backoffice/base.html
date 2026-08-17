@@ -106,6 +106,20 @@
     "use strict";
     var raiz = document.getElementById('bo-raiz');
 
+    // Alto real de la topbar -> --topbar. La cabecera pegajosa de las tablas
+    // se cuelga de ahí; el alto cambia según si la pantalla tiene subtítulo,
+    // así que medirlo es más seguro que dejarlo fijo en el CSS.
+    var topbar = document.querySelector('.bo-topbar');
+    if (topbar) {
+      var medir = function () {
+        document.documentElement.style.setProperty(
+          '--topbar', topbar.offsetHeight + 'px');
+      };
+      medir();
+      if (window.ResizeObserver) new ResizeObserver(medir).observe(topbar);
+      else window.addEventListener('resize', medir);
+    }
+
     // Menú lateral en pantallas chicas.
     document.getElementById('bo-menu').addEventListener('click', function () {
       raiz.classList.toggle('abierto');
