@@ -78,12 +78,28 @@ Cloudflare crea el DNS automáticamente.
 crontab -e
 ```
 ```
+0 */2 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --usar-conocidos >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 ```
-Sin `--solo-si-falta`: refresca el catálogo cada 6 h (antes se congelaba tras la
-primera corrida del día y no tomaba rutas/precios agregados después). El barrido
-reintenta ante fallos de red y conserva el snapshot anterior si el nuevo trae
-< 60 % de viajes (protege contra barridos parciales).
+Son dos, a propósito:
+
+- **Cada 2 h — HOY.** Es lo que la gente compra, así que precios y cupos se
+  refrescan seguido. `--usar-conocidos` se salta el descubrimiento de los 600
+  pares posibles y consulta solo los corredores que ya salieron en los
+  snapshots recientes: ~270 llamadas en vez de ~660.
+- **Cada 6 h — los 15 días.** Esta sí descubre: es la que encuentra un corredor
+  NUEVO. Sin ella, el refresco rápido se quedaría mirando siempre los mismos.
+
+Sin `--solo-si-falta`: refrescan de verdad (antes el catálogo se congelaba tras
+la primera corrida del día y no tomaba rutas/precios agregados después). Ambos
+reintentan ante fallos de red y conservan el snapshot anterior si el nuevo trae
+< 60 % de viajes (protege contra barridos parciales). Si un refresco rápido no
+trae nada, se cae al barrido completo en vez de guardar un catálogo vacío.
+
+Coste medido (25 oficinas, ~60 corredores activos, ~1,5 s por llamada):
+~12.600 llamadas/día y unos 5 min por corrida completa. Poner las 15 fechas
+cada 2 h serían ~28.000 — el triple contra el sistema de Aerorutas, sin ganar
+frescura donde importa.
 
 ### 8. Cron para resolver los pagos R4 en espera
 ```bash

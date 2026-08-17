@@ -38,6 +38,12 @@ class Command(BaseCommand):
         parser.add_argument('--forzar', action='store_true',
                             help='Sobrescribe el snapshot aunque el barrido nuevo traiga muchos menos '
                                  'viajes que el anterior (por defecto se conserva el anterior si parece parcial).')
+        parser.add_argument('--usar-conocidos', action='store_true',
+                            help='No barre los 600 pares para descubrir corredores: reutiliza los que ya '
+                                 'salieron en los snapshots recientes. Para el refresco frecuente de HOY '
+                                 '(~130 llamadas en vez de ~670). Si no hay snapshots, descubre igual.')
+        parser.add_argument('--dias-conocidos', type=int, default=7,
+                            help='Cuántos días atrás mirar para sacar los corredores conocidos.')
 
     def _hay_data_hoy(self):
         """True si ya existe un snapshot con viajes para HOY (chequeo barato de BD)."""
@@ -46,6 +52,27 @@ class Command(BaseCommand):
         # pide el navegador aunque el servidor esté en UTC.
         snap = RutaAerorutasSnapshot.objects.filter(fecha=timezone.localdate()).first()
         return bool(snap and snap.data)
+
+    def _corredores_conocidos(self, dias_atras):
+        """Pares (inicio, fin) que ya aparecieron en los snapshots recientes.
+
+        Sirve para saltarse el descubrimiento: los 600 pares posibles tardan
+        ~75 s y casi todos vienen vacíos, mientras que los corredores que de
+        verdad operan son ~60. Cada viaje guardado trae el id compuesto
+        `codrut_inicio_fin_fecha`, así que los pares salen de ahí sin tocar la
+        red.
+
+        Un corredor NUEVO no se detecta por aquí; lo encuentra la corrida
+        completa (la que sí descubre), que debe seguir programada.
+        """
+        desde = timezone.localdate() - timedelta(days=dias_atras)
+        pares = set()
+        for snap in RutaAerorutasSnapshot.objects.filter(fecha__gte=desde):
+            for v in (snap.data or []):
+                partes = str(v.get('id') or '').split('_')
+                if len(partes) >= 3 and partes[1] and partes[2]:
+                    pares.add((partes[1], partes[2]))
+        return sorted(pares)
 
     def _descubrir_activos(self, fecha0, intentos, espera):
         """Barre todos los pares para hallar corredores activos.
@@ -74,12 +101,36 @@ class Command(BaseCommand):
                 time.sleep(espera)
         return encontrados0, activos
 
-    def _precargar(self, dias, intentos, espera, forzar=False):
+    def _precargar(self, dias, intentos, espera, forzar=False,
+                   usar_conocidos=False, dias_conocidos=7):
         hoy = timezone.localdate()  # hora de Venezuela, no el reloj del SO
         fechas = [hoy + timedelta(days=i) for i in range(dias)]
 
-        # Fase 1: descubrir corredores activos con la primera fecha (barrido completo, con reintentos)
-        encontrados0, activos = self._descubrir_activos(fechas[0].isoformat(), intentos, espera)
+        # Fase 1: qué pares consultar.
+        encontrados0, activos = [], []
+        if usar_conocidos:
+            conocidos = self._corredores_conocidos(dias_conocidos)
+            if conocidos:
+                self.stdout.write(f'Reusando {len(conocidos)} corredores conocidos '
+                                  f'(sin descubrir).')
+                try:
+                    encontrados0 = aerorutas.barrer_rutas(fechas[0].isoformat(), conocidos)
+                except Exception as e:
+                    self.stderr.write(f'  Error de red: {e}')
+                    encontrados0 = []
+                # Si no volvió NADA, no darlo por bueno: `barrer_rutas` se traga
+                # los fallos par a par, así que un corte de red se ve igual que
+                # "hoy no hay viajes". Se cae al barrido completo, que sí
+                # reintenta y aborta sin tocar la BD si de verdad no hay red.
+                activos = conocidos if encontrados0 else []
+            else:
+                self.stdout.write(self.style.WARNING(
+                    'No hay snapshots de donde sacar corredores: se descubre igual.'))
+
+        # Sin conocidos (o si fallaron): barrido completo con reintentos.
+        if not activos:
+            encontrados0, activos = self._descubrir_activos(
+                fechas[0].isoformat(), intentos, espera)
         if not activos:
             # No hay datos ni red: NO tocar la BD para no borrar el catálogo bueno.
             raise CommandError(
@@ -114,7 +165,8 @@ class Command(BaseCommand):
             if o['solo_si_falta'] and self._hay_data_hoy():
                 self.stdout.write('Ya hay catálogo para hoy; nada que hacer.')
                 return
-            self._precargar(o['dias'], o['intentos'], o['espera_red'], o['forzar'])
+            self._precargar(o['dias'], o['intentos'], o['espera_red'], o['forzar'],
+                            o['usar_conocidos'], o['dias_conocidos'])
             return
         self.stdout.write(self.style.SUCCESS(
             f'Precargando cada {o["cada"]}s (Ctrl+C para salir)…'))
@@ -122,7 +174,8 @@ class Command(BaseCommand):
             while True:
                 try:
                     if not (o['solo_si_falta'] and self._hay_data_hoy()):
-                        self._precargar(o['dias'], o['intentos'], o['espera_red'], o['forzar'])
+                        self._precargar(o['dias'], o['intentos'], o['espera_red'], o['forzar'],
+                            o['usar_conocidos'], o['dias_conocidos'])
                 except CommandError as e:
                     self.stderr.write(self.style.ERROR(str(e)))
                 time.sleep(o['cada'])

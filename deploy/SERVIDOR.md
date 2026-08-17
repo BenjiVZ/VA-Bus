@@ -124,11 +124,20 @@ Los viajes vienen del sistema externo **Aerorutas** y se precargan en la BD por 
 ```bash
 crontab -l    # ver el cron
 ```
-Cron actual (cada 6 h, hora de Venezuela):
+Crones actuales (hora de Venezuela):
 ```
+0 */2 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --usar-conocidos >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 ```
-- **SIN `--solo-si-falta`**: refresca el catálogo cada 6 h. Antes, con
+- **Cada 2 h refresca HOY** con `--usar-conocidos`: no barre los 600 pares
+  posibles, reutiliza los corredores que ya salieron en los snapshots de los
+  últimos 7 días (`--dias-conocidos`). ~270 llamadas en vez de ~660, ~35 s.
+  No detecta corredores nuevos: para eso está la corrida de las 6 h.
+- **Cada 6 h refresca los 15 días** y sí descubre (barrido completo, ~5 min).
+- Si el refresco rápido no trae ningún viaje (corte de red: `barrer_rutas` se
+  traga los fallos par a par y se ve igual que "hoy no hay viajes"), se cae al
+  barrido completo, que reintenta y aborta sin tocar la BD.
+- **SIN `--solo-si-falta`**: refresca el catálogo de verdad. Antes, con
   `--solo-si-falta`, el snapshot de HOY se congelaba tras la primera corrida y
   NO tomaba precios/rutas que Aerorutas agregaba después (ej. corredor de los
   Andes / línea 005 hacia Mérida y El Vigía quedaba fuera todo el día).
