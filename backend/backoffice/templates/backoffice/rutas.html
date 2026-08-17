@@ -95,7 +95,7 @@
   <table class="tabla">
     <thead>
       <tr>
-        <th>Nº ruta</th>
+        <th>Nº</th>
         <th>Desde → Hasta</th>
         <th>Hora</th>
         <th>Autobús</th>
@@ -109,8 +109,18 @@
     <tbody>
       {% for s in d.filas %}
       <tr class="{% if s.tipo != 'salida' %}fila-suelta{% endif %}">
+        {% comment %}
+          Nº de ruta y nº de unidad: sale el que haya, y los dos cuando los
+          tiene. Cada uno etiquetado, que "009" y "#26" solos se confunden.
+        {% endcomment %}
         <td class="mono">
-          {% if s.codrut %}<strong>{{ s.codrut }}</strong>{% else %}<span class="muted">—</span>{% endif %}
+          {% if s.codrut %}
+            <div class="num-et"><span>ruta</span> <strong>{{ s.codrut }}</strong></div>
+          {% endif %}
+          {% if s.num_bus %}
+            <div class="num-et"><span>bus</span> <strong>{{ s.num_bus }}</strong></div>
+          {% endif %}
+          {% if not s.codrut and not s.num_bus %}<span class="muted">—</span>{% endif %}
         </td>
         <td>
           {% if s.tipo == 'bus_sin_viaje' %}

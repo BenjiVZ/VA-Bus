@@ -421,6 +421,18 @@ table.tabla th.num, table.tabla td.num { text-align: right; font-variant-numeric
 }
 .bo-seccion:first-child { margin-top: 0; }
 
+/* Nº de ruta / Nº de unidad: la etiqueta chiquita delante para que no se
+   confundan entre si cuando salen los dos. */
+.num-et { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.num-et + .num-et { margin-top: 3px; }
+.num-et > span {
+  font-family: var(--fuente, inherit);
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--texto-suave);
+}
+
 /* Filas que no son una salida (rutas sin viaje, buses sin asignar): van en el
    mismo listado pero apagadas, para que no compitan con lo que sí se vende. */
 table.tabla tbody tr.fila-suelta { background: var(--superficie-2); }

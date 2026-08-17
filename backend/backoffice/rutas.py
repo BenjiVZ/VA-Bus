@@ -12,6 +12,8 @@ Las reglas de "se ve / no se ve" son las MISMAS que aplican las vistas públicas
 aquí: esta pantalla existe para explicar por qué una salida no aparece, y
 mentiría si se desincronizara.
 """
+import re
+
 from django.db.models import Count, Q
 from django.utils import timezone
 
@@ -20,6 +22,10 @@ from viajes.models import Ruta, RutaAerorutasSnapshot, Viaje
 # Una reserva en cualquiera de estos estados ocupa el puesto.
 ESTADOS_OCUPAN = ['pendiente', 'apartado', 'confirmado']
 
+# El número de unidad va dentro del nombre: "VOLVO BLANCO 2006 (#26)".
+# Se respetan los ceros a la izquierda: la flota los rotula "#08", no "#8".
+_NUM_BUS = re.compile(r'\(\s*#\s*(\d+)\s*\)')
+
 
 def _num(valor):
     """A número, tolerando None, '' y basura ('' → 0.0)."""
@@ -27,6 +33,18 @@ def _num(valor):
         return float(valor or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _numero_bus(nombre, placa):
+    """Número de la unidad: el "(#26)" del nombre; si no, la placa.
+
+    No hay campo propio para el número en el modelo, así que se saca del
+    nombre (que es donde lo escriben) y se cae a la placa, que sí es única.
+    """
+    m = _NUM_BUS.search(nombre or '')
+    if m:
+        return '#%s' % m.group(1)
+    return (placa or '').strip()
 
 
 def _fila(**kw):
@@ -42,6 +60,7 @@ def _fila(**kw):
         'orden': 0,
         'fuente': 'propio',      # propio | aerorutas
         'codrut': '',            # nº de ruta/línea (codrut en Aerorutas)
+        'num_bus': '',           # nº de unidad ("#26") o, si no lo tiene, la placa
         'origen': '', 'destino': '', 'hora': '', 'autobus': '', 'placa': '',
         'precio': 0.0,
         'capacidad': None,       # None = no se sabe (Aerorutas no la publica)
@@ -109,6 +128,7 @@ def salidas_propias(fecha, hoy=None):
             # En los propios no hay "número de línea" como en Aerorutas; lo más
             # parecido es el id de la ruta, que es con lo que se busca en el admin.
             codrut=v.aerorutas_codrut or ('R%s' % v.ruta_id),
+            num_bus=_numero_bus(v.autobus.nombre, v.autobus.placa),
             origen=v.ruta.origen, destino=v.ruta.destino,
             hora=v.hora_salida.strftime('%H:%M') if v.hora_salida else '',
             autobus=v.autobus.nombre, placa=v.autobus.placa,
@@ -319,6 +339,7 @@ def buses_sin_viaje(fecha):
                              % (b.motivo_no_disponible or 'sin motivo anotado'))
         filas.append(_fila(
             tipo='bus_sin_viaje', orden=2,
+            num_bus=_numero_bus(b.nombre, b.placa),
             autobus=b.nombre, placa=b.placa,
             capacidad=capacidad, ocupados=0, disponibles=0,
             visible=False,
