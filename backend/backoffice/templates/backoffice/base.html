@@ -48,6 +48,8 @@
         <svg class="bo-nav__icono ico"><use href="#i-caja"></use></svg> Caja (taquilla)</a>
       <a href="{% url 'backoffice:viajes' %}" class="{% if seccion == 'viajes' %}activo{% endif %}">
         <svg class="bo-nav__icono ico"><use href="#i-bus"></use></svg> Viajes</a>
+      <a href="{% url 'backoffice:rutas' %}" class="{% if seccion == 'rutas' %}activo{% endif %}">
+        <svg class="bo-nav__icono ico"><use href="#i-ruta"></use></svg> Rutas y salidas</a>
       <a href="{% url 'backoffice:boletos' %}" class="{% if seccion == 'boletos' %}activo{% endif %}">
         <svg class="bo-nav__icono ico"><use href="#i-boleto"></use></svg> Boletos</a>
 

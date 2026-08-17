@@ -18,6 +18,7 @@ urlpatterns = [
 
     path('viajes/', portal_viajes_view, name='viajes'),
     path('viajes/eliminar/<int:viaje_id>/', eliminar_viaje_view, name='eliminar_viaje'),
+    path('rutas/', views.rutas, name='rutas'),
 
     path('boletos/', views.boletos, name='boletos'),
     path('comprobantes/', views.comprobantes, name='comprobantes'),

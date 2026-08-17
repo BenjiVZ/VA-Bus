@@ -12,6 +12,7 @@ from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from pagos.models import ComprobantePago, MetodoPago, PagoCaja
 from pagos.services import validar_comprobante
@@ -19,6 +20,7 @@ from r4conecta.models import OperacionDebitoOTP
 from reservas.models import Reserva
 from viajes.models import ConfiguracionGeneral, Viaje
 
+from . import rutas as rutas_svc
 from .auth import staff_requerido
 
 # Cuántas filas por página en los listados.
@@ -113,6 +115,38 @@ def inicio(request):
             config and config.tasa_actualizada
             and config.tasa_actualizada < ahora - timedelta(days=1)
         ),
+    })
+
+
+# ══════════════════════════════════════════════════════════════════
+#  Rutas y salidas (qué se publica y qué no)
+# ══════════════════════════════════════════════════════════════════
+
+@staff_requerido
+def rutas(request):
+    hoy = timezone.localdate()
+    # La fecha llega por la URL: si viene mal (enlace viejo, alguien la escribió
+    # a mano), la consulta reventaba con un 500. Se avisa y se sigue con hoy.
+    pedida = (request.GET.get('fecha') or '').strip()
+    fecha_obj = parse_date(pedida) if pedida else None
+    if pedida and fecha_obj is None:
+        messages.error(request, f'«{pedida}» no es una fecha válida; se muestra el día de hoy.')
+    fecha = (fecha_obj or hoy).isoformat()
+
+    origen = (request.GET.get('origen') or '').strip()
+    destino = (request.GET.get('destino') or '').strip()
+    filtro = request.GET.get('filtro') or ''
+
+    datos = rutas_svc.analizar(fecha, origen=origen, destino=destino, filtro=filtro)
+    r = datos['resumen']
+
+    return render(request, 'backoffice/rutas.html', {
+        'seccion': 'rutas',
+        'titulo': 'Rutas y salidas',
+        'subtitulo': f'{r["total"]} salida(s) para el {fecha} · '
+                     f'{r["visibles"]} en la página, {r["ocultas"]} ocultas',
+        'd': datos,
+        'f': {'fecha': fecha, 'origen': origen, 'destino': destino, 'filtro': filtro},
     })
 
 

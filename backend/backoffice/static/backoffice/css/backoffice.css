@@ -408,6 +408,44 @@ td.mono, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospac
 
 .tabla-vacia { text-align: center; color: var(--texto-suave); padding: 34px 14px !important; }
 
+/* Columnas de números: alineadas a la derecha para poder compararlas de un
+   vistazo, y con cifras de ancho fijo para que no bailen entre filas. */
+table.tabla th.num, table.tabla td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Encabezado de cada bloque dentro de una pantalla. */
+.bo-seccion {
+  margin: 26px 0 10px;
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--texto);
+}
+.bo-seccion:first-child { margin-top: 0; }
+
+/* Bloque plegable (<details>): tablas de apoyo que no deben robar la pantalla. */
+.bo-plegable { margin: 26px 0 10px; }
+.bo-plegable > summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--superficie);
+  font-size: .9rem;
+}
+.bo-plegable > summary:hover { background: var(--superficie-2); }
+.bo-plegable[open] > summary { margin-bottom: 10px; }
+
+/* Aviso dentro de una celda: algo que revisar sin que llegue a ser un error. */
+.alerta-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: .78rem;
+  line-height: 1.35;
+  color: var(--ambar);
+}
+.alerta-fila .ico { margin-top: .15em; }
+
 /* ── Distintivos de estado ──────────────────────────────────────────────── */
 .pin {
   display: inline-block; padding: 3px 9px;

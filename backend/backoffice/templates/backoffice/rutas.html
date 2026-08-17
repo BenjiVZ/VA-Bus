@@ -1,0 +1,232 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Rutas y salidas{% endblock %}
+
+{% block content %}
+
+{% if not d.hay_catalogo %}
+<div class="aviso aviso-error">
+  <svg class="ico"><use href="#i-alerta"></use></svg>
+  No hay catálogo de Aerorutas cargado para el {{ f.fecha }}. En la página solo
+  se verán los viajes propios. Si es la fecha de hoy, la precarga se dispara
+  sola cuando alguien entre a buscar viajes.
+</div>
+{% endif %}
+
+{# ══════════ Resumen ══════════ #}
+<div class="metricas">
+  <div class="metrica">
+    <div class="metrica__et"><svg class="ico"><use href="#i-ruta"></use></svg> Salidas ese día</div>
+    <div class="metrica__n">{{ d.resumen.total }}</div>
+    <div class="metrica__pie">{{ d.resumen.propias }} propias · {{ d.resumen.aerorutas }} de Aerorutas</div>
+  </div>
+
+  <div class="metrica metrica--verde">
+    <div class="metrica__et"><svg class="ico"><use href="#i-ok-circulo"></use></svg> Se ven en la página</div>
+    <div class="metrica__n">{{ d.resumen.visibles }}</div>
+    <div class="metrica__pie">Lo que el cliente puede comprar</div>
+  </div>
+
+  <div class="metrica {% if d.resumen.ocultas %}metrica--ambar{% endif %}">
+    <div class="metrica__et"><svg class="ico"><use href="#i-no-circulo"></use></svg> Ocultas</div>
+    <div class="metrica__n">{{ d.resumen.ocultas }}</div>
+    <div class="metrica__pie">
+      {% if d.resumen.ocultas %}
+        <a href="{% querystring filtro='ocultas' %}">Ver por qué →</a>
+      {% else %}Ninguna{% endif %}
+    </div>
+  </div>
+
+  <div class="metrica {% if d.resumen.sin_precio %}metrica--ambar{% endif %}">
+    <div class="metrica__et"><svg class="ico"><use href="#i-dinero"></use></svg> Sin precio</div>
+    <div class="metrica__n">{{ d.resumen.sin_precio }}</div>
+    <div class="metrica__pie">
+      {% if d.resumen.sin_precio %}
+        <a href="{% querystring filtro='sin_precio' %}">Ver cuáles →</a>
+      {% else %}Todas con precio{% endif %}
+    </div>
+  </div>
+
+  <div class="metrica {% if d.resumen.con_defecto %}metrica--ambar{% endif %}">
+    <div class="metrica__et"><svg class="ico"><use href="#i-alerta"></use></svg> Se venden con defecto</div>
+    <div class="metrica__n">{{ d.resumen.con_defecto }}</div>
+    <div class="metrica__pie">
+      {% if d.resumen.con_defecto %}
+        <a href="{% querystring filtro='problemas' %}">Revisarlas →</a>
+      {% else %}Ninguna publicada con fallas{% endif %}
+    </div>
+  </div>
+</div>
+
+{# ══════════ Filtros ══════════ #}
+<form class="filtros" method="get">
+  <div class="campo">
+    <label for="fecha">Fecha</label>
+    <input type="date" id="fecha" name="fecha" value="{{ f.fecha }}">
+  </div>
+  <div class="campo campo--crece">
+    <label for="origen">Desde</label>
+    <input type="search" id="origen" name="origen" value="{{ f.origen }}" placeholder="Ej: Caracas">
+  </div>
+  <div class="campo campo--crece">
+    <label for="destino">Hasta</label>
+    <input type="search" id="destino" name="destino" value="{{ f.destino }}" placeholder="Ej: Barinas">
+  </div>
+  <div class="campo">
+    <label for="filtro">Mostrar</label>
+    <select id="filtro" name="filtro">
+      <option value="">Todas</option>
+      <option value="ocultas" {% if f.filtro == 'ocultas' %}selected{% endif %}>Solo las ocultas</option>
+      <option value="problemas" {% if f.filtro == 'problemas' %}selected{% endif %}>Solo con problemas</option>
+      <option value="sin_precio" {% if f.filtro == 'sin_precio' %}selected{% endif %}>Solo sin precio</option>
+    </select>
+  </div>
+  <button type="submit" class="button">Filtrar</button>
+  <a class="button button--fantasma" href="{% url 'backoffice:rutas' %}">Limpiar</a>
+</form>
+
+{% comment %}
+  ══════════ Pares desde → hasta ══════════
+  Plegado: cuando cada par tiene una sola salida, esta tabla repite la de
+  abajo. Se deja a un clic para los días con varias salidas por par.
+  (Ojo: {# #} en Django es de UNA línea; multilínea se imprime como texto.)
+{% endcomment %}
+<details class="bo-plegable">
+<summary><strong>Desde → Hasta que existen ese día ({{ d.pares|length }})</strong>
+  <span class="muted">— resumen agrupado</span></summary>
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Desde</th>
+        <th>Hasta</th>
+        <th class="num">Salidas</th>
+        <th class="num">En la página</th>
+        <th class="num">Precio</th>
+        <th class="num">Puestos libres</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in d.pares %}
+      <tr>
+        <td><strong>{{ p.origen|default:"—" }}</strong></td>
+        <td><strong>{{ p.destino|default:"—" }}</strong></td>
+        <td class="num">{{ p.salidas }}</td>
+        <td class="num">
+          {% if p.visibles %}<span class="pin pin-verde">{{ p.visibles }}</span>
+          {% else %}<span class="pin pin-rojo">0</span>{% endif %}
+        </td>
+        <td class="num">
+          {% if p.precio_min == None %}<span class="muted">sin precio</span>
+          {% elif p.precio_min == p.precio_max %}${{ p.precio_min|floatformat:2 }}
+          {% else %}${{ p.precio_min|floatformat:2 }} – ${{ p.precio_max|floatformat:2 }}{% endif %}
+        </td>
+        <td class="num">
+          {{ p.disponibles }}{% if p.sin_disponibilidad %}<span class="muted">+?</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="tabla-vacia">No hay salidas con esos filtros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</details>
+
+{# ══════════ Detalle salida por salida ══════════ #}
+<h3 class="bo-seccion">Salidas ({{ d.filas|length }})</h3>
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Desde → Hasta</th>
+        <th>Hora</th>
+        <th>Autobús</th>
+        <th class="num">Precio</th>
+        <th class="num">Libres</th>
+        <th class="num">Ocupados</th>
+        <th class="num">Capacidad</th>
+        <th>¿Se ve en la página?</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in d.filas %}
+      <tr>
+        <td>
+          <strong>{{ s.origen|default:"—" }} &rarr; {{ s.destino|default:"—" }}</strong>
+          <div class="muted">
+            {% if s.fuente == 'aerorutas' %}Catálogo Aerorutas{% else %}Viaje propio #{{ s.viaje_id }}{% endif %}
+          </div>
+        </td>
+        <td class="mono">{{ s.hora|default:"—" }}</td>
+        <td>{{ s.autobus|default:"—" }}</td>
+        <td class="num">
+          {% if s.precio > 0 %}${{ s.precio|floatformat:2 }}
+          {% else %}<span class="pin pin-rojo">sin precio</span>{% endif %}
+        </td>
+        <td class="num">
+          {% if s.disponibles == None %}<span class="muted">?</span>
+          {% elif s.disponibles == 0 %}<span class="pin pin-rojo">0</span>
+          {% else %}{{ s.disponibles }}{% endif %}
+        </td>
+        <td class="num">
+          {% if s.ocupados == None %}<span class="muted">?</span>
+          {% else %}{{ s.ocupados }}{% if s.ocupados_es_parcial %}<span class="muted" title="Solo lo vendido por nosotros; lo que venda la empresa por su lado no se ve aquí">*</span>{% endif %}
+          {% endif %}
+        </td>
+        <td class="num">
+          {% if s.capacidad == None %}<span class="muted">—</span>
+          {% else %}{{ s.capacidad }}{% endif %}
+        </td>
+        <td>
+          {% if s.visible %}
+            <span class="pin pin-verde">Sí</span>
+          {% else %}
+            <span class="pin pin-rojo">No</span>
+          {% endif %}
+          {% for m in s.motivos %}<div class="muted">{{ m }}</div>{% endfor %}
+          {% for p in s.problemas %}
+            <div class="alerta-fila"><svg class="ico"><use href="#i-alerta"></use></svg> {{ p }}</div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="tabla-vacia">No hay salidas con esos filtros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="muted" style="margin-top:.6rem">
+  * En las salidas de Aerorutas solo sabemos los puestos que vendimos nosotros;
+  el total del autobús no lo publica su sistema, por eso la capacidad va en «—».
+  Los puestos libres sí son los reales de Aerorutas.
+  {% if d.catalogo_actualizado %}
+    Catálogo precargado el {{ d.catalogo_actualizado|date:"d/m/Y H:i" }}.
+  {% endif %}
+</p>
+
+{# ══════════ Rutas sin ninguna salida ese día ══════════ #}
+{% if d.rutas_sin_salidas %}
+<h3 class="bo-seccion">Rutas propias sin salidas el {{ f.fecha }} ({{ d.rutas_sin_salidas|length }})</h3>
+<p class="muted">
+  Existen como ruta pero ese día no tienen ningún viaje cargado, así que no
+  aparecen por ningún lado. No es un error si ese día no sale.
+</p>
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead><tr><th>Desde</th><th>Hasta</th><th>Duración estimada</th></tr></thead>
+    <tbody>
+      {% for r in d.rutas_sin_salidas %}
+      <tr>
+        <td>{{ r.origen }}</td>
+        <td>{{ r.destino }}</td>
+        <td class="muted">{{ r.duracion_estimada|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}
