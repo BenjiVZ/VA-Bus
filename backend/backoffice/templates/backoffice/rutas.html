@@ -58,6 +58,101 @@
   </div>
 </div>
 
+{% comment %}
+  Cronograma de los barridos. No programa nada: refleja el crontab del
+  servidor. Al lado va la hora REAL de la última precarga, que es el dato
+  duro; si no cuadra con el cronograma, el crontab quedó distinto.
+{% endcomment %}
+<section class="bo-seccion barridos">
+  <div class="barridos__cab">
+    <div>
+      <h2 class="barridos__tit">
+        <svg class="ico"><use href="#i-reloj"></use></svg> Barridos del catálogo
+      </h2>
+      <p class="barridos__sub">
+        {% if agenda.proximo_hora %}
+          Próximo: <strong>{{ agenda.proximo_hora }}</strong> — {{ agenda.proximo_etiqueta }}.
+        {% endif %}
+        {% if d.catalogo_actualizado %}
+          Última precarga real de este día:
+          <strong>{{ d.catalogo_actualizado|date:"j M H:i" }}</strong>.
+        {% else %}
+          Este día todavía no tiene catálogo cargado.
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="barridos__acciones">
+      {% if agenda.en_curso %}
+        <span class="pin pin-ambar barridos__curso">
+          <svg class="ico"><use href="#i-espera"></use></svg> Barrido en curso…
+        </span>
+      {% endif %}
+      {% for modo, m in agenda.modos.items %}
+        <form method="post" action="{% url 'backoffice:rutas_barrer' %}">
+          {% csrf_token %}
+          <input type="hidden" name="modo" value="{{ modo }}">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit"
+                  class="button {% if modo == 'completo' %}button--fantasma{% endif %}"
+                  {% if not agenda.permitido %}disabled title="{{ agenda.motivo }}"{% endif %}>
+            <svg class="ico"><use href="#i-refrescar"></use></svg>
+            {% if modo == 'hoy' %}Barrer ahora (hoy){% else %}Barrido completo{% endif %}
+          </button>
+        </form>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if not agenda.permitido %}
+  <div class="aviso aviso-info barridos__nota">
+    <svg class="ico"><use href="#i-alerta"></use></svg> {{ agenda.motivo }}
+  </div>
+  {% else %}
+  <p class="barridos__nota muted">
+    El barrido a mano se desactiva {{ agenda.min_antes }} minutos antes de cada
+    barrido automático (y mientras uno corre), para que no se pisen escribiendo
+    el mismo catálogo.
+  </p>
+  {% endif %}
+
+  {% comment %}
+    El qué hace cada tipo va en la leyenda, no en cada fila: son solo dos
+    tipos y repetir el texto trece veces no dice nada nuevo.
+  {% endcomment %}
+  <ol class="agenda">
+    {% for a in agenda.filas %}
+    <li class="agenda__it agenda__it--{{ a.modo }}{% if a.proximo %} es-proximo{% elif a.pasado %} es-pasado{% endif %}">
+      <span class="agenda__hora">{{ a.hora }}</span>
+      <span class="agenda__que">{{ a.etiqueta }}</span>
+      <span class="agenda__estado">{% if a.proximo %}sigue{% elif a.pasado %}hecho{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ol>
+
+  <dl class="agenda-leyenda">
+    {% for modo, m in agenda.modos.items %}
+    <div class="agenda-leyenda__it agenda__it--{{ modo }}">
+      <dt>{{ m.etiqueta }} <span class="muted">· {{ m.dura }}</span></dt>
+      <dd>{{ m.detalle }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+
+  {% comment %}
+    Quién manda de verdad es el crontab del servidor. Estas líneas salen de
+    las mismas constantes que dibujan el cronograma de arriba, así que pegarlas
+    deja el servidor exactamente como dice esta pantalla.
+  {% endcomment %}
+  <details class="barridos__cron">
+    <summary>Ver las líneas del crontab que corresponden a este cronograma</summary>
+    <pre>{% for l in agenda.crontab %}{{ l }}
+{% endfor %}</pre>
+    <p class="muted">El cronograma de arriba describe estas líneas; no las aplica.
+      Si en el servidor hay otras horas, manda el servidor.</p>
+  </details>
+</section>
+
 {# ══════════ Filtros ══════════ #}
 <form class="filtros" method="get">
   <div class="campo">

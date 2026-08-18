@@ -664,3 +664,72 @@ table.tabla tbody tr.fila-suelta strong { font-weight: 600; }
   .bo-contenido { padding: 0; }
   .panel, .tabla-envoltura { box-shadow: none; border-color: #ccc; }
 }
+
+/* ── Barridos del catálogo (pantalla de rutas) ───────────────────────────── */
+/* El cronograma refleja el crontab del servidor; el botón manual se apaga
+   pegado a cada barrido automático para que no se pisen. */
+.barridos {
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: 12px; padding: 14px 16px; margin: 0 0 16px;
+  font-weight: 400; font-size: .88rem; box-shadow: var(--sombra);
+}
+.barridos__cab {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: flex-start; justify-content: space-between;
+}
+.barridos__tit { margin: 0; font-size: .95rem; font-weight: 700; }
+.barridos__tit .ico { width: 15px; height: 15px; vertical-align: -0.2em; }
+.barridos__sub { margin: 4px 0 0; color: var(--texto-suave); font-size: .82rem; }
+.barridos__acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.barridos__acciones form { margin: 0; }
+.barridos__acciones .button .ico { width: 13px; height: 13px; vertical-align: -0.15em; }
+.barridos__curso .ico { width: 12px; height: 12px; vertical-align: -0.15em; }
+.barridos__nota { margin: 10px 0 0; font-size: .8rem; }
+
+.agenda {
+  list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.agenda__it {
+  display: grid; gap: 8px; align-items: baseline;
+  grid-template-columns: 52px 1fr auto;
+  padding: 6px 10px; border-radius: 8px;
+  border-left: 3px solid var(--borde-fuerte);
+  background: var(--superficie-2);
+}
+.agenda__it--completo { border-left-color: var(--navy-suave); }
+.agenda__it--hoy { border-left-color: var(--oro-oscuro); }
+.agenda__hora { font-weight: 800; font-variant-numeric: tabular-nums; }
+.agenda__que { font-weight: 600; }
+.agenda__estado {
+  text-align: right; font-size: .68rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px; color: var(--texto-suave);
+}
+.agenda__it.es-pasado { opacity: .55; }
+.agenda__it.es-proximo {
+  background: var(--selected-bg); outline: 1px solid var(--navy-suave);
+}
+.agenda__it.es-proximo .agenda__estado { color: var(--navy-suave); }
+
+.agenda-leyenda {
+  margin: 10px 0 0; display: grid; gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.agenda-leyenda__it {
+  padding: 7px 10px; border-left: 3px solid var(--borde-fuerte);
+  background: var(--superficie-2); border-radius: 8px;
+}
+.agenda-leyenda dt { font-weight: 700; font-size: .82rem; }
+.agenda-leyenda dt .muted { font-weight: 400; }
+.agenda-leyenda dd { margin: 2px 0 0; color: var(--texto-suave); font-size: .8rem; }
+
+/* Django manda tag "success"; la hoja solo tenía .aviso-ok. */
+.aviso-success { background: var(--verde-claro); color: var(--verde); border-left: 4px solid var(--verde); }
+.aviso-warning { background: var(--ambar-claro); color: var(--ambar); border-left: 4px solid var(--ambar); }
+.barridos__cron { margin-top: 12px; font-size: .8rem; }
+.barridos__cron summary { cursor: pointer; color: var(--navy-suave); font-weight: 600; }
+.barridos__cron pre {
+  margin: 8px 0 4px; padding: 10px 12px; overflow-x: auto;
+  background: var(--superficie-2); border: 1px solid var(--borde);
+  border-radius: 8px; font-size: .74rem; line-height: 1.5;
+}

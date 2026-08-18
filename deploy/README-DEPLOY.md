@@ -78,10 +78,12 @@ Cloudflare crea el DNS automáticamente.
 crontab -e
 ```
 ```
-0 */2 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --usar-conocidos >> /opt/va-bus/backend/precargar_rutas.log 2>&1
-0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
+CRON_TZ=America/Caracas
+30 6,8,10,12,14,16,18,20,22 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --usar-conocidos >> /opt/va-bus/backend/precargar_rutas.log 2>&1
+30 1,7,13,19 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 ```
-Son dos, a propósito:
+Son dos, a propósito, y a horas que no chocan (dos barridos simultáneos se pisan
+escribiendo el mismo snapshot):
 
 - **Cada 2 h — HOY.** Es lo que la gente compra, así que precios y cupos se
   refrescan seguido. `--usar-conocidos` se salta el descubrimiento de los 600
@@ -95,6 +97,11 @@ la primera corrida del día y no tomaba rutas/precios agregados después). Ambos
 reintentan ante fallos de red y conservan el snapshot anterior si el nuevo trae
 < 60 % de viajes (protege contra barridos parciales). Si un refresco rápido no
 trae nada, se cae al barrido completo en vez de guardar un catálogo vacío.
+
+El cronograma se ve en el back office (**Rutas y salidas → Barridos del
+catálogo**), con un botón para adelantar un barrido a mano. Las horas están
+declaradas una sola vez en `backend/viajes/agenda_precarga.py`; esa pantalla trae
+las líneas de crontab ya generadas desde ahí, listas para pegar.
 
 Coste medido (25 oficinas, ~60 corredores activos, ~1,5 s por llamada):
 ~12.600 llamadas/día y unos 5 min por corrida completa. Poner las 15 fechas

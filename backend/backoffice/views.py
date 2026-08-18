@@ -18,6 +18,7 @@ from pagos.models import ComprobantePago, MetodoPago, PagoCaja
 from pagos.services import validar_comprobante
 from r4conecta.models import OperacionDebitoOTP
 from reservas.models import Reserva
+from viajes import agenda_precarga
 from viajes.models import ConfiguracionGeneral, Viaje
 
 from . import rutas as rutas_svc
@@ -140,6 +141,9 @@ def rutas(request):
     datos = rutas_svc.analizar(fecha, origen=origen, destino=destino, filtro=filtro)
     r = datos['resumen']
 
+    proximo_cuando, proximo_modo = agenda_precarga.proximo()
+    permitido, motivo = agenda_precarga.estado_manual()
+
     return render(request, 'backoffice/rutas.html', {
         'seccion': 'rutas',
         'titulo': 'Rutas y salidas',
@@ -147,7 +151,28 @@ def rutas(request):
                      f'{r["visibles"]} en la página, {r["ocultas"]} ocultas',
         'd': datos,
         'f': {'fecha': fecha, 'origen': origen, 'destino': destino, 'filtro': filtro},
+        'agenda': {
+            'filas': agenda_precarga.agenda(),
+            'proximo_hora': proximo_cuando and timezone.localtime(proximo_cuando).strftime('%H:%M'),
+            'proximo_etiqueta': proximo_modo and agenda_precarga.MODOS[proximo_modo]['etiqueta'],
+            'modos': agenda_precarga.MODOS,
+            'permitido': permitido,
+            'motivo': motivo,
+            'en_curso': agenda_precarga.en_curso(),
+            'min_antes': agenda_precarga.MIN_ANTES,
+            'crontab': agenda_precarga.lineas_crontab(),
+        },
     })
+
+
+@staff_requerido
+def rutas_barrer(request):
+    """Dispara a mano un barrido del catálogo. Solo POST desde la pantalla."""
+    if request.method != 'POST':
+        return redirect('backoffice:rutas')
+    arranco, mensaje = agenda_precarga.lanzar(request.POST.get('modo') or '')
+    (messages.success if arranco else messages.error)(request, mensaje)
+    return redirect(_destino_seguro(request))
 
 
 # ══════════════════════════════════════════════════════════════════

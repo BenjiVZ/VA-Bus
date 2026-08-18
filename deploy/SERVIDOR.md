@@ -126,9 +126,21 @@ crontab -l    # ver el cron
 ```
 Crones actuales (hora de Venezuela):
 ```
-0 */2 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --usar-conocidos >> /opt/va-bus/backend/precargar_rutas.log 2>&1
-0 */6 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
+CRON_TZ=America/Caracas
+30 6,8,10,12,14,16,18,20,22 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 1 --usar-conocidos >> /opt/va-bus/backend/precargar_rutas.log 2>&1
+30 1,7,13,19 * * * cd /opt/va-bus/backend && venv/bin/python manage.py precargar_rutas --dias 15 >> /opt/va-bus/backend/precargar_rutas.log 2>&1
 ```
+Las horas **no se solapan a propósito**: dos barridos a la vez escriben el mismo
+snapshot y el segundo puede disparar la protección del 60 % y dejar el catálogo
+viejo. `CRON_TZ` fija las horas en hora de Venezuela aunque alguien recree el
+droplet en UTC y se olvide de la sección 8.
+
+Estas mismas horas están declaradas en `backend/viajes/agenda_precarga.py`, que
+es lo que dibuja el cronograma del back office (**Rutas y salidas → Barridos del
+catálogo**). **Si cambias una, cambia la otra**, o la pantalla mentirá. La
+pantalla muestra al lado la hora real de la última precarga justamente para que
+se note si quedaron distintas, y trae las líneas ya listas para pegar.
+
 - **Cada 2 h refresca HOY** con `--usar-conocidos`: no barre los 600 pares
   posibles, reutiliza los corredores que ya salieron en los snapshots de los
   últimos 7 días (`--dias-conocidos`). ~270 llamadas en vez de ~660, ~35 s.
@@ -144,11 +156,17 @@ Crones actuales (hora de Venezuela):
 - El barrido reintenta pares que fallan por red y **conserva el snapshot
   anterior si el nuevo trae < 60 % de viajes** (evita pisar un catálogo bueno
   con uno parcial). Para sobrescribir igual: `--forzar`.
-- Forzar carga/refresco manual de hoy:
+- **Barrido a mano desde el back office**: *Rutas y salidas* tiene el cronograma
+  del día y dos botones. Se desactivan 20 min antes de cada barrido automático y
+  10 min después (y mientras corre otro), para que no se pisen. El botón lanza el
+  mismo comando en segundo plano: la pantalla responde al instante y hay que
+  recargarla para ver el resultado.
+- Forzar carga/refresco manual de hoy por consola:
   ```bash
   cd /opt/va-bus/backend && source venv/bin/activate
-  python manage.py precargar_rutas --dias 1          # refresca hoy
-  python manage.py precargar_rutas --dias 1 --forzar # ignora el guardado parcial
+  python manage.py precargar_rutas --dias 1                     # barre los 600 pares, solo hoy
+  python manage.py precargar_rutas --dias 1 --usar-conocidos    # rápido (lo del cron de 2 h)
+  python manage.py precargar_rutas --dias 1 --forzar            # ignora el guardado parcial
   ```
 - Log: `/opt/va-bus/backend/precargar_rutas.log`
 
