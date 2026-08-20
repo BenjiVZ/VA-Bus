@@ -733,3 +733,44 @@ table.tabla tbody tr.fila-suelta strong { font-weight: 600; }
   background: var(--superficie-2); border: 1px solid var(--borde);
   border-radius: 8px; font-size: .74rem; line-height: 1.5;
 }
+
+/* ── Alta de usuarios del personal ──────────────────────────────────────── */
+.tarjeta-form {
+  background: var(--superficie); border: 1px solid var(--borde);
+  border-radius: 12px; padding: 16px 18px; margin: 0 0 18px;
+  font-weight: 400; font-size: .9rem; box-shadow: var(--sombra);
+}
+.tarjeta-form__tit { margin: 0; font-size: .95rem; font-weight: 700; }
+.tarjeta-form__tit .ico { width: 15px; height: 15px; vertical-align: -0.2em; }
+.tarjeta-form__sub { margin: 4px 0 14px; color: var(--texto-suave); font-size: .82rem; }
+
+.form-alta {
+  display: grid; gap: 12px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+.form-alta .campo--ancho { grid-column: 1 / -1; }
+.form-alta label { font-size: .8rem; font-weight: 600; }
+.form-alta input[type="text"], .form-alta input[type="email"],
+.form-alta input[type="password"] { width: 100%; }
+.campo__pista { font-size: .74rem; color: var(--texto-suave); }
+.campo__error { font-size: .74rem; color: var(--rojo); font-weight: 600; }
+.obligatorio { color: var(--rojo); }
+[aria-invalid="true"] { border-color: var(--rojo) !important; }
+
+.roles { border: 0; padding: 0; margin: 0; }
+.roles legend { font-size: .8rem; font-weight: 600; padding: 0 0 6px; }
+.roles { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.roles legend { grid-column: 1 / -1; }
+.rol {
+  display: flex; gap: 9px; align-items: flex-start; cursor: pointer;
+  padding: 9px 11px; border: 1px solid var(--borde); border-radius: 9px;
+  background: var(--superficie-2);
+  /* `label` va en versalitas en todo el back office; aquí dentro es una frase. */
+  text-transform: none; letter-spacing: normal; font-weight: 400; font-size: .84rem;
+}
+.rol:has(input:checked) { border-color: var(--navy-suave); background: var(--selected-bg); }
+.rol input { margin-top: 3px; }
+.rol strong { display: block; font-size: .84rem; }
+.rol em { font-style: normal; color: var(--texto-suave); font-size: .77rem; }
+
+.form-alta__pie { flex-direction: row; align-items: center; gap: 12px; flex-wrap: wrap; }

@@ -1,0 +1,144 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Usuarios{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  Solo cuentas del PERSONAL. Los pasajeros se registran solos desde la web o la
+  app y la taquilla vende sin abrirles cuenta, así que no van en esta lista.
+{% endcomment %}
+
+<section class="bo-seccion tarjeta-form">
+  <h2 class="tarjeta-form__tit">
+    <svg class="ico"><use href="#i-mas"></use></svg> Nueva cuenta
+  </h2>
+  <p class="tarjeta-form__sub">
+    Le da acceso al back office a una persona del equipo. Para los pasajeros no
+    hace falta: se registran solos.
+  </p>
+
+  <form method="post" class="form-alta" autocomplete="off">
+    {% csrf_token %}
+
+    <div class="campo campo--medio">
+      <label for="usuario">Usuario <span class="obligatorio">*</span></label>
+      <input type="text" id="usuario" name="usuario" value="{{ d.usuario }}"
+             placeholder="Ej: mgonzalez" required
+             {% if e.usuario %}aria-invalid="true"{% endif %}>
+      {% if e.usuario %}<span class="campo__error">{{ e.usuario }}</span>
+      {% else %}<span class="campo__pista">Con esto entra. Sin espacios.</span>{% endif %}
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="nombre">Nombre <span class="obligatorio">*</span></label>
+      <input type="text" id="nombre" name="nombre" value="{{ d.nombre }}" required
+             {% if e.nombre %}aria-invalid="true"{% endif %}>
+      {% if e.nombre %}<span class="campo__error">{{ e.nombre }}</span>{% endif %}
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="apellido">Apellido</label>
+      <input type="text" id="apellido" name="apellido" value="{{ d.apellido }}">
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="email">Correo</label>
+      <input type="email" id="email" name="email" value="{{ d.email }}"
+             {% if e.email %}aria-invalid="true"{% endif %}>
+      {% if e.email %}<span class="campo__error">{{ e.email }}</span>
+      {% else %}<span class="campo__pista">Opcional, pero sin él no puede recuperar su contraseña.</span>{% endif %}
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="cedula">Cédula</label>
+      <input type="text" id="cedula" name="cedula" value="{{ d.cedula }}" placeholder="Ej: V-12345678">
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="telefono">Teléfono</label>
+      <input type="text" id="telefono" name="telefono" value="{{ d.telefono }}" placeholder="Ej: 0412-1234567">
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="clave">Contraseña <span class="obligatorio">*</span></label>
+      <input type="password" id="clave" name="clave" required autocomplete="new-password"
+             {% if e.clave %}aria-invalid="true"{% endif %}>
+      {% if e.clave %}<span class="campo__error">{{ e.clave }}</span>
+      {% else %}<span class="campo__pista">Mínimo 8 caracteres, que no sea solo números.</span>{% endif %}
+    </div>
+
+    <div class="campo campo--medio">
+      <label for="clave2">Repetir contraseña <span class="obligatorio">*</span></label>
+      <input type="password" id="clave2" name="clave2" required autocomplete="new-password"
+             {% if e.clave2 %}aria-invalid="true"{% endif %}>
+      {% if e.clave2 %}<span class="campo__error">{{ e.clave2 }}</span>{% endif %}
+    </div>
+
+    <fieldset class="campo campo--ancho roles">
+      <legend>Qué va a poder hacer</legend>
+      {% for clave, r in roles.items %}
+      <label class="rol">
+        <input type="radio" name="rol" value="{{ clave }}"
+               {% if d.rol == clave %}checked{% endif %}>
+        <span>
+          <strong>{{ r.etiqueta }}</strong>
+          <em>{{ r.detalle }}</em>
+        </span>
+      </label>
+      {% endfor %}
+      {% if e.rol %}<span class="campo__error">{{ e.rol }}</span>{% endif %}
+    </fieldset>
+
+    <div class="campo campo--ancho form-alta__pie">
+      <button type="submit" class="button">Crear cuenta</button>
+      <span class="muted">La contraseña no se vuelve a mostrar: anótala antes de darla.</span>
+    </div>
+  </form>
+</section>
+
+<h2 class="bo-seccion">Cuentas con acceso</h2>
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Usuario</th>
+        <th>Persona</th>
+        <th>Correo</th>
+        <th>Puede hacer</th>
+        <th>Estado</th>
+        <th>Último ingreso</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cuentas %}
+      <tr>
+        <td class="mono"><strong>{{ c.username }}</strong></td>
+        <td>{{ c.get_full_name|default:"—" }}</td>
+        <td>{{ c.email|default:"—" }}</td>
+        <td>
+          {% if c.is_superuser %}
+            <span class="pin pin-morado">Administrador</span>
+          {% else %}
+            <span class="pin pin-gris">Personal</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if c.is_active %}<span class="pin pin-verde">Activa</span>
+          {% else %}<span class="pin pin-rojo">Desactivada</span>{% endif %}
+        </td>
+        <td>{{ c.last_login|date:"j M Y H:i"|default:"Nunca entró" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="tabla-vacia">Todavía no hay cuentas del personal.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="muted">
+  Para desactivar una cuenta o cambiarle la contraseña a alguien, por ahora hay
+  que entrar a <a href="/admin/usuarios/usuario/" target="_blank" rel="noopener">Datos y configuración</a>.
+</p>
+
+{% endblock %}

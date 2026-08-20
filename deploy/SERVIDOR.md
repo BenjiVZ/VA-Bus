@@ -228,7 +228,11 @@ del home) salen vacíos/0. **Si se recrea el droplet, repetir este ajuste.**
 
 - URL: **https://aerorutasdevenezuela.net/admin/**
 - Usuario: `admin` (superuser creado en el deploy).
-- Crear otro superuser:
+- **Para dar de alta personal no hace falta el admin ni la consola**: en el back
+  office, *Sistema → Usuarios* (`/panel/usuarios/`) crea cuentas de taquilla o de
+  administrador. Solo la ven los administradores: crear cuentas es repartir
+  permisos, y si cualquier empleado pudiera hacerlo se ascendería a sí mismo.
+- Crear otro superuser desde la consola (útil si te quedaste sin ninguno):
   ```bash
   cd /opt/va-bus/backend && source venv/bin/activate
   python manage.py createsuperuser

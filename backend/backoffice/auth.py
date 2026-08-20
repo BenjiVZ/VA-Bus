@@ -21,3 +21,25 @@ def staff_requerido(vista):
         destino = reverse('backoffice:ingresar')
         return redirect(f'{destino}?{urlencode({"next": request.get_full_path()})}')
     return _envoltura
+
+
+def superusuario_requerido(vista):
+    """Solo administradores.
+
+    Dar de alta cuentas del personal es repartir permisos: si cualquier
+    empleado con acceso al back office pudiera hacerlo, podría crearse a sí
+    mismo un administrador. Al personal que no lo es se le devuelve al inicio
+    con un aviso, en vez de mandarlo al login (ya entró; lo que falta es rango).
+    """
+    @wraps(vista)
+    def _envoltura(request, *args, **kwargs):
+        usuario = request.user
+        if usuario.is_authenticated and usuario.is_active and usuario.is_superuser:
+            return vista(request, *args, **kwargs)
+        if usuario.is_authenticated and usuario.is_staff:
+            from django.contrib import messages
+            messages.error(request, 'Esa pantalla es solo para administradores.')
+            return redirect(reverse('backoffice:inicio'))
+        destino = reverse('backoffice:ingresar')
+        return redirect(f'{destino}?{urlencode({"next": request.get_full_path()})}')
+    return _envoltura

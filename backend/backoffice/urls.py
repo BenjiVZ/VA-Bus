@@ -25,4 +25,6 @@ urlpatterns = [
     path('comprobantes/', views.comprobantes, name='comprobantes'),
     path('arqueo/', views.arqueo, name='arqueo'),
     path('pagos-r4/', panel_pagos, name='pagos_r4'),
+
+    path('usuarios/', views.usuarios, name='usuarios'),
 ]

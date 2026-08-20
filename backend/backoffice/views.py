@@ -21,8 +21,9 @@ from reservas.models import Reserva
 from viajes import agenda_precarga
 from viajes.models import ConfiguracionGeneral, Viaje
 
+from . import personal as personal_svc
 from . import rutas as rutas_svc
-from .auth import staff_requerido
+from .auth import staff_requerido, superusuario_requerido
 
 # Cuántas filas por página en los listados.
 POR_PAGINA = 25
@@ -328,4 +329,39 @@ def arqueo(request):
                     .distinct().order_by('cajero__username')),
         'metodos': MetodoPago.objects.filter(disponible_caja=True).order_by('orden', 'nombre'),
         'f': {'desde': desde, 'hasta': hasta, 'cajero': cajero, 'metodo': metodo},
+    })
+
+
+# ══════════════════════════════════════════════════════════════════
+#  Usuarios del personal (dar de alta cuentas del back office)
+# ══════════════════════════════════════════════════════════════════
+
+@superusuario_requerido
+def usuarios(request):
+    datos, errores = {'rol': 'taquilla'}, {}
+
+    if request.method == 'POST':
+        datos = personal_svc.limpiar(request.POST)
+        clave = request.POST.get('clave') or ''
+        errores = personal_svc.validar(datos, clave, request.POST.get('clave2') or '')
+        if not errores:
+            nuevo = personal_svc.crear(datos, clave)
+            messages.success(
+                request,
+                f'Cuenta «{nuevo.username}» creada como {personal_svc.rol_de(nuevo)}. '
+                f'Dale la contraseña a la persona por un medio seguro: aquí no se '
+                f'vuelve a mostrar.')
+            # Redirect tras POST: si recarga la página no intenta crearla otra vez.
+            return redirect('backoffice:usuarios')
+        messages.error(request, 'Revisa lo marcado en rojo: la cuenta no se creó.')
+
+    cuentas = personal_svc.listado()
+    return render(request, 'backoffice/usuarios.html', {
+        'seccion': 'usuarios',
+        'titulo': 'Usuarios',
+        'subtitulo': f'{len(cuentas)} cuenta(s) con acceso al back office',
+        'cuentas': cuentas,
+        'roles': personal_svc.ROLES,
+        'd': datos,
+        'e': errores,
     })

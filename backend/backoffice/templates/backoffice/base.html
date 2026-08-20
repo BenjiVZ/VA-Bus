@@ -63,6 +63,10 @@
         <svg class="bo-nav__icono ico"><use href="#i-arqueo"></use></svg> Arqueo de caja</a>
 
       <div class="bo-nav__grupo">Sistema</div>
+      {% if user.is_superuser %}
+      <a href="{% url 'backoffice:usuarios' %}" class="{% if seccion == 'usuarios' %}activo{% endif %}">
+        <svg class="bo-nav__icono ico"><use href="#i-usuarios"></use></svg> Usuarios</a>
+      {% endif %}
       <a href="/admin/" target="_blank" rel="noopener">
         <svg class="bo-nav__icono ico"><use href="#i-config"></use></svg> Datos y configuración</a>
     </nav>
